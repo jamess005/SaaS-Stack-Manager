@@ -1,0 +1,110 @@
+{
+  "NexusCRM": {
+    "avg_monthly_active_users": 19,
+    "total_seats": 22,
+    "utilisation_pct": 86,
+    "features_actively_used": [
+      "contact management",
+      "deal pipeline",
+      "email logging",
+      "activity feed"
+    ],
+    "features_unused": [
+      "forecasting module",
+      "territory management",
+      "product catalogue"
+    ],
+    "shelfware_flag": false,
+    "power_users": 6,
+    "occasional_users": 13,
+    "inactive_seats": 3,
+    "notes": "Core sales tool. High adoption but significant unused feature surface \u2014 forecasting and territory modules never configured."
+  },
+  "PeoplePulse": {
+    "avg_monthly_active_users": 123,
+    "total_seats": 150,
+    "utilisation_pct": 82,
+    "features_actively_used": [
+      "leave management",
+      "employee self-service",
+      "org chart",
+      "document storage"
+    ],
+    "features_unused": [
+      "performance review module",
+      "learning management",
+      "compensation bands",
+      "pulse surveys"
+    ],
+    "shelfware_flag": false,
+    "power_users": 4,
+    "occasional_users": 119,
+    "inactive_seats": 27,
+    "notes": "Widely used for basic HR ops. Performance management features not adopted \u2014 team reverted to a Google Form. LMS never launched."
+  },
+  "VaultLedger": {
+    "avg_monthly_active_users": 7,
+    "total_seats": 8,
+    "utilisation_pct": 87,
+    "features_actively_used": [
+      "invoicing",
+      "expense management",
+      "VAT/MTD filing",
+      "bank reconciliation",
+      "payroll sync"
+    ],
+    "features_unused": [
+      "multi-currency module (broken)",
+      "revenue recognition",
+      "project billing"
+    ],
+    "shelfware_flag": false,
+    "power_users": 3,
+    "occasional_users": 4,
+    "inactive_seats": 1,
+    "notes": "Finance team rely on this daily. Multi-currency module listed as feature but non-functional for EUR \u2014 finance team workaround is manual."
+  },
+  "TaskBridge": {
+    "avg_monthly_active_users": 98,
+    "total_seats": 150,
+    "utilisation_pct": 65,
+    "features_actively_used": [
+      "task boards",
+      "project templates",
+      "deadline reminders",
+      "file attachments"
+    ],
+    "features_unused": [
+      "timeline view",
+      "workload view",
+      "automation rules",
+      "forms/intake"
+    ],
+    "shelfware_flag": true,
+    "power_users": 18,
+    "occasional_users": 80,
+    "inactive_seats": 52,
+    "notes": "Shelfware flag set \u2014 52 inactive seats paying full rate. Advanced features (automations, workload) never adopted. Time-tracking gap being patched by ChronoLog at extra cost."
+  },
+  "InsightDeck": {
+    "avg_monthly_active_users": 9,
+    "total_seats": 12,
+    "utilisation_pct": 75,
+    "features_actively_used": [
+      "dashboard builder",
+      "CRM connector",
+      "finance connector",
+      "white-label client views"
+    ],
+    "features_unused": [
+      "anomaly detection (not shipped)",
+      "mobile view (broken)",
+      "data lineage (absent)"
+    ],
+    "shelfware_flag": false,
+    "power_users": 4,
+    "occasional_users": 5,
+    "inactive_seats": 3,
+    "notes": "Core BI tool for 3 client-facing dashboards. Vendor has missed roadmap commitments on ML features twice. Compliance gap on data lineage is escalating."
+  }
+}

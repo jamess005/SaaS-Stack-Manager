@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+*.key
+
+# Model weights — never commit these
+models/
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+*.ckpt
+*.pkl
+
+# Training outputs
+training/checkpoints/
+training/runs/
+training/logs/
+wandb/
+
+# Agent output files (generated at runtime — not versioned)
+market_inbox/*.md
+
+# Verdict outputs (generated at runtime — not versioned)
+outputs/*.md
+
+# Hold register (runtime state — not versioned)
+hold_register.json
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Pytest
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+logs/

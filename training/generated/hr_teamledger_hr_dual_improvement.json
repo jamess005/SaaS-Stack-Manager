@@ -1,0 +1,20 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "pulse surveys",
+    "full LMS with course builder",
+    "compensation bands"
+  ],
+  "current_tool_status": [
+    "Performance review module now offers quarterly cycles (not continuous feedback)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "GDPR erasure requests can now be handled via automated support ticket (not manual)",
+  "notes": [
+    "PeoplePulse still lacks built-in eNPS tooling; TeamLedger HR's AI features are not yet shipped"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "real-time dashboards with sub-minute refresh rates",
+    "anomaly detection powered by statistical models (GA)",
+    "mobile-responsive dashboard viewer (iOS and Android)",
+    "email and Slack alert triggers on metric thresholds",
+    "native connector for VaultLedger"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "ML-based anomaly detection still not shipped",
+    "Data lineage tracking absent — compliance team flagging this for upcoming ISO audit"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "InsightDeck migration assistant may not be as seamless as MetricFlux"
+  ]
+}

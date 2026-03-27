@@ -1,0 +1,137 @@
+{
+  "crm": {
+    "tool": "NexusCRM",
+    "vendor": "NexusCRM Ltd",
+    "monthly_cost_gbp": 510,
+    "seat_count": 22,
+    "cost_per_seat_gbp": 23.18,
+    "contract_type": "annual",
+    "contract_end": "2025-08",
+    "category": "crm",
+    "known_issues": [
+      "No native LinkedIn enrichment \u2014 reps manually copy contact data",
+      "Email sequence builder limited to 5 steps; competitors offer unlimited",
+      "API rate limits cause sync delays with InsightDeck (analytics tool)",
+      "Mobile app is unstable \u2014 crashes reported on iOS 17+",
+      "Reporting dashboards not customisable without paying for add-on"
+    ],
+    "integrations": [
+      "VaultLedger",
+      "TeamSync",
+      "InsightDeck"
+    ],
+    "positive_signals": [
+      "Reliable uptime \u2014 no major incidents in 18 months",
+      "Support team responsive within 2 hours",
+      "Custom pipeline stages work well for consulting sales cycle"
+    ]
+  },
+  "hr": {
+    "tool": "PeoplePulse",
+    "vendor": "PeoplePulse Technologies",
+    "monthly_cost_gbp": 385,
+    "seat_count": 150,
+    "cost_per_seat_gbp": 2.57,
+    "contract_type": "annual",
+    "contract_end": "2025-11",
+    "category": "hr",
+    "known_issues": [
+      "Performance review module is outdated \u2014 no continuous feedback, only annual cycles",
+      "No built-in eNPS or pulse survey tooling",
+      "Onboarding workflows require manual setup per new hire \u2014 no templates",
+      "UK payroll integration with PayAxis requires a middleware connector that breaks quarterly",
+      "GDPR right-to-erasure requests must be handled manually via support ticket"
+    ],
+    "integrations": [
+      "PayAxis",
+      "TeamSync",
+      "VaultLedger"
+    ],
+    "positive_signals": [
+      "Leave management and absence tracking works flawlessly",
+      "Employee self-service portal well adopted (82% monthly active)",
+      "HRIS data reliable \u2014 single source of truth for headcount"
+    ]
+  },
+  "finance": {
+    "tool": "VaultLedger",
+    "vendor": "VaultLedger Financial Systems",
+    "monthly_cost_gbp": 420,
+    "seat_count": 8,
+    "cost_per_seat_gbp": 52.5,
+    "contract_type": "annual",
+    "contract_end": "2025-06",
+    "category": "finance",
+    "known_issues": [
+      "No native multi-currency \u2014 EUR invoices require manual conversion and journal entries",
+      "Reconciliation on datasets >5,000 rows takes 8\u201312 minutes; causes month-end bottleneck",
+      "Revenue recognition module not IFRS 15 compliant \u2014 workaround in use",
+      "No real-time bank feed for Barclays Business accounts (only overnight sync)",
+      "Audit trail export is CSV only \u2014 external auditors have requested PDF with digital signature"
+    ],
+    "integrations": [
+      "PayAxis",
+      "NexusCRM",
+      "InsightDeck"
+    ],
+    "positive_signals": [
+      "VAT return filing via MTD is fully automated",
+      "Chart of accounts well configured for professional services billing",
+      "24/7 support SLA met consistently"
+    ]
+  },
+  "project_mgmt": {
+    "tool": "TaskBridge",
+    "vendor": "TaskBridge Software",
+    "monthly_cost_gbp": 290,
+    "seat_count": 150,
+    "cost_per_seat_gbp": 1.93,
+    "contract_type": "monthly",
+    "contract_end": null,
+    "category": "project_mgmt",
+    "known_issues": [
+      "No time-tracking built in \u2014 staff use a separate tool (ChronoLog) at \u00a395/mo",
+      "Client portal view is read-only; clients cannot comment or approve deliverables in-app",
+      "Gantt chart view requires manual refresh \u2014 does not auto-update on dependency changes",
+      "No resource capacity planning \u2014 managers track utilisation in spreadsheets",
+      "Slack integration was deprecated in TaskBridge v4.1; now requires Zapier workaround"
+    ],
+    "integrations": [
+      "TeamSync",
+      "InsightDeck",
+      "ChronoLog (external, \u00a395/mo)"
+    ],
+    "positive_signals": [
+      "Template library well-stocked for consulting project types",
+      "Board view intuitive \u2014 high adoption across non-technical staff",
+      "Reliable notifications and deadline reminders"
+    ]
+  },
+  "analytics": {
+    "tool": "InsightDeck",
+    "vendor": "InsightDeck Analytics",
+    "monthly_cost_gbp": 340,
+    "seat_count": 12,
+    "cost_per_seat_gbp": 28.33,
+    "contract_type": "annual",
+    "contract_end": "2026-01",
+    "category": "analytics",
+    "known_issues": [
+      "NexusCRM sync hits API rate limits above 50k records \u2014 dashboards stale by up to 4 hours",
+      "No self-serve embedded reporting for clients \u2014 requires export and manual PDF",
+      "ML-based anomaly detection promised on roadmap since Q2 2023, still not shipped",
+      "No mobile view \u2014 dashboards non-functional on phones/tablets",
+      "Data lineage tracking absent \u2014 compliance team flagging this for upcoming ISO audit"
+    ],
+    "integrations": [
+      "NexusCRM",
+      "VaultLedger",
+      "TaskBridge"
+    ],
+    "positive_signals": [
+      "Drag-and-drop dashboard builder is fast and flexible",
+      "Data connector library covers all current stack tools",
+      "White-labelling available on current plan \u2014 used for 3 client dashboards"
+    ]
+  }
+}

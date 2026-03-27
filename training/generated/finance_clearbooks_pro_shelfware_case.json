@@ -1,0 +1,19 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption declined by 12% in Q2"
+  ],
+  "pricing_delta": "competitor offers per-active-user pricing",
+  "compliance_changes": "No changes",
+  "notes": [
+    "team is paying for unused capacity"
+  ]
+}

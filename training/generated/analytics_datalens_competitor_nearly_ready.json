@@ -1,0 +1,20 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "analytics",
+  "competitor": "DataLens",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "AI anomaly detection and alerting (shipped Q3 2024)",
+    "row-level security for client data isolation"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "ML-based anomaly detection still not shipped"
+  ],
+  "pricing_delta": "DataLens £480 vs InsightDeck £340, DataLens is £140 more",
+  "compliance_changes": "DataLens has SOC 2 Type 2, GDPR EU residency, UK residency, SSO SAML, audit log, data lineage, and ISO 27001",
+  "notes": [
+    "DataLens NexusCRM connector requires custom API config — estimated 4hrs setup"
+  ]
+}

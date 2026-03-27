@@ -1,0 +1,22 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "real-time connectors (major CRM and finance tools)",
+    "mobile-responsive dashboards",
+    "data lineage tracking"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours partially mitigated with improved API queue management (v2.5)",
+    "self-serve embedded reporting for clients now available via export and manual PDF, but still requires manual PDF processing"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "ClearView Analytics now SOC 2 Type 2 compliant",
+  "notes": [
+    "InsightDeck's ML-based anomaly detection still not shipped, but competitor's AI anomaly detection not yet shipped either",
+    "InsightDeck's mobile view still non-functional on phones/tablets"
+  ]
+}

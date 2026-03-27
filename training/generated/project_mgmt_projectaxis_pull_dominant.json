@@ -1,0 +1,21 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in time tracking with weekly timesheet submission and manager approval",
+    "client portal with deliverable commenting, approval workflow, and status updates",
+    "native Slack integration (bidirectional — task creation from Slack, notifications to channels)"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist."
+  ],
+  "pricing_delta": "price reduction",
+  "compliance_changes": "SOC 2 Type 2 and GDPR EU residency compliance now available",
+  "notes": [
+    "migration tooling available for users concerned about switching",
+    "competitor's Gantt chart auto-update can be slow on projects with >200 tasks"
+  ]
+}

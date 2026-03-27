@@ -1,0 +1,20 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "finance",
+  "competitor": "PayTrek",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Stability patch v3.2.1 released"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "support response time degraded from 24h to 72h",
+    "Reconciliation on datasets >5,000 rows takes 10–15 minutes; causes month-end bottleneck worsened"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "No compliance change",
+  "notes": [
+    "PayTrek's data residency roadmap remains uncertain for EU clients with data sovereignty requirements"
+  ]
+}

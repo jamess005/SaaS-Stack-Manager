@@ -1,0 +1,30 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "analytics",
+  "competitor": "DataLens",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "new feature: real-time data connectors",
+    "new feature: embedded client reporting",
+    "new feature: mobile-responsive dashboards",
+    "new feature: full data lineage and audit trail",
+    "new feature: AI anomaly detection and alerting",
+    "new feature: natural language query interface",
+    "new feature: automated insight digests",
+    "new feature: row-level security for client data isolation",
+    "new feature: dbt integration"
+  ],
+  "current_tool_status": [
+    "known issue: NexusCRM sync hits API rate limits above 50k records",
+    "known issue: no self-serve embedded reporting for clients",
+    "known issue: ML-based anomaly detection not shipped",
+    "known issue: no mobile view — dashboards non-functional on phones/tablets",
+    "known issue: data lineage tracking absent"
+  ],
+  "pricing_delta": "price increase: £480 (competitor) vs £340 (current tool)",
+  "compliance_changes": "compliance gap: UK data residency not available",
+  "notes": [
+    "custom API config required for NexusCRM connector"
+  ]
+}

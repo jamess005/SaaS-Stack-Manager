@@ -1,0 +1,20 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Stability patch v3.2.1 released"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "Support response time degraded from 24h to 72h",
+    "Reconciliation on datasets >5,000 rows now takes 12–18 minutes"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "IFRS 15 compliant revenue recognition module now available in VaultLedger",
+  "notes": [
+    "Migration from VaultLedger to NovaPay may incur additional setup fees"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "embedded reporting available on Enterprise tier",
+    "data lineage tracking available"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync rate limits unchanged",
+    "ML-based anomaly detection roadmap unchanged"
+  ],
+  "pricing_delta": "£390 - £340 = £50 price increase",
+  "compliance_changes": "ISO27001 compliance not available on ClearView Analytics",
+  "notes": [
+    "White-label embedded reporting requires Enterprise tier (+£17.50/seat)",
+    "AI anomaly detection not yet shipped"
+  ]
+}

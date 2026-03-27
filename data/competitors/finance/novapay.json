@@ -1,0 +1,54 @@
+{
+  "name": "NovaPay",
+  "based_on": "Xero / FreeAgent",
+  "category": "finance",
+  "monthly_cost_gbp": 420,
+  "seat_count_assumed": 8,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 52.5,
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 52.5,
+      "min_seats": 3
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 75.0,
+      "min_seats": 5
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_pdf_signed": false,
+    "mtd_vat": true,
+    "ifrs15_compliant": false
+  },
+  "features": [
+    "invoicing (GBP, USD, AUD \u2014 no EUR native)",
+    "expense management",
+    "bank reconciliation (Barclays native feed \u2014 real-time)",
+    "VAT / MTD filing",
+    "UK payroll sync (PayAxis)",
+    "reporting and P&L",
+    "24/7 support SLA"
+  ],
+  "known_limitations": [
+    "EUR invoicing not supported \u2014 GBP only with manual conversion",
+    "Audit trail export is CSV only \u2014 no PDF with digital signature",
+    "IFRS 15 revenue recognition not available",
+    "Multi-entity consolidation not available"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "NexusCRM",
+    "InsightDeck",
+    "Zapier"
+  ],
+  "recent_trajectory": "active_development",
+  "last_updated": "2024-10-01"
+}

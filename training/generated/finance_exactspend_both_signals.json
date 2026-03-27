@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "finance",
+  "competitor": "ExactSpend",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native multi-currency invoicing",
+    "real-time bank feeds including Barclays Business"
+  ],
+  "current_tool_status": [
+    "reconciliation on datasets >5,000 rows takes 12-15 minutes; causes month-end bottleneck"
+  ],
+  "pricing_delta": "£420 → £395",
+  "compliance_changes": "IFRS 15 compliant",
+  "notes": [
+    "inactive seat utilization and shelfware metrics not provided"
+  ]
+}

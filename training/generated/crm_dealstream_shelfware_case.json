@@ -1,0 +1,19 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [],
+  "current_tool_status": [
+    "inactive seats rose from 3 to 68",
+    "feature adoption declined from 86% to 45%",
+    "team is paying for unused capacity due to shelfware"
+  ],
+  "pricing_delta": "competitor pricing eliminates wasted seat cost with per-active-user pricing",
+  "compliance_changes": "competitor maintains SOC2 Type 2 and GDPR compliance",
+  "notes": [
+    "NexusCRM data migration tool available in DealStream",
+    "DealStream migration from NexusCRM estimated at 8 working hours"
+  ]
+}

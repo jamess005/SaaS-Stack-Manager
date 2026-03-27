@@ -1,0 +1,21 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "no native time-tracking",
+    "no client portal",
+    "no resource capacity planning",
+    "Gantt view basic — no dependency auto-update"
+  ],
+  "current_tool_status": [
+    "stable"
+  ],
+  "pricing_delta": "£220 (vs. £290 for TaskBridge)",
+  "compliance_changes": "UK data residency not available",
+  "notes": [
+    "migration from TaskBridge would mean losing dedicated PM depth"
+  ]
+}

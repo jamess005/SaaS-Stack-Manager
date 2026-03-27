@@ -1,0 +1,18 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "finance",
+  "competitor": "ExactSpend",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "price reduction by 10-15%"
+  ],
+  "current_tool_status": [
+    "reconciliation on datasets >5,000 rows takes 8–12 minutes"
+  ],
+  "pricing_delta": "from £420 to £365",
+  "compliance_changes": "IFRS 15 revenue recognition module not yet compliant; workaround in use",
+  "notes": [
+    "price reduction by competitor may indicate market pressure or strategic move"
+  ]
+}

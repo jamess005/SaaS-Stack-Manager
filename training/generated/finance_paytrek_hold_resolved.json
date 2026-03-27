@@ -1,0 +1,28 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "finance",
+  "competitor": "PayTrek",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "IFRS 15 revenue recognition module (GA)",
+    "audit trail export: PDF with digital signature",
+    "real-time bank feeds (Barclays, HSBC via Open Banking API)",
+    "multi-currency invoicing (80+ currencies including EUR, GBP, USD native)",
+    "UK payroll sync (PayAxis native integration)",
+    "AP automation with 3-way matching",
+    "cash flow forecasting"
+  ],
+  "current_tool_status": [
+    "No native multi-currency — EUR invoices require manual conversion and journal entries",
+    "Reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck",
+    "Revenue recognition module not IFRS 15 compliant — workaround in use",
+    "No real-time bank feed for Barclays Business accounts (only overnight sync)",
+    "Audit trail export is CSV only — external auditors have requested PDF with digital signature"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "PayTrek offers GDPR Data Processing Agreement, VaultLedger does not meet Meridian's UK GDPR obligations for EU client data due to US data residency",
+  "notes": [
+    "PayTrek has limitations on EU data residency and pricing increases if payment volume exceeds £500k/month"
+  ]
+}

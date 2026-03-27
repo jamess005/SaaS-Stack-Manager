@@ -1,0 +1,19 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Minor UI refresh — no new features"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "Mobile app crashes reported on iOS 17+"
+  ],
+  "pricing_delta": "£510 (NexusCRM) vs £462 (DealStream) — DealStream is £48 cheaper",
+  "compliance_changes": "DealStream:'soc2_type2': true, 'gdpr_eu_residency': true; NexusCRM:'soc2_type2': false, 'gdpr_eu_residency': false",
+  "notes": [
+    "Migration from NexusCRM to DealStream estimated at 8 working hours using built-in migration tool"
+  ]
+}

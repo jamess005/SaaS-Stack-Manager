@@ -1,0 +1,19 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "crm",
+  "competitor": "PipelineIQ",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "unlimited email sequence steps",
+    "native LinkedIn enrichment"
+  ],
+  "current_tool_status": [
+    "mobile app stability issues reported on iOS 17+"
+  ],
+  "pricing_delta": "from £510 to £460",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "PipelineIQ offers AI lead scoring in beta, but it's enterprise tier only"
+  ]
+}

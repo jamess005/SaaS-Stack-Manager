@@ -1,0 +1,18 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor feature update: LinkedIn enrichment now included in Professional tier"
+  ],
+  "current_tool_status": [
+    "resolved: native LinkedIn enrichment via LinkedIn API (v2.5) and email sequence builder limit increased to 10 steps (v4.2)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "active users: 19/22 seats, utilisation: 86%, inactive seats: 3, shelfware: False"
+  ]
+}

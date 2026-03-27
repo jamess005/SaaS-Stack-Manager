@@ -1,0 +1,20 @@
+{
+  "scenario_type": "both_signals",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Continuous performance feedback module",
+    "Price reduced by £55 (from £330 to £275)"
+  ],
+  "current_tool_status": [
+    "Performance review module performance degradation (annual cycles vs continuous feedback)"
+  ],
+  "pricing_delta": "reduced by £55",
+  "compliance_changes": "GDPR right-to-erasure automated process (manual process previously)",
+  "notes": [
+    "Competitor's price reduction may impact pricing strategy",
+    "Current tool's performance review module degradation may impact employee engagement"
+  ]
+}

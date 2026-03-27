@@ -1,0 +1,62 @@
+{
+  "name": "CrewPlan",
+  "based_on": "Personio / CharlieHR",
+  "category": "hr",
+  "monthly_cost_gbp": 360,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 2.40,
+  "pricing_tiers": [
+    {
+      "tier": "Core",
+      "cost_per_seat_gbp": 2.40,
+      "min_seats": 50,
+      "notes": "Full HRIS, GDPR automation, SSO included"
+    },
+    {
+      "tier": "Workforce",
+      "cost_per_seat_gbp": 3.60,
+      "min_seats": 50,
+      "notes": "Adds capacity planning, skills matrix, succession planning"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "sso_tiers": "all",
+    "audit_log": true,
+    "audit_log_exportable": true,
+    "gdpr_erasure_automated": true,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "automated GDPR right-to-erasure with self-service portal and compliance certificate (72hr SLA)",
+    "continuous performance feedback with 360-degree review cycles",
+    "eNPS and pulse survey tooling (configurable cadence)",
+    "onboarding workflow templates (25 consulting-specific templates included)",
+    "leave management and absence tracking",
+    "employee self-service portal",
+    "org chart and headcount reporting",
+    "learning management system (LMS) with CPD tracking",
+    "compensation band management",
+    "InsightDeck native connector for headcount analytics"
+  ],
+  "known_limitations": [
+    "PayAxis integration via certified connector (not native API) — Meridian's specific connector version untested",
+    "UK payroll sync requires connector configuration by CrewPlan implementation team (2-3 day lead time)",
+    "No built-in payroll engine — payroll must remain in PayAxis or equivalent",
+    "Workforce tier required for capacity planning and skills matrix"
+  ],
+  "integration_compatibility": [
+    "PayAxis (via connector)",
+    "InsightDeck",
+    "Microsoft Teams",
+    "VaultLedger",
+    "Zapier"
+  ],
+  "recent_trajectory": "growing_uk_market_share",
+  "last_updated": "2024-11-01",
+  "notes": "At 150 seats, Core tier = £360/mo vs PeoplePulse £385/mo = £25/mo saving (£300/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net = £108/yr — well below £1,200 threshold on direct saving alone. Operational gains: GDPR automation removes HIGH compliance risk, continuous feedback resolves PeoplePulse's most-flagged issue, eNPS and LMS fill current gaps. PayAxis connector risk is a concern — not native. PeoplePulse contract ends Nov 2025. Strong HOLD candidate — switch case is compelling operationally but economics and contract timing argue for reassessing at renewal."
+}

@@ -1,0 +1,57 @@
+{
+  "name": "PipelineIQ",
+  "based_on": "Pipedrive / Close",
+  "category": "crm",
+  "monthly_cost_gbp": 460,
+  "seat_count_assumed": 22,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 20.91,
+  "pricing_tiers": [
+    {
+      "tier": "Growth",
+      "cost_per_seat_gbp": 20.91,
+      "min_seats": 5
+    },
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 29.0,
+      "min_seats": 5
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 45.0,
+      "min_seats": 10
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true
+  },
+  "features": [
+    "contact and company management",
+    "deal pipeline with custom stages",
+    "email integration (Gmail + Outlook)",
+    "LinkedIn enrichment (native, 500 credits/seat/mo)",
+    "email sequences (unlimited steps)",
+    "meeting scheduler",
+    "reporting: deal velocity, pipeline, win/loss",
+    "mobile app (iOS + Android)",
+    "API with high rate limits (10k req/hr)"
+  ],
+  "known_limitations": [
+    "No conversation intelligence / call recording",
+    "AI lead scoring in beta \u2014 enterprise tier only",
+    "Limited custom object support"
+  ],
+  "integration_compatibility": [
+    "InsightDeck",
+    "VaultLedger",
+    "TeamSync",
+    "Zapier"
+  ],
+  "recent_trajectory": "steady_improvement",
+  "last_updated": "2024-10-01"
+}

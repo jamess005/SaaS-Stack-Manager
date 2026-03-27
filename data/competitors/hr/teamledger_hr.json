@@ -1,0 +1,54 @@
+{
+  "name": "TeamLedger HR",
+  "based_on": "BambooHR / Factorial",
+  "category": "hr",
+  "monthly_cost_gbp": 510,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 3.4,
+  "pricing_tiers": [
+    {
+      "tier": "Essentials",
+      "cost_per_seat_gbp": 3.4,
+      "min_seats": 1
+    },
+    {
+      "tier": "Complete",
+      "cost_per_seat_gbp": 5.5,
+      "min_seats": 1
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "gdpr_erasure_automated": false
+  },
+  "features": [
+    "leave management",
+    "employee self-service",
+    "document storage",
+    "org chart",
+    "onboarding workflow builder",
+    "performance review module (annual and quarterly cycles)",
+    "eNPS and pulse surveys",
+    "full LMS with course builder",
+    "compensation bands",
+    "UK payroll integration (PayAxis native)"
+  ],
+  "known_limitations": [
+    "GDPR erasure still manual \u2014 no automation",
+    "Priced above current PeoplePulse for comparable feature set",
+    "AI features in roadmap \u2014 not yet shipped"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "TeamSync",
+    "VaultLedger",
+    "Slack"
+  ],
+  "recent_trajectory": "stable",
+  "last_updated": "2024-10-15"
+}

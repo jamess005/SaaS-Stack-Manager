@@ -1,0 +1,20 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "hr",
+  "competitor": "WorkForge",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor feature: improved documentation for UK payroll native integration"
+  ],
+  "current_tool_status": [
+    "performance review module updated to continuous feedback with 90% user adoption",
+    "eNPS and pulse survey tooling added with 85% active users participating",
+    "manual onboarding setup replaced with 12 pre-built templates and 92% reduction in support tickets"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "UK residency compliance updated to include automated data deletion for GDPR right-to-erasure",
+  "notes": [
+    "ongoing adoption metrics: active users 123 / 150 seats, utilisation 82%, inactive seats 27"
+  ]
+}

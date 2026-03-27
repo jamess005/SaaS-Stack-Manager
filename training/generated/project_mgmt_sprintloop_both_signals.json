@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "project_mgmt",
+  "competitor": "SprintLoop",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "velocity tracking in sprint planning",
+    "reduced monthly cost to £220"
+  ],
+  "current_tool_status": [
+    "time-tracking via ChronoLog still required; utilisation in spreadsheets for resource capacity planning"
+  ],
+  "pricing_delta": "reduced by £70 (£290 -> £220)",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "consider SprintLoop's Business tier SSO limitations; evaluate ChronoLog time-tracking costs"
+  ]
+}

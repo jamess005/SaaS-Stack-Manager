@@ -1,0 +1,19 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "EUR invoicing support in beta",
+    "real-time Barclays bank feed expected Q2 2025"
+  ],
+  "current_tool_status": [
+    "reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "IFRS 15 revenue recognition module still not compliant in NovaPay; audit trail export is CSV only",
+  "notes": [
+    "NovaPay's EUR invoicing support is not yet GA; VaultLedger's reconciliation issue persists"
+  ]
+}

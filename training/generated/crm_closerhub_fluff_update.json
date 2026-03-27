@@ -1,0 +1,19 @@
+{
+  "scenario_type": "fluff_update",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "enhanced workflows",
+    "improved performance"
+  ],
+  "current_tool_status": [
+    "mobile app is unstable — crashes reported on iOS 17+"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "no new features shipped; competitor update has no concrete changes"
+  ]
+}

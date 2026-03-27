@@ -1,0 +1,19 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment",
+    "unlimited email sequences with A/B testing"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist."
+  ],
+  "pricing_delta": "price reduction from £510 to £418",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "migration complexity rated HIGH, estimated 20 working hours for full data migration from NexusCRM including pipeline history"
+  ]
+}

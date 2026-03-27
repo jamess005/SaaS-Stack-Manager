@@ -1,0 +1,24 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "hr",
+  "competitor": "CrewPlan",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor documentation refresh"
+  ],
+  "current_tool_status": [
+    "Performance review module now offers continuous feedback with real-time ratings (95% user adoption, 30% reduction in annual cycle processing time)",
+    "eNPS and pulse survey tooling now integrated with HRIS data for seamless analysis",
+    "Onboarding workflows now utilize automated templates with 90% reduction in manual setup time"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "GDPR right-to-erasure automated process now available within 24 hours (previously 72 hours)",
+  "notes": [
+    "Current tool's improved performance review module has led to a significant reduction in annual cycle processing time, making it a more attractive option for users."
+  ],
+  "push_signals": [
+    "PeoplePulse's performance review module now offers continuous feedback with real-time ratings, reducing the need for manual processing and increasing user adoption.",
+    "Current tool's improved onboarding workflows have reduced manual setup time by 90%, making it a more efficient option for users."
+  ]
+}

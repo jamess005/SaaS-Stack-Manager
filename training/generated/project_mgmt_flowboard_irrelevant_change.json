@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "project_mgmt",
+  "competitor": "FlowBoard",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native inventory management",
+    "auto-replenishment feature"
+  ],
+  "current_tool_status": [
+    "stable"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "feature irrelevant to a UK B2B management consultancy"
+  ]
+}

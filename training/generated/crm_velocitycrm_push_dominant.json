@@ -1,0 +1,20 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "crm",
+  "competitor": "VelocityCRM",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Minor UI refresh"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "Mobile app crashes increased from 5/day to 15/day",
+    "Support response time degraded from 24h to 48h"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Active users decreased to 18/22 seats"
+  ]
+}

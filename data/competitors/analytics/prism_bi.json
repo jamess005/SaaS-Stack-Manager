@@ -1,0 +1,66 @@
+{
+  "name": "Prism BI",
+  "based_on": "Tableau / Power BI embedded",
+  "category": "analytics",
+  "monthly_cost_gbp": 520,
+  "seat_count_assumed": 12,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_flat_gbp": 520,
+      "max_seats": 20,
+      "notes": "Full BI suite, all connectors, embedded reporting"
+    },
+    {
+      "tier": "Enterprise",
+      "cost_flat_gbp": 890,
+      "max_seats": "unlimited",
+      "notes": "Adds on-prem option, custom SLA, dedicated data engineer"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "data_lineage_tracking": true,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "60+ native data connectors including NexusCRM, VaultLedger, TaskBridge, PayAxis",
+    "data lineage tracking with column-level provenance",
+    "anomaly detection with ML-powered root cause analysis (GA)",
+    "mobile-responsive dashboard viewer with offline mode",
+    "embedded client reporting — clients can interact with live data in-portal (white-label)",
+    "self-serve report builder for non-technical users",
+    "automated data refresh scheduling (up to 1-minute intervals)",
+    "Slack, Teams, and email threshold alerting",
+    "InsightDeck migration assistant with dashboard conversion",
+    "ISO 27001 certified in addition to SOC2 Type II"
+  ],
+  "known_limitations": [
+    "Requires a dedicated analytics resource to configure and maintain — vendor estimates 20+ hours initial setup",
+    "£520/mo vs InsightDeck £340/mo — £180/mo cost increase with no direct saving",
+    "Self-serve report builder has a steep learning curve — not suitable for occasional users without training",
+    "Overkill for teams without a dedicated data analyst on staff",
+    "Advanced features (ML anomaly detection, column-level lineage) require initial data modelling investment"
+  ],
+  "integration_compatibility": [
+    "NexusCRM",
+    "VaultLedger",
+    "TaskBridge",
+    "InsightDeck (migration only)",
+    "PayAxis",
+    "Slack",
+    "Microsoft Teams",
+    "Zapier",
+    "PostgreSQL",
+    "Snowflake",
+    "BigQuery"
+  ],
+  "recent_trajectory": "enterprise_focused_feature_complete",
+  "last_updated": "2024-09-30",
+  "notes": "Technically resolves all InsightDeck known issues. However: £520/mo vs £340/mo = £180/mo MORE expensive (£2,160/yr cost increase). Migration at 20hrs × £48 = £960, amortised £320/yr. Net = -£2,480/yr (negative ROI). Additionally: requires dedicated analyst resource not currently on staff, and 20+ hours setup exceeds migration budget. Feature excellence is not in question, but economic case is strongly negative. STAY verdict — cost increase and implementation overhead make this non-viable despite feature quality."
+}

@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "project_mgmt",
+  "competitor": "SprintLoop",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "UK data residency not available",
+    "SOC2 certification in progress — expected H2 2025",
+    "No SSO on any tier"
+  ],
+  "current_tool_status": [
+    "stable"
+  ],
+  "pricing_delta": "£240 (competitor) vs £290 (current tool)",
+  "compliance_changes": "SOC2 certification in progress, no UK data residency, no SSO on any tier",
+  "notes": [
+    "Competitor's SOC2 certification expected in H2 2025"
+  ]
+}

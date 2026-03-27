@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "embedded reporting (white-label, Enterprise only)",
+    "data lineage tracking",
+    "mobile-responsive dashboards"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "ISO27001 compliance added",
+  "notes": [
+    "client adoption rate: 75% utilisation, 9/12 active users"
+  ]
+}

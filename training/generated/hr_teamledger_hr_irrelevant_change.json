@@ -1,0 +1,18 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "shipped automated AI-powered product recommendations for retail sales associates"
+  ],
+  "current_tool_status": [
+    "Performance review module is outdated — no continuous feedback, only annual cycles"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "GDPR erasure still manual — no automation",
+  "notes": [
+    "feature has no relevance to a UK B2B management consultancy"
+  ]
+}

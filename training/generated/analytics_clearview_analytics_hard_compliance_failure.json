@@ -1,0 +1,34 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "embedded reporting (white-label, Enterprise only)",
+    "mobile-responsive dashboards",
+    "data lineage tracking",
+    "row-level security"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "no self-serve embedded reporting for clients — requires export and manual PDF",
+    "ML-based anomaly detection promised on roadmap since Q2 2023, still not shipped",
+    "no mobile view — dashboards non-functional on phones/tablets",
+    "Data lineage tracking absent — compliance team flagging this for upcoming ISO audit"
+  ],
+  "pricing_delta": "increased by £50 per month",
+  "compliance_changes": {
+    "soc2_type2": false,
+    "gdpr_eu_residency": true,
+    "uk_residency": false,
+    "sso_saml": false,
+    "audit_log": false,
+    "data_lineage": false,
+    "iso27001": false
+  },
+  "notes": [
+    "ClearView Analytics has a NexusCRM connector rate-limit issue similar to InsightDeck",
+    "White-label embedded reporting requires Enterprise tier (+£17.50/seat)"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "analytics",
+  "competitor": "PulseMetrics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "UK data residency not available"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours"
+  ],
+  "pricing_delta": "£310 (competitor) vs £340 (current tool)",
+  "compliance_changes": "Compliance gaps identified: UK data residency not available, SOC2 certification in progress — expected H2 2025, no SSO on any tier, no audit log",
+  "notes": [
+    "UK data residency compliance gap may impact large enterprise clients"
+  ]
+}

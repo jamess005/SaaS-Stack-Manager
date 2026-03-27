@@ -1,0 +1,21 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "LinkedIn enrichment via CloserHub Enrich add-on",
+    "AI lead scoring"
+  ],
+  "current_tool_status": [
+    "Mobile app stability worsened",
+    "Reporting dashboards still not customisable without paying for add-on"
+  ],
+  "pricing_delta": "CloserHub price increased by £170 from £510",
+  "compliance_changes": "CloserHub added SOC 2 Type 2 compliance and UK residency",
+  "notes": [
+    "EU data residency requires Advanced plan",
+    "feature in preview — GA date TBD"
+  ]
+}

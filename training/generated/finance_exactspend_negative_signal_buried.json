@@ -1,0 +1,22 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "finance",
+  "competitor": "ExactSpend",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Multi-currency invoicing in 35+ currencies including EUR, USD, CHF native",
+    "Real-time bank feeds for Barclays, HSBC, Lloyds, NatWest, Monzo, Starling"
+  ],
+  "current_tool_status": [
+    "No native multi-currency — EUR invoices require manual conversion and journal entries",
+    "Reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck"
+  ],
+  "pricing_delta": "£420 (VaultLedger) vs £365 (ExactSpend)",
+  "compliance_changes": "ExactSpend has SOC2 Type 2 and GDPR EU residency, VaultLedger has MTD VAT filing",
+  "notes": [
+    "ExactSpend's IFRS 15 revenue recognition module is planned Q3 2025 — not yet GA; workaround required until then",
+    "Multi-entity consolidation requires ExactSpend's Advanced tier (£540/mo)",
+    "EUR invoice template customisation limited compared to dedicated invoicing tools"
+  ]
+}

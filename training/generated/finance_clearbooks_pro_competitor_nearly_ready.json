@@ -1,0 +1,19 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "invoicing with EUR support 'in beta'",
+    "bank reconciliation in Q2 2025"
+  ],
+  "current_tool_status": [
+    "No native multi-currency; manual conversion and journal entries"
+  ],
+  "pricing_delta": "competitive",
+  "compliance_changes": "SOC2 Type II not compliant; MTD VAT filing via competitor",
+  "notes": [
+    "Competitor's feature directly addresses current tool's main gap; not ready to switch today"
+  ]
+}

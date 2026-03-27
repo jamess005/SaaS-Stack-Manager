@@ -1,0 +1,61 @@
+{
+  "name": "MetricFlux",
+  "based_on": "Geckoboard / Klipfolio",
+  "category": "analytics",
+  "monthly_cost_gbp": 290,
+  "seat_count_assumed": 12,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Business",
+      "cost_flat_gbp": 290,
+      "max_seats": 15
+    },
+    {
+      "tier": "Advanced",
+      "cost_flat_gbp": 450,
+      "max_seats": 30,
+      "notes": "Adds unlimited data sources, custom SQL, dedicated support"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "data_lineage_tracking": true,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "real-time dashboards with sub-minute refresh rates",
+    "data lineage tracking with full audit trail of data transformations",
+    "anomaly detection powered by statistical models (GA)",
+    "mobile-responsive dashboard viewer (iOS and Android)",
+    "white-label client dashboards (up to 10 included)",
+    "NexusCRM native connector (real-time, no rate limit issues)",
+    "VaultLedger native connector",
+    "InsightDeck migration assistant (import existing dashboards)",
+    "email and Slack alert triggers on metric thresholds"
+  ],
+  "known_limitations": [
+    "8 native data connectors on Business tier — TaskBridge connector in roadmap Q2 2025, not yet available",
+    "Custom SQL queries require Advanced tier",
+    "Limited to 15 seats on Business tier",
+    "No embedded reporting for client self-serve (white-label view is read-only for clients)",
+    "Data connector library significantly smaller than InsightDeck (8 vs 40+ native connectors)"
+  ],
+  "integration_compatibility": [
+    "NexusCRM",
+    "VaultLedger",
+    "Slack",
+    "Microsoft Teams",
+    "Zapier",
+    "Google Sheets",
+    "PostgreSQL",
+    "REST API (generic)"
+  ],
+  "recent_trajectory": "fast_moving_real_time_focus",
+  "last_updated": "2024-11-01",
+  "notes": "At Business tier: £290/mo vs InsightDeck £340/mo = £50/mo saving (£600/yr). Migration at 8hrs × £48 = £384, amortised £128/yr. Net = £472/yr — below £1,200 threshold. Resolves: data lineage tracking (compliance gap), anomaly detection, CRM rate limit issue (real-time native connector), mobile view. Does NOT resolve: TaskBridge connector absent (Q2 2025 roadmap), client self-serve embedded reporting. Partial stack coverage is the blocker. Strong HOLD candidate — reassess Q2 2025 when TaskBridge connector ships."
+}

@@ -1,0 +1,20 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Minor UI refresh — no new features"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "support response time degraded from 24h to 72h",
+    "data lineage tracking absent — compliance team flagging this for upcoming ISO audit"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "SOC2 Type II compliance also certified",
+  "notes": [
+    "InsightDeck migration assistant with dashboard conversion is available for Prism BI customers"
+  ]
+}

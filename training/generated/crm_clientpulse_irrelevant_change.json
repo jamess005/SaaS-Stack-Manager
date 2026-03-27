@@ -1,0 +1,18 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native retail POS integration with inventory management"
+  ],
+  "current_tool_status": [
+    "mobile app instability on iOS 17+"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "migration complexity rated HIGH by vendor — estimated 20 working hours"
+  ]
+}

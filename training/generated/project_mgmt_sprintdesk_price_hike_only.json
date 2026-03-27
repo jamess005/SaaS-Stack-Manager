@@ -1,0 +1,21 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "price reduction by 10-15%"
+  ],
+  "current_tool_status": [
+    "inactive seats: 52",
+    "shelfware: true",
+    "utilisation: 65%",
+    "active users: 98/150 seats"
+  ],
+  "pricing_delta": "from £410 to £357.50",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "SprintDesk's price reduction may impact its competitive positioning"
+  ]
+}

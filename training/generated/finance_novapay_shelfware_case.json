@@ -1,0 +1,21 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption declined to 87%",
+    "team is paying for unused capacity"
+  ],
+  "pricing_delta": "NovaPay offers per-active-user pricing that would eliminate wasted seat cost",
+  "compliance_changes": "NovaPay compliance: IFRS 15 revenue recognition not available",
+  "notes": [
+    "NovaPay EUR invoicing not supported — GBP only with manual conversion",
+    "NovaPay Audit trail export is CSV only — no PDF with digital signature"
+  ]
+}

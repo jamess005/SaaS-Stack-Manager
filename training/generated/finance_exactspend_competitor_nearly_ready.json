@@ -1,0 +1,27 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "finance",
+  "competitor": "ExactSpend",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native multi-currency invoicing",
+    "real-time bank feeds",
+    "fast reconciliation engine",
+    "audit trail export: PDF with digital signature",
+    "UK payroll sync",
+    "project billing and profitability by engagement",
+    "cash flow forecasting"
+  ],
+  "current_tool_status": [
+    "manual conversion and journal entries for EUR invoices",
+    "reconciliation on datasets >5,000 rows takes 8–12 minutes",
+    "workaround for IFRS 15 revenue recognition module"
+  ],
+  "pricing_delta": "competitive price (£365) vs current tool (£420)",
+  "compliance_changes": "ExactSpend has SOC2 Type 2 and GDPR compliance; VaultLedger has SOC2 Type 2",
+  "notes": [
+    "ExactSpend's IFRS 15 revenue recognition module is not yet GA and planned for Q3 2025",
+    "manual conversion and journal entries for EUR invoices in VaultLedger"
+  ]
+}

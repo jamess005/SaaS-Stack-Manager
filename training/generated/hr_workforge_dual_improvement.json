@@ -1,0 +1,21 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "hr",
+  "competitor": "WorkForge",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Native UK payroll integration (PayAxis, BrightPay, Sage Payroll)",
+    "GDPR right-to-erasure automation",
+    "Continuous performance feedback"
+  ],
+  "current_tool_status": [
+    "Performance review module updated to include continuous feedback (80% of users enabled)",
+    "Onboarding workflows partially automated with new templates (30% reduction in manual setup)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "WorkPulse SOC 2 Type 2 certification now covers all EU regions",
+  "notes": [
+    "Active users remain at 123 / 150 seats; utilisation still at 82%"
+  ]
+}

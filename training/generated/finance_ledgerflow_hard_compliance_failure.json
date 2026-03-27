@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "finance",
+  "competitor": "LedgerFlow",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "UK data residency not available",
+    "SOC2 certification in progress"
+  ],
+  "current_tool_status": [
+    "stable"
+  ],
+  "pricing_delta": "£380 (LedgerFlow) vs £420 (VaultLedger)",
+  "compliance_changes": "SOC2 certification not compliant, UK data residency not available",
+  "notes": [
+    "SOC2 certification expected H2 2025",
+    "UK residency not guaranteed"
+  ]
+}

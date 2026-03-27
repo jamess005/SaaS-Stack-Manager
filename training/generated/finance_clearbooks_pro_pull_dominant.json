@@ -1,0 +1,21 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Multi-currency invoicing (GBP, EUR, USD)",
+    "Real-time bank feeds",
+    "IFRS 15 compliant revenue recognition module"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist."
+  ],
+  "pricing_delta": "slightly reduced",
+  "compliance_changes": "SOC2 Type II certification now available",
+  "notes": [
+    "Migration tooling available for existing VaultLedger customers",
+    "Current tool still lacks SOC2 Type II certification, IFRS 15 compliance, and real-time bank feeds"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "data lineage tracking with column-level provenance",
+    "anomaly detection with ML-powered root cause analysis (GA)",
+    "mobile-responsive dashboard viewer with offline mode",
+    "embedded client reporting — clients can interact with live data in-portal (white-label)",
+    "self-serve report builder for non-technical users",
+    "automated data refresh scheduling (up to 1-minute intervals)",
+    "Slack, Teams, and email threshold alerting",
+    "InsightDeck migration assistant with dashboard conversion"
+  ],
+  "current_tool_status": [
+    "API rate limits hit above 50k records — dashboards stale by up to 4 hours",
+    "no self-serve embedded reporting for clients — requires export and manual PDF"
+  ],
+  "pricing_delta": "£180/mo cost increase with no direct saving",
+  "compliance_changes": "Prism BI ISO 27001 certified in addition to SOC2 Type II",
+  "notes": [
+    "Prism BI requires a dedicated analytics resource to configure and maintain — vendor estimates 20+ hours initial setup",
+    "steep learning curve for self-serve report builder",
+    "overkill for teams without a dedicated data analyst on staff",
+    "advanced features require initial data modelling investment"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "feature in beta addresses main gap",
+    "mobile app available"
+  ],
+  "current_tool_status": [
+    "shelfware rate 52/150 seats",
+    "inactive seats 52"
+  ],
+  "pricing_delta": "competitive",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "migration would mean losing dedicated PM depth"
+  ]
+}

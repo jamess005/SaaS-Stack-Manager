@@ -1,0 +1,20 @@
+{
+  "scenario_type": "both_signals",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in time tracking with weekly timesheet submission and manager approval",
+    "client portal with deliverable commenting, approval workflow, and status updates"
+  ],
+  "current_tool_status": [
+    "Gantt chart view no longer auto-updates on dependency changes"
+  ],
+  "pricing_delta": "reduced pricing, new price £285",
+  "compliance_changes": "SOC2 Type 2 certification now available",
+  "notes": [
+    "Competitor's built-in invoicing integration requires additional setup with VaultLedger or LedgerFlow",
+    "Current tool's Gantt chart auto-update issue may be related to projects with >150 tasks"
+  ]
+}

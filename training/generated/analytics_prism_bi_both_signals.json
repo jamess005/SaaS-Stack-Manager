@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "embedded client reporting — clients can interact with live data in-portal (white-label)",
+    "automated data refresh scheduling (up to 1-minute intervals)"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours"
+  ],
+  "pricing_delta": "-£180/mo compared to InsightDeck (£340/mo -> £520/mo)",
+  "compliance_changes": "SOC2 Type II certification added to existing GDPR EU residency, UK residency, SSO SAML, audit log, data lineage tracking, and MFA enforceable compliance",
+  "notes": [
+    "Prism BI requires a dedicated analytics resource for initial setup (~20+ hours)"
+  ]
+}

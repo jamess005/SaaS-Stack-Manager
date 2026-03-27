@@ -1,0 +1,24 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "shift scheduling and rota management",
+    "clock-in / clock-out with geofencing"
+  ],
+  "current_tool_status": [
+    "Performance review module is outdated — no continuous feedback, only annual cycles",
+    "No built-in eNPS or pulse survey tooling",
+    "Onboarding workflows require manual setup per new hire — no templates",
+    "UK payroll integration with PayAxis requires a middleware connector that breaks quarterly",
+    "GDPR right-to-erasure requests must be handled manually via support ticket"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "GDPR right-to-erasure is manual process only — no automation, support ticket required",
+  "notes": [
+    "Audit log not exportable in Standard or Plus tier",
+    "Designed for shift-based workforces — poor fit for knowledge worker / consulting use cases"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in meeting scheduler with calendar sync",
+    "pipeline health dashboard with win-rate analytics",
+    "InsightDeck native connector"
+  ],
+  "current_tool_status": [
+    "API rate limits cause sync delays with InsightDeck (analytics tool), with 17% of syncs delayed (metric: avg. sync delay: 2.5 hours)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "DealStream now has SOC2 Type 2 compliance; NexusCRM compliance unchanged",
+  "notes": [
+    "NexusCRM mobile app stability issues persist; DealStream has full feature parity on mobile"
+  ]
+}

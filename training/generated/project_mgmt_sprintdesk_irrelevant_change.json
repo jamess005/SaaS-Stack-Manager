@@ -1,0 +1,22 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "released a new 'Inventory Management' module for retail POS",
+    "introduced a native 'Kitchen Display System' for restaurants"
+  ],
+  "current_tool_status": [
+    "Active users: 98 / 150 seats",
+    "Utilisation: 65%",
+    "Inactive seats: 52",
+    "Shelfware: True"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "SprintDesk's feature set is largely irrelevant to Meridian's B2B consulting operations"
+  ]
+}

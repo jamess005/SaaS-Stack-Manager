@@ -1,0 +1,62 @@
+{
+  "name": "WorkForge",
+  "based_on": "Personio / CharlieHR",
+  "category": "hr",
+  "monthly_cost_gbp": 420,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 2.8,
+  "pricing_tiers": [
+    {
+      "tier": "Core",
+      "cost_per_seat_gbp": 2.8,
+      "min_seats": 10
+    },
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 4.2,
+      "min_seats": 10
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 6.0,
+      "min_seats": 50
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "gdpr_erasure_automated": true
+  },
+  "features": [
+    "leave and absence management",
+    "employee self-service portal",
+    "document storage with e-signature",
+    "org chart",
+    "onboarding workflow templates (library of 12)",
+    "UK payroll native integration (PayAxis, BrightPay, Sage Payroll)",
+    "GDPR right-to-erasure automation",
+    "continuous performance feedback",
+    "pulse surveys and eNPS",
+    "learning management system (basic)",
+    "offboarding workflows",
+    "audit log for all HR data access"
+  ],
+  "known_limitations": [
+    "LMS limited to uploading materials \u2014 no course builder",
+    "Compensation benchmarking requires Enterprise tier",
+    "Reporting suite less flexible than PeoplePulse"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "BrightPay",
+    "TeamSync",
+    "VaultLedger",
+    "Slack"
+  ],
+  "recent_trajectory": "strong_improvement",
+  "last_updated": "2024-11-01"
+}

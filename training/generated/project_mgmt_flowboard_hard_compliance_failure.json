@@ -1,0 +1,21 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "project_mgmt",
+  "competitor": "FlowBoard",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native time-tracking eliminates ChronoLog overlap",
+    "client portal with commenting and deliverable approval"
+  ],
+  "current_tool_status": [
+    "shelfware: 52 inactive seats",
+    "manual refresh required for Gantt chart view"
+  ],
+  "pricing_delta": "FlowBoard is £50 more expensive (£340) than TaskBridge (£290)",
+  "compliance_changes": "FlowBoard has explicit compliance gaps: UK data residency not available, no SSO on any tier, and no audit log",
+  "notes": [
+    "UK data residency not available may impact FlowBoard adoption in the UK",
+    "FlowBoard's native time-tracking may reduce ChronoLog usage and associated costs"
+  ]
+}

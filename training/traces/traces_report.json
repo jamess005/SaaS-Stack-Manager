@@ -1,0 +1,22 @@
+{
+  "signal_files_processed": 325,
+  "passed": 325,
+  "skipped": 0,
+  "errors": 0,
+  "total_traces_written": 325,
+  "traces_per_scenario": {
+    "both_signals": 25,
+    "competitor_nearly_ready": 25,
+    "current_tool_rally": 25,
+    "dual_improvement": 25,
+    "fluff_update": 25,
+    "hard_compliance_failure": 25,
+    "hold_resolved": 25,
+    "irrelevant_change": 25,
+    "negative_signal_buried": 25,
+    "price_hike_only": 25,
+    "pull_dominant": 25,
+    "push_dominant": 25,
+    "shelfware_case": 25
+  }
+}

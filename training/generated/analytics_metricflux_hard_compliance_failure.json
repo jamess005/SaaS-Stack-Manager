@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "no UK data residency available",
+    "SOC2 certification in progress — expected H2 2025",
+    "no SSO on any tier",
+    "no audit log"
+  ],
+  "current_tool_status": [],
+  "pricing_delta": "price decreased by £50 per month",
+  "compliance_changes": "compliance gaps identified",
+  "notes": [
+    "MetricFlux has a smaller data connector library compared to InsightDeck",
+    "InsightDeck's NexusCRM sync still hits API rate limits above 50k records"
+  ]
+}

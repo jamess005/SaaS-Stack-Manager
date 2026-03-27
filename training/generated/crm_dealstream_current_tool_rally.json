@@ -1,0 +1,18 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor feature update: added support for send-time optimisation in email sequences"
+  ],
+  "current_tool_status": [
+    "resolved: API rate limits causing sync delays with InsightDeck (analytics tool)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "mobile app stability improved with iOS 17+ fixes"
+  ]
+}

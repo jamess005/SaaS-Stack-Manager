@@ -1,0 +1,18 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68, feature adoption is declining, and the team is paying for unused capacity"
+  ],
+  "pricing_delta": "inactive seats on MetricFlux Business tier would eliminate wasted seat cost (£340 vs £290 per-active-user pricing)",
+  "compliance_changes": "InsightDeck data lineage tracking absent — compliance team flagging this for upcoming ISO audit, MetricFlux has data lineage tracking with full audit trail",
+  "notes": [
+    "consider InsightDeck ML-based anomaly detection still not shipped, MetricFlux has statistical models for anomaly detection"
+  ]
+}

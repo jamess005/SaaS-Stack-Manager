@@ -1,0 +1,21 @@
+{
+  "scenario_type": "both_signals",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment",
+    "unlimited email sequences with A/B testing"
+  ],
+  "current_tool_status": [
+    "Mobile app stability worsened (iOS 17+ crashes reported",
+    "API rate limits cause sync delays with InsightDeck, impacting 14% of API calls"
+  ],
+  "pricing_delta": "-£92 (monthly cost reduced from £510 to £418)",
+  "compliance_changes": "SOC 2 Type 2 certification added to existing compliance suite",
+  "notes": [
+    "Migration complexity rated HIGH by vendor — estimated 20 working hours for full data migration from NexusCRM",
+    "Utilisation: 86% (active users: 19 / 22 seats)"
+  ]
+}

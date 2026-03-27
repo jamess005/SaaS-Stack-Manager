@@ -1,0 +1,21 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor documentation refresh",
+    "native Microsoft Teams notifications"
+  ],
+  "current_tool_status": [
+    "resolved API rate limits causing sync delays with InsightDeck (analytics tool) — improved API rate limits (version 3.2.1)",
+    "enhanced email sequence builder now supports up to 10 steps",
+    "mobile app stability improved with iOS 17+ crash fixes (version 2.5.3)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "active users: 19/22 seats; utilisation: 86%"
+  ]
+}

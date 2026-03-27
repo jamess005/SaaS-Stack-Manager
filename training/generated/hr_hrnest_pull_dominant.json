@@ -1,0 +1,20 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "continuous feedback module",
+    "built-in eNPS or pulse survey tooling",
+    "templates for onboarding workflows"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist."
+  ],
+  "pricing_delta": "price reduction to £295",
+  "compliance_changes": "GDPR right-to-erasure requests can be handled automatically via HRNest's built-in feature",
+  "notes": [
+    "migration tooling available for PeoplePulse"
+  ]
+}

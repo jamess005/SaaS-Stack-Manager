@@ -1,0 +1,20 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Minor documentation refresh to improve Standard tier onboarding checklist clarity"
+  ],
+  "current_tool_status": [
+    "Performance review module now offers continuous feedback with weekly cycles and automated feedback loops",
+    "Built-in eNPS and pulse survey tooling now available, reducing manual handling of UK payroll integration with PayAxis",
+    "Automated GDPR right-to-erasure requests via native support for PeoplePulse"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "SOC2 Type II compliance now met, enabling Meridian's adoption",
+  "notes": [
+    "Current tool's improved performance review module and automated GDPR handling have reduced the case for switching"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "name": "VelocityCRM",
+  "based_on": "Salesforce Essentials / Zoho CRM",
+  "category": "crm",
+  "monthly_cost_gbp": 390,
+  "seat_count_assumed": 22,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 17.73,
+  "pricing_tiers": [
+    {
+      "tier": "Core",
+      "cost_per_seat_gbp": 17.73,
+      "min_seats": 1
+    },
+    {
+      "tier": "Advanced",
+      "cost_per_seat_gbp": 28.0,
+      "min_seats": 1
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": false,
+    "sso_saml": false,
+    "audit_log": false
+  },
+  "features": [
+    "contact and company management",
+    "deal pipeline",
+    "email integration (Gmail only natively)",
+    "basic reporting",
+    "mobile app (iOS only, Android in beta)"
+  ],
+  "known_limitations": [
+    "No SSO on Core tier \u2014 Advanced required",
+    "No audit log on either tier",
+    "UK data residency not available \u2014 EU (Ireland) only",
+    "No LinkedIn enrichment",
+    "Outlook integration via third-party plugin only",
+    "Android app in beta \u2014 unstable"
+  ],
+  "integration_compatibility": [
+    "Zapier",
+    "InsightDeck (limited)"
+  ],
+  "recent_trajectory": "slow_development",
+  "last_updated": "2024-07-01"
+}

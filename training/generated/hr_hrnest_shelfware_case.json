@@ -1,0 +1,20 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "active user adoption declined to 82%",
+    "utilisation dropped to 82%"
+  ],
+  "pricing_delta": "HRNest offers per-active-user pricing",
+  "compliance_changes": "HRNest added automated GDPR erasure",
+  "notes": [
+    "HRNest lacks SOC2 Type II certification"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "project_mgmt",
+  "competitor": "SprintLoop",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Added 'Automated Store Inventory Reconciliation' feature for retail POS clients"
+  ],
+  "current_tool_status": [
+    "Time-tracking still requires separate tool (ChronoLog) at £95/mo"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Feature has no relevance to Meridian's office-based consulting projects"
+  ]
+}

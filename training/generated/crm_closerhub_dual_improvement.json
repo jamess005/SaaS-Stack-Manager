@@ -1,0 +1,21 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "unlimited email sequences",
+    "AI lead scoring",
+    "conversation intelligence"
+  ],
+  "current_tool_status": [
+    "API rate limits partially addressed (increased from 100 to 150 requests/minute)",
+    "mobile app stability improved (crash rate reduced by 30% on iOS 17+)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "SOC2 Type 2 certification expanded to include UK residency",
+  "notes": [
+    "trajectory warrants reassessment in 3 months"
+  ]
+}

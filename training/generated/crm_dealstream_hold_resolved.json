@@ -1,0 +1,29 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "AI-powered deal scoring and next-step recommendations",
+    "unlimited email sequences with send-time optimisation",
+    "Outlook and Gmail native bidirectional sync",
+    "customisable pipeline stages with drag-and-drop automation",
+    "mobile app (iOS and Android, full feature parity)",
+    "built-in meeting scheduler with calendar sync",
+    "real-time activity feed and deal timeline",
+    "pipeline health dashboard with win-rate analytics",
+    "NexusCRM data migration tool (automated import)",
+    "InsightDeck native connector"
+  ],
+  "current_tool_status": [
+    "Mobile app instability persists — crashes reported on iOS 17+",
+    "Email sequence builder still limited to 5 steps"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "DealStream has UK data residency; NexusCRM does not",
+  "notes": [
+    "DealStream migration tool may require 8 working hours to set up",
+    "UK data residency not available on DealStream (EU only)"
+  ]
+}

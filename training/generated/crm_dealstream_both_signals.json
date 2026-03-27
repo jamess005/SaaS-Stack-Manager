@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "unlimited email sequences with send-time optimisation",
+    "mobile app (iOS and Android, full feature parity)"
+  ],
+  "current_tool_status": [
+    "API rate limits causing sync delays with InsightDeck (analytics tool) worsened; previously 2 hours delay, now 4 hours delay"
+  ],
+  "pricing_delta": "-£48 (reduced to £462 from £510)",
+  "compliance_changes": "UK data residency not available — EU (Frankfurt) only",
+  "notes": [
+    "Migration from NexusCRM estimated at 8 working hours using built-in migration tool"
+  ]
+}

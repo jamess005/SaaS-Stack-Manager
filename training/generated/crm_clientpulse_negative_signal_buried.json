@@ -1,0 +1,21 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment",
+    "unlimited email sequences with A/B testing"
+  ],
+  "current_tool_status": [
+    "Mobile app is unstable — crashes reported on iOS 17+",
+    "Reporting dashboards not customisable without paying for add-on"
+  ],
+  "pricing_delta": "price decreased to £418",
+  "compliance_changes": "added support for GDPR EU residency",
+  "notes": [
+    "migration complexity rated HIGH by vendor — estimated 20 working hours for full data migration",
+    "EU data residency requires Advanced plan"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption declining",
+    "team paying for unused capacity"
+  ],
+  "pricing_delta": "SprintDesk offers per-active-user pricing",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Consider migration to SprintDesk to eliminate wasted seat cost"
+  ]
+}

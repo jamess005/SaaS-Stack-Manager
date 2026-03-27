@@ -1,0 +1,62 @@
+{
+  "name": "ClientPulse",
+  "based_on": "Pipedrive / Copper CRM",
+  "category": "crm",
+  "monthly_cost_gbp": 418,
+  "seat_count_assumed": 22,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 19.0,
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 19.0,
+      "min_seats": 5,
+      "notes": "All features including SSO and LinkedIn enrichment included on all tiers"
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 28.0,
+      "min_seats": 20,
+      "notes": "Dedicated CSM, custom SLA, priority support"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "sso_tiers": "all",
+    "audit_log": true,
+    "audit_log_exportable": true,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "native LinkedIn Sales Navigator enrichment (one-click contact import)",
+    "unlimited email sequences with A/B testing",
+    "Outlook and Gmail native integration (bidirectional sync)",
+    "customisable pipeline stages with automation triggers",
+    "mobile app (iOS and Android, stable release)",
+    "deal timeline and activity log",
+    "role-based access controls",
+    "InsightDeck and VaultLedger certified integrations",
+    "real-time pipeline reporting and quota tracking",
+    "Microsoft Teams notifications"
+  ],
+  "known_limitations": [
+    "Migration complexity rated HIGH by vendor — estimated 20 working hours for full data migration from NexusCRM including pipeline history",
+    "No territory management module",
+    "No built-in CPQ or quote generation",
+    "Vendor-assisted onboarding required for SSO setup (adds to migration time)"
+  ],
+  "integration_compatibility": [
+    "VaultLedger",
+    "InsightDeck",
+    "TaskBridge",
+    "PayAxis",
+    "Microsoft Teams",
+    "Zapier"
+  ],
+  "recent_trajectory": "strong_growth_feature_rich",
+  "last_updated": "2024-09-01",
+  "notes": "UK-headquartered vendor. Strong fit for consulting CRM needs but high migration complexity. At 22 seats, Professional tier = £418/mo vs NexusCRM £510/mo = £92/mo saving (£1,104/yr). Migration at 20hrs × £48 = £960 one-time, amortised £320/yr. Net = £784/yr — below £1,200 threshold. Switch case depends on operational gains (LinkedIn enrichment, Outlook native, mobile stability)."
+}

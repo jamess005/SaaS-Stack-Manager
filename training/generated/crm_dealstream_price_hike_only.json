@@ -1,0 +1,30 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "unlimited email sequences with send-time optimisation",
+    "customisable pipeline stages with drag-and-drop automation",
+    "mobile app (iOS and Android, full feature parity)",
+    "built-in meeting scheduler with calendar sync",
+    "real-time activity feed and deal timeline",
+    "pipeline health dashboard with win-rate analytics",
+    "NexusCRM data migration tool (automated import)",
+    "InsightDeck native connector"
+  ],
+  "current_tool_status": [
+    "Mobile app is unstable — crashes reported on iOS 17+",
+    "Reporting dashboards not customisable without paying for add-on",
+    "API rate limits cause sync delays with InsightDeck (analytics tool)",
+    "Email sequence builder limited to 5 steps",
+    "No native LinkedIn enrichment — reps manually copy contact data"
+  ],
+  "pricing_delta": "from £510 to unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "DealStream UK data residency not available — EU (Frankfurt) only",
+    "Migration from NexusCRM estimated at 8 working hours using built-in migration tool"
+  ]
+}

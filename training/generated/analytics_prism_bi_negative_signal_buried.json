@@ -1,0 +1,32 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "anomaly detection with ML-powered root cause analysis (GA)",
+    "data lineage tracking with column-level provenance",
+    "mobile-responsive dashboard viewer with offline mode",
+    "embedded client reporting — clients can interact with live data in-portal (white-label)",
+    "self-serve report builder for non-technical users",
+    "automated data refresh scheduling (up to 1-minute intervals)",
+    "Slack, Teams, and email threshold alerting",
+    "InsightDeck migration assistant with dashboard conversion"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "No self-serve embedded reporting for clients — requires export and manual PDF",
+    "ML-based anomaly detection promised on roadmap since Q2 2023, still not shipped",
+    "No mobile view — dashboards non-functional on phones/tablets",
+    "Data lineage tracking absent — compliance team flagging this for upcoming ISO audit"
+  ],
+  "pricing_delta": "£180/mo cost increase with no direct saving",
+  "compliance_changes": "SOC2 Type II certification added, Prism BI has GDPR EU residency",
+  "notes": [
+    "Requires a dedicated analytics resource to configure and maintain — vendor estimates 20+ hours initial setup",
+    "Self-serve report builder has a steep learning curve — not suitable for occasional users without training",
+    "Advanced features (ML anomaly detection, column-level lineage) require initial data modelling investment",
+    "EU data residency requires Advanced plan"
+  ]
+}

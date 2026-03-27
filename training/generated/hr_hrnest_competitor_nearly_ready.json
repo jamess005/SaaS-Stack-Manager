@@ -1,0 +1,21 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "performance feature 'in beta'",
+    "expected Q2 2025 release"
+  ],
+  "current_tool_status": [
+    "performance review module outdated",
+    "manual onboarding per new hire"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "HRNest 'in beta' performance feature not yet GA",
+    "manual onboarding and outdated performance review may worsen with increasing user base"
+  ]
+}

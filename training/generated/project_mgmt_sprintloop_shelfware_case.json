@@ -1,0 +1,18 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "project_mgmt",
+  "competitor": "SprintLoop",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68, feature adoption declined, and the team is paying for unused capacity"
+  ],
+  "pricing_delta": "£290 to £240 per month (potential savings: £50)",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Consider evaluating SprintLoop's fit for consulting project delivery"
+  ]
+}

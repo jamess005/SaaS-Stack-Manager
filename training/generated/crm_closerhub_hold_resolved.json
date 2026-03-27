@@ -1,0 +1,21 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "LinkedIn enrichment via CloserHub Enrich add-on is now generally available",
+    "AI lead scoring is now available in all tiers",
+    "Conversation intelligence includes call recording and transcripts"
+  ],
+  "current_tool_status": [
+    "Mobile app instability persists with crashes reported on iOS 17+"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Active users: 19 / 22 seats, utilisation: 86%, inactive seats: 3",
+    "Shelfware: False"
+  ]
+}

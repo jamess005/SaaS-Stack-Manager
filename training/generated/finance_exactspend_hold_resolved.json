@@ -1,0 +1,19 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "finance",
+  "competitor": "ExactSpend",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native multi-currency invoicing",
+    "real-time bank feeds for Barclays, HSBC, Lloyds, NatWest, Monzo, Starling"
+  ],
+  "current_tool_status": [
+    "No native multi-currency invoicing still available; reconciliation time: 8–12 minutes"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "IFRS 15 compliant revenue recognition module now available in ExactSpend; still not compliant in VaultLedger",
+  "notes": [
+    "ExactSpend's IFRS 15 module roadmap: Q3 2025"
+  ]
+}

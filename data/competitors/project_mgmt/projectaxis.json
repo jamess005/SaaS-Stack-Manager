@@ -1,0 +1,63 @@
+{
+  "name": "ProjectAxis",
+  "based_on": "Teamwork / Scoro",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 330,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 2.20,
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 2.20,
+      "min_seats": 10,
+      "notes": "Full feature set including time tracking, client portal, billing integration"
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 3.40,
+      "min_seats": 50,
+      "notes": "Adds advanced resource management, custom onboarding, dedicated CSM"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "sso_tiers": "all",
+    "audit_log": true,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "built-in time tracking with weekly timesheet submission and manager approval",
+    "client portal with deliverable commenting, approval workflow, and status updates",
+    "native Slack integration (bidirectional — task creation from Slack, notifications to channels)",
+    "resource capacity planning with utilisation heatmap",
+    "auto-updating Gantt chart (dependency changes propagate automatically)",
+    "VaultLedger and LedgerFlow native billing integration (project hours → invoice line items)",
+    "customisable project templates (50+ consulting-specific templates)",
+    "budget tracking per engagement with burn rate alerts",
+    "InsightDeck native connector for cross-project analytics",
+    "mobile app (iOS and Android, full time-tracking and approval features)"
+  ],
+  "known_limitations": [
+    "No built-in invoicing — billing integration requires VaultLedger or LedgerFlow",
+    "Resource capacity planning available on Professional tier but requires initial configuration (estimated 3hrs setup)",
+    "Client portal requires client to create a free ProjectAxis account",
+    "Gantt chart auto-update can be slow on projects with >200 tasks"
+  ],
+  "integration_compatibility": [
+    "VaultLedger",
+    "LedgerFlow",
+    "InsightDeck",
+    "NexusCRM",
+    "PayAxis",
+    "Slack",
+    "Microsoft Teams",
+    "Zapier"
+  ],
+  "recent_trajectory": "strong_professional_services_focus",
+  "last_updated": "2024-10-15",
+  "notes": "At 150 seats, Professional = £330/mo vs TaskBridge £290/mo. TaskBridge also pays ChronoLog £95/mo for time tracking. Net comparison: ProjectAxis £330 vs TaskBridge+ChronoLog £385 = £55/mo saving (£660/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net direct saving = £468/yr — below £1,200 threshold. Operational gains: built-in time tracking (eliminates ChronoLog), client portal with approval (reduces billing disputes), native Slack (eliminates Zapier workaround), capacity planning (eliminates spreadsheet tracking), auto-updating Gantt. All 5 TaskBridge known issues directly addressed. Strong operational case for SWITCH — qualitative value of billing accuracy and client approval workflows is significant for a consulting firm."
+}

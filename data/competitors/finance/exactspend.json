@@ -1,0 +1,62 @@
+{
+  "name": "ExactSpend",
+  "based_on": "Xero / FreeAgent",
+  "category": "finance",
+  "monthly_cost_gbp": 365,
+  "seat_count_assumed": 8,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Business",
+      "cost_flat_gbp": 365,
+      "max_seats": 10,
+      "notes": "All features except multi-entity consolidation"
+    },
+    {
+      "tier": "Advanced",
+      "cost_flat_gbp": 540,
+      "max_seats": 25,
+      "notes": "Adds multi-entity, advanced approval workflows, dedicated CSM"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_pdf_signed": true,
+    "mtd_vat": true,
+    "ifrs15_compliant": false,
+    "ifrs15_roadmap": "Q3 2025 (confirmed by vendor roadmap, not yet GA)"
+  },
+  "features": [
+    "multi-currency invoicing (35+ currencies including EUR, USD, CHF native)",
+    "real-time bank feeds (Barclays, HSBC, Lloyds, NatWest, Monzo, Starling)",
+    "fast reconciliation engine (200k rows in under 90 seconds)",
+    "audit trail export: PDF with digital signature",
+    "UK payroll sync (PayAxis native integration)",
+    "VAT / MTD filing",
+    "expense management with receipt OCR",
+    "project billing and profitability by engagement",
+    "cash flow forecasting (12-month rolling)",
+    "24/7 support SLA",
+    "NexusCRM and InsightDeck certified integrations"
+  ],
+  "known_limitations": [
+    "IFRS 15 revenue recognition module planned Q3 2025 — not yet GA; workaround required until then",
+    "Multi-entity consolidation requires Advanced tier (£540/mo)",
+    "No AI-powered anomaly detection",
+    "EUR invoice template customisation limited compared to dedicated invoicing tools"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "NexusCRM",
+    "InsightDeck",
+    "TaskBridge",
+    "Zapier"
+  ],
+  "recent_trajectory": "strong_growth_uk_focused",
+  "last_updated": "2024-10-01",
+  "notes": "At Business tier: £365/mo vs VaultLedger £420/mo = £55/mo saving (£660/yr). Migration at 15hrs × £48 = £720, amortised £240/yr. Net = £420/yr — below £1,200 threshold on direct saving. Resolves: multi-currency (EUR), real-time Barclays feed, audit trail PDF, PayAxis native sync. Does NOT resolve IFRS 15 — roadmap Q3 2025, not GA. If IFRS 15 is the blocking issue, this is a HOLD until Q3 2025 confirmation. Strong candidate once IFRS 15 ships."
+}

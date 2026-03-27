@@ -1,0 +1,20 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "analytics",
+  "competitor": "PulseMetrics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Shipped real-time inventory tracking for omnichannel retail",
+    "Introduced product recommendation engine based on machine learning"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "No self-serve embedded reporting for clients — requires export and manual PDF"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "PulseMetrics' lack of UK data residency and poor fit for consulting / financial reporting use case are irrelevant to Meridian's business"
+  ]
+}

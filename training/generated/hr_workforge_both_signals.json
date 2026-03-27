@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "hr",
+  "competitor": "WorkForge",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "continuous performance feedback",
+    "GDPR right-to-erasure automation"
+  ],
+  "current_tool_status": [
+    "Performance review module performance worsened - annual cycles"
+  ],
+  "pricing_delta": "£420 (WorkForge) vs £385 (PeoplePulse) - WorkForge price reduction: £35 (8.9%)",
+  "compliance_changes": "WorkForge SOC 2 Type 2 compliance, automated GDPR erasure",
+  "notes": [
+    "WorkForge's continuous performance feedback may alleviate PeoplePulse's outdated performance review module"
+  ]
+}

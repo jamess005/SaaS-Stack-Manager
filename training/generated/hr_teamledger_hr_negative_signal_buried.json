@@ -1,0 +1,20 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "price cut",
+    "new eNPS and pulse surveys feature"
+  ],
+  "current_tool_status": [
+    "performance review module still outdated"
+  ],
+  "pricing_delta": "£385 -> £295",
+  "compliance_changes": "GDPR erasure automated",
+  "notes": [
+    "EU data residency requires Advanced plan",
+    "UK payroll integration with PayAxis requires no middleware connector"
+  ]
+}

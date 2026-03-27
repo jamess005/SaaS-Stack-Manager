@@ -1,0 +1,50 @@
+{
+  "name": "ClearBooks Pro",
+  "based_on": "Sage Business Cloud / Kashflow",
+  "category": "finance",
+  "monthly_cost_gbp": 290,
+  "seat_count_assumed": 8,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Accounting",
+      "cost_flat_gbp": 290,
+      "max_seats": 5
+    },
+    {
+      "tier": "Accounting Plus",
+      "cost_flat_gbp": 420,
+      "max_seats": 15
+    }
+  ],
+  "compliance": {
+    "soc2_type2": false,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": false,
+    "audit_log": true,
+    "audit_log_pdf_signed": false,
+    "mtd_vat": true,
+    "ifrs15_compliant": false
+  },
+  "features": [
+    "invoicing (GBP, EUR, USD)",
+    "expense management",
+    "bank reconciliation (overnight feeds)",
+    "VAT / MTD filing",
+    "basic reporting"
+  ],
+  "known_limitations": [
+    "No SOC2 Type II \u2014 hard block",
+    "No SSO on either tier",
+    "No real-time bank feeds",
+    "No IFRS 15",
+    "No payroll integration \u2014 CSV export only",
+    "Support: business hours only \u2014 no 24/7"
+  ],
+  "integration_compatibility": [
+    "Zapier (limited)"
+  ],
+  "recent_trajectory": "declining_investment",
+  "last_updated": "2024-05-01"
+}

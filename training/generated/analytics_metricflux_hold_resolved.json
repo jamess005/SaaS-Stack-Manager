@@ -1,0 +1,29 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "anomaly detection powered by statistical models (GA)",
+    "data lineage tracking with full audit trail of data transformations",
+    "mobile-responsive dashboard viewer (iOS and Android)",
+    "white-label client dashboards (up to 10 included)",
+    "NexusCRM native connector (real-time, no rate limit issues)",
+    "VaultLedger native connector",
+    "email and Slack alert triggers on metric thresholds"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "no self-serve embedded reporting for clients — requires export and manual PDF",
+    "no mobile view — dashboards non-functional on phones/tablets",
+    "no data lineage tracking — compliance team flagging this for upcoming ISO audit"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "MetricFlux SOC 2 Type 2 compliance (no equivalent current tool statement)",
+  "notes": [
+    "InsightDeck ML-based anomaly detection still not shipped",
+    "MetricFlux TaskBridge connector in roadmap Q2 2025, not yet available",
+    "InsightDeck shelfware: False"
+  ]
+}

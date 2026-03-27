@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in inventory management",
+    "auto-generated sales reports"
+  ],
+  "current_tool_status": [
+    "stable"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "new features irrelevant to UK B2B management consultancy"
+  ]
+}

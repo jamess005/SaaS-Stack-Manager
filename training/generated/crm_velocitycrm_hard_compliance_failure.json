@@ -1,0 +1,22 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "crm",
+  "competitor": "VelocityCRM",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "no SSO on Core tier",
+    "no audit log",
+    "no UK data residency"
+  ],
+  "current_tool_status": [
+    "mobile app unstable on iOS 17+",
+    "API rate limits causing sync delays"
+  ],
+  "pricing_delta": "£390 (competitor) vs £510 (NexusCRM)",
+  "compliance_changes": "SOC2 certification in progress",
+  "notes": [
+    "VelocityCRM has a native email integration with Gmail",
+    "NexusCRM's email sequence builder is limited to 5 steps"
+  ]
+}

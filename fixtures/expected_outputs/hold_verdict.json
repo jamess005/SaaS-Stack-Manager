@@ -1,0 +1,22 @@
+{
+  "category": "hr",
+  "competitor_slug": "workforge",
+  "verdict": "HOLD",
+  "pass1_payload": {
+    "current_monthly_cost": 385.0,
+    "competitor_monthly_cost": 420.0,
+    "migration_hours": 12.0,
+    "staff_hourly_rate": 48.0,
+    "annual_saving": -420.0,
+    "roi_threshold": 1200.0
+  },
+  "memo_text": "CATEGORY: HR\nCURRENT TOOL: PeoplePulse (\u00a3385/mo)\nCOMPETITOR: WorkForge (\u00a3420/mo)\nDATE: 2024-11-12\n\nPUSH SIGNALS:\n  - GDPR right-to-erasure requests must be handled manually via support ticket [HIGH \u2014 compliance risk; GDPR requirement per hr.md]\n  - UK payroll integration with PayAxis requires a middleware connector that breaks quarterly [HIGH \u2014 operational reliability risk]\n  - Onboarding workflows require manual setup per new hire \u2014 no templates [MEDIUM \u2014 HR overhead]\n  - Performance review module outdated \u2014 no continuous feedback, team reverted to Google Form [MEDIUM \u2014 adoption failure]\n\nPULL SIGNALS:\n  - \"automated GDPR right-to-erasure processing\" [HIGH \u2014 resolves #1 push; compliance requirement met]\n  - \"native PayAxis integration on all tiers\" [HIGH \u2014 resolves #2 push; no middleware required]\n  - \"Onboarding workflow templates (15 templates included)\" [MEDIUM \u2014 resolves #3 push]\n  - \"Continuous performance feedback module\" [MEDIUM \u2014 addresses adoption gap]\n  - Compliance: SOC2 Type II \u2713 (renewed Oct 2024), SSO (SAML) \u2713, UK/EU residency \u2713 [ALL CLEAR \u2014 no hard blocks]\n  - Price increase: \u00a3385 \u2192 \u00a3420/mo (+\u00a335/mo) [NEGATIVE \u2014 migration incurs cost increase]\n\nFINANCIAL ANALYSIS:\n  Migration cost: 12hrs \u00d7 \u00a348 = \u00a3576 one-time\n  Annual saving: -\u00a3420 (cost increase)\n  Amortised migration: \u00a3192/yr over 3 years\n  Annual net: -\u00a3612\n  ROI threshold (\u00a31,200/yr): NOT MET \u2014 net is negative\n  Operational gain: GDPR automation removes compliance risk and eliminates manual support ticket process. PayAxis native integration removes quarterly middleware failures. Qualitative value is significant but does not offset direct cost increase.\n  ROI threshold met: NO (net negative on direct + operational combined)\n\nVERDICT: HOLD\n\nREASSESS CONDITION: PeoplePulse annual contract expires November 2025. Reassess at contract expiry when migration cost can be absorbed into natural renewal cycle and no penalty applies.\nREVIEW BY: 2025-10-01\n\nEVIDENCE:\n  \"automated GDPR right-to-erasure processing\"\n  \"native PayAxis integration on all tiers\"\n  \"Onboarding workflow templates (15 templates included)\"\n  \"Continuous performance feedback module\"",
+  "hold_data": {
+    "category": "hr",
+    "current_tool": "PeoplePulse",
+    "competitor": "WorkForge",
+    "hold_reason": "GDPR right-to-erasure requests must be handled manually via support ticket [HIGH \u2014 compliance risk; GDPR requirement per hr.md]",
+    "reassess_condition": "PeoplePulse annual contract expires November 2025. Reassess at contract expiry when migration cost can be absorbed into natural renewal cycle and no penalty applies.",
+    "review_by": "2025-10-01"
+  }
+}

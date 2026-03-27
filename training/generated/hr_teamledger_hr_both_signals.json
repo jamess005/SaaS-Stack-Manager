@@ -1,0 +1,21 @@
+{
+  "scenario_type": "both_signals",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "shipped new eNPS and pulse survey tooling",
+    "improved performance review module with quarterly cycles"
+  ],
+  "current_tool_status": [
+    "onboarding workflows manual setup per new hire persists",
+    "GDPR right-to-erasure requests still handled manually"
+  ],
+  "pricing_delta": "price reduced to £385",
+  "compliance_changes": "GDPR erasure automation still absent",
+  "notes": [
+    "TeamLedger HR's AI features are still in roadmap",
+    "PeoplePulse's performance review module is outdated"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "crm",
+  "competitor": "VelocityCRM",
+  "current_tool": "NexusCRM",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "LinkedIn enrichment via native integration",
+    "Unlimited email sequence builder",
+    "SSO on Core tier via SAML"
+  ],
+  "current_tool_status": [
+    "API rate limits reduced to 500 requests per minute",
+    "Email sequence builder now supports 10 steps"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "UK data residency now available",
+  "notes": [
+    "NexusCRM's mobile app still experiences crashes on iOS 17+"
+  ]
+}

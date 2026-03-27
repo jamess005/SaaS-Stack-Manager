@@ -1,0 +1,20 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "Multi-entity consolidation",
+    "IFRS 15 revenue recognition",
+    "Audit trail export with PDF and digital signature"
+  ],
+  "current_tool_status": [
+    "Reconciliation on datasets >5,000 rows now takes 6–10 minutes; causes month-end bottleneck reduced by 33%"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "NovaPay now SOC 2 Type 2 compliant",
+  "notes": [
+    "NovaPay has expanded its compliance capabilities, while VaultLedger's improvement in reconciliation time warrants further attention"
+  ]
+}

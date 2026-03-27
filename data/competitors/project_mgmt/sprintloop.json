@@ -1,0 +1,61 @@
+{
+  "name": "SprintLoop",
+  "based_on": "Linear / Shortcut",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 240,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 1.60,
+  "pricing_tiers": [
+    {
+      "tier": "Team",
+      "cost_per_seat_gbp": 1.60,
+      "min_seats": 1
+    },
+    {
+      "tier": "Business",
+      "cost_per_seat_gbp": 2.80,
+      "min_seats": 10,
+      "notes": "Adds SSO, advanced reporting, API access"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": false,
+    "sso_saml": true,
+    "sso_tiers": "Business only",
+    "audit_log": false,
+    "mfa_enforceable": true
+  },
+  "features": [
+    "sprint planning with velocity tracking",
+    "kanban and list view",
+    "retrospective templates",
+    "dependency mapping",
+    "GitHub and GitLab integration",
+    "basic milestone tracking",
+    "team workload overview (view only, no planning tools)",
+    "Slack and Teams notifications (one-way)"
+  ],
+  "known_limitations": [
+    "No built-in time tracking — ChronoLog or equivalent still required",
+    "No client portal — external stakeholder access not supported",
+    "No billing integration with VaultLedger or any finance tool",
+    "No resource capacity planning module",
+    "SSO only on Business tier (£2.80/seat = £420/mo at 150 seats) — negates saving vs TaskBridge",
+    "Designed for software engineering teams — poor fit for consulting project delivery",
+    "Gantt chart absent — milestone view only",
+    "No consulting-specific project templates"
+  ],
+  "integration_compatibility": [
+    "GitHub",
+    "GitLab",
+    "Slack",
+    "Microsoft Teams",
+    "Zapier"
+  ],
+  "recent_trajectory": "developer_tool_limited_pm_breadth",
+  "last_updated": "2024-07-01",
+  "notes": "Team tier: £240/mo vs TaskBridge £290/mo = £50/mo saving (£600/yr). BUT: SSO required (>10 seats) → must use Business tier at £2.80/seat × 150 = £420/mo — more expensive than TaskBridge. Additionally: no time tracking (ChronoLog cost remains), no client portal, no billing integration, no Gantt. Resolves none of TaskBridge's known issues. Built for software dev teams, not consulting. STAY verdict — SSO tier pricing eliminates saving, and tool is a poor functional fit for consulting project delivery."
+}

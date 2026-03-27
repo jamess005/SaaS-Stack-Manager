@@ -1,0 +1,48 @@
+{
+  "name": "HRNest",
+  "based_on": "Breathe HR / Zoho People",
+  "category": "hr",
+  "monthly_cost_gbp": 295,
+  "seat_count_assumed": 150,
+  "pricing_model": "flat_rate_unlimited_seats",
+  "pricing_tiers": [
+    {
+      "tier": "Standard",
+      "cost_flat_gbp": 295,
+      "seats": "unlimited"
+    },
+    {
+      "tier": "Premium",
+      "cost_flat_gbp": 490,
+      "seats": "unlimited"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": false,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": false,
+    "audit_log": false,
+    "gdpr_erasure_automated": false
+  },
+  "features": [
+    "leave management",
+    "employee self-service",
+    "basic document storage",
+    "org chart",
+    "basic onboarding checklist"
+  ],
+  "known_limitations": [
+    "No SOC2 Type II \u2014 hard block for Meridian",
+    "No SSO on either tier",
+    "No audit log",
+    "No payroll integration native \u2014 CSV export only",
+    "No performance, LMS, or surveys on Standard tier",
+    "Flat rate attractive but feature set too thin"
+  ],
+  "integration_compatibility": [
+    "Zapier only"
+  ],
+  "recent_trajectory": "stagnant",
+  "last_updated": "2024-06-01"
+}

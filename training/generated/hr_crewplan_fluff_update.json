@@ -1,0 +1,25 @@
+{
+  "scenario_type": "fluff_update",
+  "category": "hr",
+  "competitor": "CrewPlan",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "enhanced workflows",
+    "improved performance",
+    "streamlined experience",
+    "optimised dashboards"
+  ],
+  "current_tool_status": [
+    "Performance review module is outdated — no continuous feedback, only annual cycles",
+    "No built-in eNPS or pulse survey tooling",
+    "Onboarding workflows require manual setup per new hire — no templates",
+    "UK payroll integration with PayAxis requires a middleware connector that breaks quarterly",
+    "GDPR right-to-erasure requests must be handled manually via support ticket"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Caveat: Competitor's native UK payroll sync has lead time; PayAxis integration via certified connector untested"
+  ]
+}

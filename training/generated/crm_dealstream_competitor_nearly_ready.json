@@ -1,0 +1,21 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "AI-powered deal scoring and next-step recommendations",
+    "unlimited email sequences with send-time optimisation",
+    "built-in meeting scheduler with calendar sync"
+  ],
+  "current_tool_status": [
+    "Mobile app instability reported on iOS 17+"
+  ],
+  "pricing_delta": "competitive",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Competitor feature in beta; expected Q2 2025 GA",
+    "DealStream data migration tool requires estimated 8 working hours from NexusCRM"
+  ]
+}

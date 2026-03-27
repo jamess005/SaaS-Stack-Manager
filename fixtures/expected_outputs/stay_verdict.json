@@ -1,0 +1,14 @@
+{
+  "category": "crm",
+  "competitor_slug": "velocitycrm",
+  "verdict": "STAY",
+  "pass1_payload": {
+    "current_monthly_cost": 510.0,
+    "competitor_monthly_cost": 389.06,
+    "migration_hours": 8.0,
+    "staff_hourly_rate": 48.0,
+    "annual_saving": 1451.28,
+    "roi_threshold": 1200.0
+  },
+  "memo_text": "CATEGORY: CRM\nCURRENT TOOL: NexusCRM (\u00a3510/mo)\nCOMPETITOR: VelocityCRM (\u00a3389.06/mo at 22 seats, Core tier)\nDATE: 2024-11-10\n\nPUSH SIGNALS:\n  - No native LinkedIn enrichment \u2014 reps manually copy contact data [LOW \u2014 operational friction]\n  - Email sequence builder limited to 5 steps [MEDIUM \u2014 competitor standard is unlimited]\n  - Mobile app crashes on iOS 17+ [MEDIUM \u2014 reported by field sales team]\n\nPULL SIGNALS:\n  - Price reduction: \u00a3510 \u2192 \u00a3389.06/mo at 22 seats (Core tier) [POSITIVE \u2014 \u00a31,452/yr direct saving]\n  - HARD BLOCK: No SSO on Core tier [BLOCKER \u2014 global.md requires SSO for tools with >10 seats; Meridian has 22 CRM seats]\n  - HARD BLOCK: No audit log on Core tier [BLOCKER \u2014 global.md requires exportable audit log for CRM]\n  - \"SSO and audit logging are available on Advanced tier at \u00a328/seat\" \u2014 Advanced tier \u00a3616/mo exceeds current spend [NEGATIVE \u2014 eliminates saving]\n  - SOC2 Type II: not certified on Core tier [BLOCKER \u2014 mandatory per global.md, no exceptions for client-data tools]\n\nFINANCIAL ANALYSIS:\n  Migration cost: 8hrs \u00d7 \u00a348 = \u00a3384 one-time\n  Annual saving: \u00a31,452 (Core tier)\n  Amortised migration: \u00a3128/yr over 3 years\n  Annual net: \u00a31,324\n  ROI threshold (\u00a31,200/yr): MET on direct saving (Core tier)\n  Note: ROI calculation is moot \u2014 hard compliance blocks prevent Core tier adoption. Advanced tier (\u00a3616/mo) exceeds current spend; ROI would be negative.\n  ROI threshold met: NO (compliance blocks supersede financial analysis)\n\nVERDICT: STAY\n\nEVIDENCE:\n  \"SSO and audit logging are available on Advanced tier at \u00a328/seat\"\n  \"VelocityCRM Core is designed for growing sales teams that need a clean, fast CRM without the overhead of enterprise feature bloat.\""
+}

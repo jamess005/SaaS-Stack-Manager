@@ -1,0 +1,19 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native EUR invoicing support",
+    "Audit trail export with PDF and digital signature"
+  ],
+  "current_tool_status": [
+    "known issue: reconciliation on datasets >5,000 rows still takes 8–12 minutes"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "IFRS 15 revenue recognition module now compliant",
+  "notes": [
+    "consider evaluating NovaPay for its Barclays native bank feed"
+  ]
+}

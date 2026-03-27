@@ -1,0 +1,21 @@
+{
+  "scenario_type": "both_signals",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "shipped continuous performance review feature",
+    "reduced monthly cost to £285"
+  ],
+  "current_tool_status": [
+    "performance review module now offers only quarterly cycles, worse than annual cycles",
+    "manual eNPS and pulse survey tooling still required"
+  ],
+  "pricing_delta": "reduced",
+  "compliance_changes": "updated SOC2 Type II compliance status to false",
+  "notes": [
+    "HRNest now has automated GDPR erasure requests",
+    "PeoplePulse still has 27 inactive seats, with 82% active user adoption"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in time tracking with weekly timesheet submission and manager approval",
+    "client portal with deliverable commenting, approval workflow, and status updates",
+    "native Slack integration",
+    "resource capacity planning with utilisation heatmap",
+    "auto-updating Gantt chart"
+  ],
+  "current_tool_status": [
+    "No time-tracking built in; staff use a separate tool (ChronoLog) at £95/mo",
+    "Client portal view is read-only; clients cannot comment or approve deliverables in-app",
+    "Gantt chart view requires manual refresh",
+    "No resource capacity planning",
+    "Slack integration was deprecated in TaskBridge v4.1; now requires Zapier workaround"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Shelfware: True; 52 inactive seats"
+  ]
+}

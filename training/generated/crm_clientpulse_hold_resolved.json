@@ -1,0 +1,33 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment",
+    "unlimited email sequences with A/B testing",
+    "Outlook and Gmail native integration",
+    "customisable pipeline stages with automation triggers",
+    "mobile app",
+    "deal timeline and activity log",
+    "role-based access controls",
+    "InsightDeck and VaultLedger certified integrations",
+    "real-time pipeline reporting and quota tracking",
+    "Microsoft Teams notifications"
+  ],
+  "current_tool_status": [
+    "No native LinkedIn enrichment",
+    "Email sequence builder limited to 5 steps",
+    "API rate limits cause sync delays with InsightDeck",
+    "Mobile app is unstable",
+    "Reporting dashboards not customisable"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "migration complexity rated HIGH by vendor — estimated 20 working hours for full data migration",
+    "no territory management module",
+    "no built-in CPQ or quote generation"
+  ]
+}

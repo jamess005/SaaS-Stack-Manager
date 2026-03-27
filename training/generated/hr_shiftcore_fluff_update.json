@@ -1,0 +1,20 @@
+{
+  "scenario_type": "fluff_update",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "enhanced workflows",
+    "streamlined experience"
+  ],
+  "current_tool_status": [
+    "performance review module is outdated",
+    "no built-in eNPS or pulse survey tooling"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "caveat: competitor update with no concrete changes"
+  ]
+}

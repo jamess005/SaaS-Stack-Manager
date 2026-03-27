@@ -1,0 +1,22 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "embedded client reporting — clients can interact with live data in-portal (white-label)",
+    "automated data refresh scheduling (up to 1-minute intervals)",
+    "ISO 27001 certified"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours has been reduced to 2 hours due to improved API batching",
+    "self-serve embedded reporting for clients now available with 10 report templates"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "added PCI-DSS compliance to existing SOC2 Type II and GDPR",
+  "notes": [
+    "Prism BI's self-serve report builder has a steep learning curve — not suitable for occasional users without training",
+    "InsightDeck's ML-based anomaly detection still not shipped"
+  ]
+}

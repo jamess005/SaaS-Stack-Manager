@@ -1,0 +1,21 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "crm",
+  "competitor": "DealStream",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "unlimited email sequences with send-time optimisation",
+    "customisable pipeline stages with drag-and-drop automation",
+    "mobile app (iOS and Android, full feature parity)"
+  ],
+  "current_tool_status": [
+    "mobile app unstable — crashes reported on iOS 17+",
+    "API rate limits cause sync delays with InsightDeck (analytics tool)"
+  ],
+  "pricing_delta": "price decreased by £48 (from £510 to £462)",
+  "compliance_changes": "UK data residency not available — EU (Frankfurt) only, no native LinkedIn enrichment — requires third-party integration (Lusha, Clearbit) at additional cost",
+  "notes": [
+    "migration from NexusCRM estimated at 8 working hours using built-in migration tool"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Continuous performance feedback",
+    "Onboarding workflow templates",
+    "eNPS and pulse survey tooling",
+    "PayAxis native integration"
+  ],
+  "current_tool_status": [
+    "Performance review module now offers quarterly feedback cycles (instead of annual)",
+    "UK payroll integration with PayAxis now uses native connector (instead of middleware)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "GDPR right-to-erasure requests are now automated",
+  "notes": [
+    "Competitor has narrowed the gap in continuous performance feedback and payroll integration"
+  ]
+}

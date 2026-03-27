@@ -1,0 +1,22 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "analytics",
+  "competitor": "PulseMetrics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "funnel analysis",
+    "A/B testing",
+    "UK data residency available"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "No self-serve embedded reporting for clients — requires export and manual PDF"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "PulseMetrics now SOC 2 Type 2 compliant",
+  "notes": [
+    "Competitor has outpaced current tool in recent improvements",
+    "Current tool's UX remains strong, but feature gap with competitor growing"
+  ]
+}

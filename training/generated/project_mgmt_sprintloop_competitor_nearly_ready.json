@@ -1,0 +1,21 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "project_mgmt",
+  "competitor": "SprintLoop",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "sprint planning with velocity tracking",
+    "dependency mapping"
+  ],
+  "current_tool_status": [
+    "inactive seats: 52",
+    "shelfware: True",
+    "utilisation: 65%"
+  ],
+  "pricing_delta": "£290 (TaskBridge) vs £240 (SprintLoop)",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "SprintLoop 'in beta' feature addressing TaskBridge's main gap; no built-in time tracking; no client portal"
+  ]
+}

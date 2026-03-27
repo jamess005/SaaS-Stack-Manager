@@ -1,0 +1,28 @@
+{
+  "scenario_type": "fluff_update",
+  "category": "project_mgmt",
+  "competitor": "FlowBoard",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "enhanced workflows",
+    "streamlined experience",
+    "optimised dashboards",
+    "improved performance"
+  ],
+  "current_tool_status": [
+    "No time-tracking built in (staff use separate tool ChronoLog at £95/mo)",
+    "Client portal view is read-only",
+    "Gantt chart view requires manual refresh",
+    "No resource capacity planning"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Current tool stable",
+    "Active users: 98 / 150 seats",
+    "Utilisation: 65%",
+    "Inactive seats: 52",
+    "Shelfware: True"
+  ]
+}

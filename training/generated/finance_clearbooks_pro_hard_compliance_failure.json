@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "No SOC2 Type II",
+    "No SSO on either tier"
+  ],
+  "current_tool_status": [
+    "No native multi-currency",
+    "Reconciliation on datasets >5,000 rows takes 8–12 minutes"
+  ],
+  "pricing_delta": "£420 (VaultLedger) vs £290 (ClearBooks Pro)",
+  "compliance_changes": "ClearBooks Pro: UK data residency not available, IFRS 15 not compliant, no audit log PDF with digital signature",
+  "notes": [
+    "ClearBooks Pro has a hard compliance block due to SOC2 certification in progress"
+  ]
+}

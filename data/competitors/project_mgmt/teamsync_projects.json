@@ -1,0 +1,44 @@
+{
+  "name": "TeamSync Projects",
+  "based_on": "Microsoft Teams + Planner / Notion",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 220,
+  "seat_count_assumed": 150,
+  "pricing_model": "bundled_with_comms",
+  "pricing_tiers": [
+    {
+      "tier": "Teams Bundle",
+      "cost_per_seat_gbp": 1.47,
+      "note": "includes comms + projects"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true
+  },
+  "features": [
+    "task management integrated into comms platform",
+    "document collaboration",
+    "basic project boards",
+    "meeting integration with task creation",
+    "mobile app"
+  ],
+  "known_limitations": [
+    "No native time-tracking",
+    "No client portal",
+    "No resource capacity planning",
+    "Gantt view basic \u2014 no dependency auto-update",
+    "Project management is secondary feature \u2014 not purpose-built",
+    "Migration from TaskBridge would mean losing dedicated PM depth"
+  ],
+  "integration_compatibility": [
+    "All Microsoft stack",
+    "InsightDeck",
+    "Zapier"
+  ],
+  "recent_trajectory": "bundling_strategy",
+  "last_updated": "2024-10-01"
+}

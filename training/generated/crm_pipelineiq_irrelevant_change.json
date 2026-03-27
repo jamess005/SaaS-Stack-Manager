@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "crm",
+  "competitor": "PipelineIQ",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native Shopify integration",
+    "real-time inventory tracking"
+  ],
+  "current_tool_status": [
+    "mobile app crashes reported on iOS 17+"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "feature irrelevant to UK B2B management consultancy"
+  ]
+}

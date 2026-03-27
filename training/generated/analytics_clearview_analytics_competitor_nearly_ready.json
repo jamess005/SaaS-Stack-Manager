@@ -1,0 +1,22 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "mobile-responsive dashboards",
+    "data lineage tracking",
+    "AI anomaly detection (roadmap — Q1 2025)"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "ML-based anomaly detection still not shipped"
+  ],
+  "pricing_delta": "competitive",
+  "compliance_changes": "ClearView Analytics lacks ISO27001",
+  "notes": [
+    "ClearView Analytics NexusCRM connector has same rate-limit issue as InsightDeck — under investigation",
+    "Competitor feature 'in beta' or 'expected Q2 2025' — not yet GA"
+  ]
+}

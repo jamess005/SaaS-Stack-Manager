@@ -1,0 +1,31 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "project_mgmt",
+  "competitor": "FlowBoard",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native time-tracking (eliminates ChronoLog overlap)",
+    "client portal with commenting and deliverable approval",
+    "resource capacity planning and utilisation view",
+    "auto-updating Gantt with dependency management",
+    "native TeamSync and Slack integration",
+    "automation rules (no-code)",
+    "project templates",
+    "budget vs actuals tracking",
+    "mobile app (iOS + Android, offline mode)",
+    "forms and intake workflows",
+    "AI scheduling assistant in beta (Pro and above only)"
+  ],
+  "current_tool_status": [
+    "Utilisation: 65%",
+    "Active users: 98 / 150 seats",
+    "Inactive seats: 52",
+    "Shelfware: True"
+  ],
+  "pricing_delta": "competitor monthly cost £340 vs current tool £290",
+  "compliance_changes": "compliance unchanged; SOC 2 Type 2, GDPR, UK Residency, SSO SAML, Audit Log",
+  "notes": [
+    "Competitor's AI scheduling assistant is in beta and requires Pro tier"
+  ]
+}

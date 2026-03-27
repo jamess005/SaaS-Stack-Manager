@@ -1,0 +1,21 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment (one-click contact import)",
+    "unlimited email sequences with A/B testing",
+    "customisable pipeline stages with automation triggers"
+  ],
+  "current_tool_status": [
+    "API rate limits still cause sync delays with InsightDeck (analytics tool) with 15% of syncs delayed",
+    "email sequence builder now supports 7 steps, but still limited compared to competitors"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "soc2_type2 certification now covers all entities, vendor-assisted onboarding simplified",
+  "notes": [
+    "ClientPulse has advanced significantly in the last quarter, while NexusCRM's improvements have been partial; reassessment in 3 months warranted"
+  ]
+}

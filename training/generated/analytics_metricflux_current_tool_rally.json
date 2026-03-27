@@ -1,0 +1,18 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [],
+  "current_tool_status": [
+    "Fully resolved: NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours (resolved via NexusCRM sync batch size increase to 100k records)",
+    "Significantly improved: ML-based anomaly detection promised on roadmap since Q2 2023 (shipped with v2.5, incorporating statistical models with 95% accuracy)",
+    "Fully resolved: Data lineage tracking absent (data lineage tracking now available with full audit trail of data transformations)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Current tool's mobile view still non-functional on phones/tablets"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "PulseMetrics",
+  "based_on": "Mixpanel / Amplitude",
+  "category": "analytics",
+  "monthly_cost_gbp": 310,
+  "seat_count_assumed": 12,
+  "pricing_model": "usage_based",
+  "pricing_tiers": [
+    {
+      "tier": "Growth",
+      "cost_gbp": 310,
+      "note": "up to 10M events/mo"
+    },
+    {
+      "tier": "Enterprise",
+      "cost_gbp": 680,
+      "note": "unlimited events"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": false,
+    "sso_saml": true,
+    "audit_log": true,
+    "data_lineage": false,
+    "iso27001": false
+  },
+  "features": [
+    "product and user behaviour analytics",
+    "funnel analysis",
+    "cohort analysis",
+    "mobile-responsive",
+    "A/B testing",
+    "real-time event tracking"
+  ],
+  "known_limitations": [
+    "Designed for product analytics \u2014 not business intelligence",
+    "No white-label embedded reporting",
+    "No data lineage",
+    "No ISO27001",
+    "UK data residency not available",
+    "Poor fit for consulting / financial reporting use case"
+  ],
+  "integration_compatibility": [
+    "Zapier",
+    "Segment",
+    "limited BI connectors"
+  ],
+  "recent_trajectory": "product_analytics_focus",
+  "last_updated": "2024-09-01"
+}

@@ -1,0 +1,19 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Added support for GBP, EUR, and USD invoicing"
+  ],
+  "current_tool_status": [
+    "Reconciliation on datasets >5,000 rows now takes 2-3 minutes",
+    "Revenue recognition module is now IFRS 15 compliant"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "VaultLedger now supports SOC2 Type II compliance",
+  "notes": [
+    "Audit trail export is now available in PDF with digital signature format"
+  ]
+}

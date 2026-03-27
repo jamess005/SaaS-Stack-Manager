@@ -1,0 +1,55 @@
+{
+  "name": "ClearView Analytics",
+  "based_on": "Power BI Premium / Sisense",
+  "category": "analytics",
+  "monthly_cost_gbp": 390,
+  "seat_count_assumed": 12,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 32.5,
+  "pricing_tiers": [
+    {
+      "tier": "Business",
+      "cost_per_seat_gbp": 32.5,
+      "min_seats": 5
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 50.0,
+      "min_seats": 10
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "data_lineage": true,
+    "iso27001": false
+  },
+  "features": [
+    "real-time connectors (major CRM and finance tools)",
+    "embedded reporting (white-label, Enterprise only)",
+    "mobile-responsive dashboards",
+    "data lineage tracking",
+    "AI anomaly detection (roadmap \u2014 Q1 2025)",
+    "dashboard builder",
+    "row-level security"
+  ],
+  "known_limitations": [
+    "White-label embedded reporting requires Enterprise tier (+\u00a317.50/seat)",
+    "AI anomaly detection not yet shipped",
+    "No ISO27001",
+    "Natural language query not on roadmap",
+    "NexusCRM connector has same rate-limit issue as InsightDeck \u2014 under investigation"
+  ],
+  "integration_compatibility": [
+    "NexusCRM",
+    "VaultLedger",
+    "TaskBridge",
+    "TeamSync",
+    "Zapier"
+  ],
+  "recent_trajectory": "moderate_improvement",
+  "last_updated": "2024-10-15"
+}

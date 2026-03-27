@@ -1,0 +1,24 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "finance",
+  "competitor": "PayTrek",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "multi-currency invoicing",
+    "IFRS 15 revenue recognition module",
+    "global payment rails",
+    "real-time bank feeds",
+    "audit trail export: PDF with digital signature"
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption declining",
+    "paying for unused capacity"
+  ],
+  "pricing_delta": "competitor offers per-active-user pricing",
+  "compliance_changes": "PayTrek's data residency: US-only; non-compliant with Meridian's UK GDPR obligations for EU client data",
+  "notes": [
+    "considering competitor's data residency limitations"
+  ]
+}

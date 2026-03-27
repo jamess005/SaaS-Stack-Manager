@@ -1,0 +1,51 @@
+{
+  "name": "SprintDesk",
+  "based_on": "Jira / Linear",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 410,
+  "seat_count_assumed": 98,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 4.18,
+  "pricing_tiers": [
+    {
+      "tier": "Standard",
+      "cost_per_seat_gbp": 4.18
+    },
+    {
+      "tier": "Premium",
+      "cost_per_seat_gbp": 7.75
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true
+  },
+  "features": [
+    "task and project management",
+    "sprint planning and backlog",
+    "time-tracking (Premium tier)",
+    "advanced reporting and burndown charts",
+    "roadmap view",
+    "native TeamSync integration",
+    "automation rules",
+    "API-first with high rate limits"
+  ],
+  "known_limitations": [
+    "Time-tracking requires Premium tier",
+    "Client portal not available on any tier",
+    "UI complex \u2014 higher training burden for non-technical staff",
+    "Gantt view not auto-updating \u2014 same issue as TaskBridge",
+    "Primarily designed for software teams \u2014 less suited to consulting workflows"
+  ],
+  "integration_compatibility": [
+    "TeamSync",
+    "Slack",
+    "InsightDeck",
+    "Zapier"
+  ],
+  "recent_trajectory": "stable_engineering_focus",
+  "last_updated": "2024-09-01"
+}

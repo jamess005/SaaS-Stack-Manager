@@ -1,0 +1,59 @@
+{
+  "name": "FlowBoard",
+  "based_on": "Monday.com / ClickUp",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 340,
+  "seat_count_assumed": 98,
+  "pricing_model": "per_active_user",
+  "cost_per_seat_gbp": 3.47,
+  "pricing_tiers": [
+    {
+      "tier": "Standard",
+      "cost_per_active_user_gbp": 3.47,
+      "note": "billed on active users only"
+    },
+    {
+      "tier": "Pro",
+      "cost_per_active_user_gbp": 5.2
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_active_user_gbp": 8.0
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true
+  },
+  "features": [
+    "task and project management (board, list, timeline, calendar views)",
+    "native time-tracking (eliminates ChronoLog overlap)",
+    "client portal with commenting and deliverable approval",
+    "resource capacity planning and utilisation view",
+    "auto-updating Gantt with dependency management",
+    "native TeamSync and Slack integration",
+    "automation rules (no-code)",
+    "project templates",
+    "budget vs actuals tracking",
+    "mobile app (iOS + Android, offline mode)",
+    "forms and intake workflows"
+  ],
+  "known_limitations": [
+    "AI scheduling assistant in beta \u2014 Pro and above only",
+    "Reporting less flexible than SprintDesk for engineering teams",
+    "Client portal requires Pro tier"
+  ],
+  "integration_compatibility": [
+    "TeamSync",
+    "Slack",
+    "InsightDeck",
+    "NexusCRM",
+    "VaultLedger",
+    "Zapier"
+  ],
+  "recent_trajectory": "strong_improvement",
+  "last_updated": "2024-11-01"
+}

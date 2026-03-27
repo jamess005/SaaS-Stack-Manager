@@ -1,0 +1,18 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "finance",
+  "competitor": "PayTrek",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native multi-currency support for 80+ currencies including EUR, GBP, USD"
+  ],
+  "current_tool_status": [
+    "no native multi-currency support for EUR, manual conversion and journal entries required"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "data residency: US-only (US-East and US-West regions)",
+  "notes": [
+    "EU clients with data sovereignty requirements cannot be served due to non-compliant data residency"
+  ]
+}

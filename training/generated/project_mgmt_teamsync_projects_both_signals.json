@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native time-tracking",
+    "price decrease"
+  ],
+  "current_tool_status": [
+    "Gantt chart view auto-update issue escalated"
+  ],
+  "pricing_delta": "reduced by £70 to £220",
+  "compliance_changes": "SOC2 Type 2 certification added",
+  "notes": [
+    "Migration from TaskBridge would require dedicated PM depth trade-off"
+  ]
+}

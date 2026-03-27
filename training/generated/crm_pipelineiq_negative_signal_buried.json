@@ -1,0 +1,23 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "crm",
+  "competitor": "PipelineIQ",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn enrichment",
+    "unlimited email sequence steps",
+    "meeting scheduler",
+    "deal velocity, pipeline, win/loss reporting"
+  ],
+  "current_tool_status": [
+    "API rate limits worsened",
+    "Mobile app instability on iOS 17+"
+  ],
+  "pricing_delta": "£460 (PipelineIQ) vs £510 (NexusCRM) - £50 price cut",
+  "compliance_changes": "PipelineIQ has SOC 2 Type 2, GDPR EU residency, UK residency, SSO SAML, and audit log - NexusCRM compliance unchanged",
+  "notes": [
+    "EU data residency requires PipelineIQ Advanced plan",
+    "feature in preview — GA date TBD"
+  ]
+}

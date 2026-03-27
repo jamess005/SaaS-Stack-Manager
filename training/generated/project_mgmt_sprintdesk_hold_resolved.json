@@ -1,0 +1,20 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "time-tracking (Premium tier)",
+    "advanced reporting and burndown charts"
+  ],
+  "current_tool_status": [
+    "Gantt chart view auto-update issue persists",
+    "Resource capacity planning still tracked in spreadsheets"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Inactive seats: 52; Shelfware: True"
+  ]
+}

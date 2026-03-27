@@ -1,0 +1,20 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "analytics",
+  "competitor": "DataLens",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "shipped real-time inventory tracking with automated low-stock alerts",
+    "introduced retail-specific dashboards for store performance analysis"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours",
+    "no self-serve embedded reporting for clients — requires export and manual PDF"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "competitor's NexusCRM connector requires custom API config — estimated 4hrs setup"
+  ]
+}

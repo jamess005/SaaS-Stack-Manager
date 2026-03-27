@@ -1,0 +1,22 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in time tracking with weekly timesheet submission and manager approval",
+    "customisable project templates (50+ consulting-specific templates)",
+    "budget tracking per engagement with burn rate alerts"
+  ],
+  "current_tool_status": [
+    "Partial resolution of Gantt chart view auto-update issue: auto-update now available on dependency changes, but still requires manual refresh on project reload",
+    "Partial resolution of resource capacity planning: utilisation tracking available, but still requires manual setup and management in spreadsheets"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "SOC 2 Type 2 certification updated to include new audit log feature",
+  "notes": [
+    "Competitor has closed the gap in key areas, but TaskBridge still offers a strong template library and board view adoption",
+    "Shelfware rate remains high at 35%"
+  ]
+}

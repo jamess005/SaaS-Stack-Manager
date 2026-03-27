@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "analytics",
+  "competitor": "ClearView Analytics",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "real-time connectors for retail POS systems",
+    "mobile-responsive dashboards"
+  ],
+  "current_tool_status": [
+    "InsightDeck stable"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "ClearView Analytics added SOC2 Type 2 compliance",
+  "notes": [
+    "ClearView Analytics white-label embedded reporting requires Enterprise tier (+£17.50/seat)"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "No new features. Minor maintenance update only."
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68; feature adoption declined; team is paying for unused capacity"
+  ],
+  "pricing_delta": "Prism BI £520/mo vs InsightDeck £340/mo (£180/mo cost increase)",
+  "compliance_changes": "Prism BI added data lineage tracking with column-level provenance and ML-powered root cause analysis",
+  "notes": [
+    "InsightDeck shelfware has increased; competitor offers per-active-user pricing to eliminate wasted seat cost"
+  ]
+}

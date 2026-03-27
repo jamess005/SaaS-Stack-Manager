@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "EUR invoicing supported",
+    "native real-time Barclays bank feed"
+  ],
+  "current_tool_status": [
+    "Reconciliation on datasets >5,000 rows takes 10–15 minutes"
+  ],
+  "pricing_delta": "£420 to £395",
+  "compliance_changes": "IFRS 15 revenue recognition module now compliant",
+  "notes": [
+    "Utilisation has dropped to 85%"
+  ]
+}

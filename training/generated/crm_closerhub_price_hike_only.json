@@ -1,0 +1,18 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "price reduction"
+  ],
+  "current_tool_status": [
+    "mobile app stability issues"
+  ],
+  "pricing_delta": "CloserHub: from £680 to £578 (10% reduction)",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "no native LinkedIn enrichment in NexusCRM"
+  ]
+}

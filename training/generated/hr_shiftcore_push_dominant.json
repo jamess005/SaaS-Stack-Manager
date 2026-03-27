@@ -1,0 +1,19 @@
+{
+  "scenario_type": "push_dominant",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Shift scheduling and rota management feature updated to support multiple shift types"
+  ],
+  "current_tool_status": [
+    "API failures increased from 50/day to 200/day",
+    "Support response time degraded from 24h to 72h"
+  ],
+  "pricing_delta": "Price increased from £385 to £395",
+  "compliance_changes": "GDPR right-to-erasure requests now automated",
+  "notes": [
+    "PayAxis native integration with PeoplePulse may require quarterly middleware updates"
+  ]
+}

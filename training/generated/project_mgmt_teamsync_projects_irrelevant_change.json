@@ -1,0 +1,23 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Integrated inventory management for retail POS",
+    "Implemented automated recipe scaling for food manufacturers"
+  ],
+  "current_tool_status": [
+    "No time-tracking built in — staff use a separate tool (ChronoLog) at £95/mo",
+    "Client portal view is read-only; clients cannot comment or approve deliverables in-app",
+    "Gantt chart view requires manual refresh — does not auto-update on dependency changes",
+    "No resource capacity planning — managers track utilisation in spreadsheets",
+    "Slack integration was deprecated in TaskBridge v4.1; now requires Zapier workaround"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Migration from TaskBridge would mean losing dedicated PM depth"
+  ]
+}

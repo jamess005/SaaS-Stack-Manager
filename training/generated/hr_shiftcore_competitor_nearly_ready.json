@@ -1,0 +1,23 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Continuous performance feedback or review cycles 'in beta'",
+    "eNPS or pulse survey tooling 'in beta'",
+    "Onboarding workflow templates 'expected Q2 2025'"
+  ],
+  "current_tool_status": [
+    "Performance review module outdated — no continuous feedback, only annual cycles",
+    "No built-in eNPS or pulse survey tooling",
+    "Onboarding workflows require manual setup per new hire — no templates"
+  ],
+  "pricing_delta": "Unchanged",
+  "compliance_changes": "GDPR right-to-erasure requests may be automated in ShiftCore",
+  "notes": [
+    "ShiftCore's GDPR right-to-erasure process still manual, support ticket required",
+    "Designed for shift-based workforces — may not fit knowledge worker / consulting use cases"
+  ]
+}

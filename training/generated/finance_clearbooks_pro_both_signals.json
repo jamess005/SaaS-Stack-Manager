@@ -1,0 +1,19 @@
+{
+  "scenario_type": "both_signals",
+  "category": "finance",
+  "competitor": "ClearBooks Pro",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native multi-currency support for EUR invoices",
+    "price reduction to £290"
+  ],
+  "current_tool_status": [
+    "reconciliation on datasets >5,000 rows takes 10–15 minutes"
+  ],
+  "pricing_delta": "reduced by £130",
+  "compliance_changes": "ClearBooks Pro now SOC2 Type II compliant; VaultLedger remains non-compliant",
+  "notes": [
+    "consider impact of increased reconciliation time on month-end workflow; note potential integration with ClearBooks Pro's payroll module"
+  ]
+}

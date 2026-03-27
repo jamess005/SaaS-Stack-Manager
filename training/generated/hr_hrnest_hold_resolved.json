@@ -1,0 +1,19 @@
+{
+  "scenario_type": "hold_resolved",
+  "category": "hr",
+  "competitor": "HRNest",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "leave management",
+    "employee self-service"
+  ],
+  "current_tool_status": [
+    "PeoplePulse performance review module is outdated — no continuous feedback, only annual cycles"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "HRNest SOC2 Type II is false, GDPR erasure automated is false",
+  "notes": [
+    "inactive seats: 27, shelfware: False"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "scenario_type": "dual_improvement",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "document collaboration",
+    "meeting integration with task creation"
+  ],
+  "current_tool_status": [
+    "Gantt chart view auto-update on dependency changes now refreshed every 5 minutes (v4.5)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "SOC 2 Type 2 compliance added",
+  "notes": [
+    "Active users: 98 / 150 seats, utilisation: 65%"
+  ]
+}

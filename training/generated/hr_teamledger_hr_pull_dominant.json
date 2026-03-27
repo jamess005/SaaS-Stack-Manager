@@ -1,0 +1,23 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Continuous performance feedback",
+    "Built-in eNPS and pulse survey tooling",
+    "Automated onboarding workflow builder"
+  ],
+  "current_tool_status": [
+    "Performance review module is outdated — no continuous feedback, only annual cycles",
+    "No built-in eNPS or pulse survey tooling",
+    "Onboarding workflows require manual setup per new hire — no templates"
+  ],
+  "pricing_delta": "price reduction",
+  "compliance_changes": "GDPR erasure automation",
+  "notes": [
+    "Migration tooling available",
+    "UK payroll integration with PayAxis now native"
+  ]
+}

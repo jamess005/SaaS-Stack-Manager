@@ -1,0 +1,56 @@
+{
+  "name": "DataLens",
+  "based_on": "Looker / Metabase",
+  "category": "analytics",
+  "monthly_cost_gbp": 480,
+  "seat_count_assumed": 12,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 40.0,
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_per_seat_gbp": 40.0,
+      "min_seats": 5
+    },
+    {
+      "tier": "Business",
+      "cost_per_seat_gbp": 58.0,
+      "min_seats": 5
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "data_lineage": true,
+    "iso27001": true
+  },
+  "features": [
+    "real-time data connectors (NexusCRM, VaultLedger, TaskBridge, 50+ others)",
+    "embedded client reporting (white-label, all tiers)",
+    "mobile-responsive dashboards",
+    "full data lineage and audit trail",
+    "drag-and-drop dashboard builder",
+    "AI anomaly detection and alerting (shipped Q3 2024)",
+    "natural language query interface",
+    "automated insight digests (weekly email)",
+    "row-level security for client data isolation",
+    "dbt integration"
+  ],
+  "known_limitations": [
+    "Higher per-seat cost than InsightDeck",
+    "NexusCRM connector requires custom API config \u2014 estimated 4hrs setup",
+    "Natural language query in English only"
+  ],
+  "integration_compatibility": [
+    "NexusCRM",
+    "VaultLedger",
+    "TaskBridge",
+    "TeamSync",
+    "50+ connectors"
+  ],
+  "recent_trajectory": "strong_improvement",
+  "last_updated": "2024-11-01"
+}

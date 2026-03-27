@@ -1,0 +1,18 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "crm",
+  "competitor": "PipelineIQ",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor documentation refresh"
+  ],
+  "current_tool_status": [
+    "fully resolved API rate limits causing sync delays with InsightDeck (analytics tool), previously 5% of syncs delayed, now 0%; mobile app instability, previously 10% crashes, now 0% on iOS 17+"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "active users: 19 / 22 seats; utilisation: 86%"
+  ]
+}

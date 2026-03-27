@@ -1,0 +1,19 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "project_mgmt",
+  "competitor": "ProjectAxis",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "built-in time tracking",
+    "client portal with deliverable commenting"
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68; utilisation declined to 65%; feature adoption is decreasing"
+  ],
+  "pricing_delta": "Competitor offers per-active-user pricing; current tool's £290/mo is not competitive with ProjectAxis's pricing",
+  "compliance_changes": "Competitor's SOC 2 Type 2 certification and GDPR compliance align with our current tool's baseline",
+  "notes": [
+    "ProjectAxis's native Slack integration and Gantt chart auto-update may improve team productivity"
+  ]
+}

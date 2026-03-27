@@ -1,0 +1,18 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "10-15% price reduction from £520 to £442"
+  ],
+  "current_tool_status": [
+    "API rate limits hit above 50k records, dashboards stale by up to 4 hours"
+  ],
+  "pricing_delta": "from £340 to £442",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "Prism BI's price reduction may be a strategic move to re-enter the market, but InsightDeck's pricing remains unchanged"
+  ]
+}

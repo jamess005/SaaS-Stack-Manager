@@ -1,0 +1,14 @@
+{
+  "category": "finance",
+  "competitor_slug": "ledgerflow",
+  "verdict": "SWITCH",
+  "pass1_payload": {
+    "current_monthly_cost": 420.0,
+    "competitor_monthly_cost": 380.0,
+    "migration_hours": 15.0,
+    "staff_hourly_rate": 48.0,
+    "annual_saving": 480.0,
+    "roi_threshold": 1200.0
+  },
+  "memo_text": "CATEGORY: Finance\nCURRENT TOOL: VaultLedger (\u00a3420/mo)\nCOMPETITOR: LedgerFlow (\u00a3380/mo)\nDATE: 2024-11-20\n\nPUSH SIGNALS:\n  - No native multi-currency \u2014 EUR invoices require manual conversion and journal entries [HIGH \u2014 blocking EU client invoicing per finance.md must-have]\n  - IFRS 15 revenue recognition workaround in use [HIGH \u2014 compliance risk, auditor flagged]\n  - Barclays bank feed is overnight only \u2014 no intraday visibility [MEDIUM \u2014 operational friction]\n  - Audit trail export is CSV only \u2014 auditors have requested PDF with digital signature [HIGH \u2014 auditor requirement per finance.md]\n\nPULL SIGNALS:\n  - \"multi-currency invoicing (40+ currencies including EUR native)\" [HIGH \u2014 resolves #1 push; must-have per finance.md]\n  - \"IFRS 15 revenue recognition module\" [HIGH \u2014 resolves #2 push; compliance requirement met]\n  - \"real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)\" [MEDIUM \u2014 resolves #3 push]\n  - \"audit trail export: PDF with digital signature\" [HIGH \u2014 resolves #4 push; auditor requirement met]\n  - Price reduction: \u00a3420 \u2192 \u00a3380/mo [POSITIVE \u2014 direct saving]\n  - Compliance: SOC2 Type II \u2713, SSO (SAML) \u2713, UK/EU residency \u2713 [ALL CLEAR \u2014 no hard blocks]\n\nFINANCIAL ANALYSIS:\n  Migration cost: 15hrs \u00d7 \u00a348 = \u00a3720 one-time\n  Annual saving: \u00a3480\n  Amortised migration: \u00a3240/yr over 3 years\n  Annual net: \u00a3240\n  ROI threshold (\u00a31,200/yr): NOT MET on direct saving alone\n  Operational gain: Multi-currency unblocks EU client invoicing. IFRS 15 compliance removes active audit risk. Combined operational and direct value materially exceeds threshold.\n  ROI threshold met: YES (direct + operational combined)\n\nVERDICT: SWITCH\n\nEVIDENCE:\n  \"multi-currency invoicing (40+ currencies including EUR native)\"\n  \"IFRS 15 revenue recognition module\"\n  \"real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)\"\n  \"audit trail export: PDF with digital signature\""
+}

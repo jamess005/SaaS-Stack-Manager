@@ -1,0 +1,20 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "analytics",
+  "competitor": "MetricFlux",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native NexusCRM connector",
+    "data lineage tracking",
+    "anomaly detection powered by statistical models"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist"
+  ],
+  "pricing_delta": "price reduction",
+  "compliance_changes": "SOC 2 Type 2, GDPR EU residency, UK residency, SSO SAML, audit log, data lineage tracking, and MFA enforcement",
+  "notes": [
+    "migration tooling available for InsightDeck users"
+  ]
+}

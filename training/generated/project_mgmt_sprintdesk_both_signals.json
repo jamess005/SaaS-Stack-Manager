@@ -1,0 +1,20 @@
+{
+  "scenario_type": "both_signals",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "shipped time-tracking feature",
+    "reduced monthly cost from £410 to £395"
+  ],
+  "current_tool_status": [
+    "Gantt chart view auto-update issue worsened"
+  ],
+  "pricing_delta": "reduced by £15",
+  "compliance_changes": "SOC2 Type II certification",
+  "notes": [
+    "Competitor's native TeamSync integration may require additional setup",
+    "Current tool's shelfware issue remains unresolved"
+  ]
+}

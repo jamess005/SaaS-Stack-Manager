@@ -1,0 +1,18 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "project_mgmt",
+  "competitor": "TeamSync Projects",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption declined from 65% to 58%",
+    "team is paying for unused capacity"
+  ],
+  "pricing_delta": "competitor offers per-active-user pricing",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "considering TeamSync Projects' dedicated project management depth"
+  ]
+}

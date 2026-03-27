@@ -1,0 +1,20 @@
+{
+  "scenario_type": "pull_dominant",
+  "category": "crm",
+  "competitor": "CloserHub",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "LinkedIn enrichment via native integration",
+    "Unlimited email sequences",
+    "High-volume API"
+  ],
+  "current_tool_status": [
+    "No change — existing issues persist."
+  ],
+  "pricing_delta": "price reduced by 25%",
+  "compliance_changes": "Compliance unchanged",
+  "notes": [
+    "Migration tooling available for CloserHub"
+  ]
+}

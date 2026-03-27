@@ -1,0 +1,25 @@
+{
+  "scenario_type": "competitor_nearly_ready",
+  "category": "finance",
+  "competitor": "LedgerFlow",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "multi-currency invoicing (40+ currencies including EUR native)",
+    "real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)",
+    "IFRS 15 revenue recognition module",
+    "fast reconciliation engine (tested to 500k rows in under 60 seconds)",
+    "audit trail export: PDF with digital signature"
+  ],
+  "current_tool_status": [
+    "No native multi-currency — EUR invoices require manual conversion and journal entries",
+    "Reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck",
+    "Revenue recognition module not IFRS 15 compliant — workaround in use",
+    "No real-time bank feed for Barclays Business accounts (only overnight sync)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "LedgerFlow's AI anomaly detection feature is in roadmap — Q2 2025 target"
+  ]
+}

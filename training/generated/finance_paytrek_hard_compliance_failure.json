@@ -1,0 +1,30 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "finance",
+  "competitor": "PayTrek",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "Multi-currency invoicing with 80+ currencies including EUR, GBP, USD native",
+    "IFRS 15 revenue recognition module (GA)",
+    "Global payment rails (SWIFT, SEPA, Faster Payments)",
+    "Real-time bank feeds (Barclays, HSBC via Open Banking API)",
+    "Audit trail export: PDF with digital signature",
+    "UK payroll sync (PayAxis native integration)",
+    "AP automation with 3-way matching",
+    "Cash flow forecasting",
+    "24/7 support SLA with dedicated success manager"
+  ],
+  "current_tool_status": [
+    "Reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck",
+    "Revenue recognition module not IFRS 15 compliant — workaround in use",
+    "No real-time bank feed for Barclays Business accounts (only overnight sync)",
+    "Audit trail export is CSV only — external auditors have requested PDF with digital signature"
+  ],
+  "pricing_delta": "Price decrease: £420 → £400",
+  "compliance_changes": "UK data residency not available; SOC2 certification in progress; no self-serve EU data residency roadmap confirmed",
+  "notes": [
+    "UK clients may not be able to use PayTrek due to non-compliance with Meridian's UK GDPR obligations for EU client data",
+    "EU clients with data sovereignty requirements cannot be served"
+  ]
+}

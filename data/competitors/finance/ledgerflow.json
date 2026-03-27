@@ -1,0 +1,56 @@
+{
+  "name": "LedgerFlow",
+  "based_on": "QuickBooks / Sage 50",
+  "category": "finance",
+  "monthly_cost_gbp": 380,
+  "seat_count_assumed": 8,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Business",
+      "cost_flat_gbp": 380,
+      "max_seats": 10
+    },
+    {
+      "tier": "Advanced",
+      "cost_flat_gbp": 560,
+      "max_seats": 25
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_pdf_signed": true,
+    "mtd_vat": true,
+    "ifrs15_compliant": true
+  },
+  "features": [
+    "multi-currency invoicing (40+ currencies including EUR native)",
+    "real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)",
+    "VAT / MTD filing",
+    "IFRS 15 revenue recognition module",
+    "fast reconciliation engine (tested to 500k rows in under 60 seconds)",
+    "audit trail export: PDF with digital signature",
+    "UK payroll sync (PayAxis, Sage Payroll)",
+    "project billing and profitability",
+    "cash flow forecasting",
+    "24/7 support SLA"
+  ],
+  "known_limitations": [
+    "AI anomaly detection in roadmap \u2014 Q2 2025 target",
+    "Multi-entity consolidation requires Advanced tier",
+    "UI considered dated by some reviewers \u2014 migration training time higher"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "NexusCRM",
+    "InsightDeck",
+    "TaskBridge",
+    "Zapier"
+  ],
+  "recent_trajectory": "strong_feature_set_stable",
+  "last_updated": "2024-10-15"
+}

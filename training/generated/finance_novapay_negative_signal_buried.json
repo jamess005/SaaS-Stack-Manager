@@ -1,0 +1,23 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "invoicing supports AUD",
+    "EUR invoicing available with manual conversion",
+    "UK payroll sync (PayAxis) added"
+  ],
+  "current_tool_status": [
+    "reconciliation time increased to 10–15 minutes",
+    "inactive seats: 2"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "NovaPay has'soc2_type2': true, 'gdpr_eu_residency': true, 'uk_residency': true,'sso_saml': true, 'audit_log': true, 'audit_log_pdf_signed': false,'mtd_vat': true, 'ifrs15_compliant': false",
+  "notes": [
+    "NovaPay's IFRS 15 revenue recognition not available",
+    "NovaPay's EUR invoicing requires manual conversion and journal entries",
+    "NovaPay's Audit trail export is CSV only — no PDF with digital signature"
+  ]
+}

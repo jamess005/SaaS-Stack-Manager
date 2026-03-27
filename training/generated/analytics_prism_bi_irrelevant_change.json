@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "analytics",
+  "competitor": "Prism BI",
+  "current_tool": "InsightDeck",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "ML-powered root cause analysis",
+    "column-level data lineage tracking"
+  ],
+  "current_tool_status": [
+    "NexusCRM sync hits API rate limits above 50k records — dashboards stale by up to 4 hours"
+  ],
+  "pricing_delta": "£180/mo cost increase with no direct saving",
+  "compliance_changes": "SOC2 Type II certification, GDPR EU residency",
+  "notes": [
+    "Overkill for teams without a dedicated data analyst on staff"
+  ]
+}

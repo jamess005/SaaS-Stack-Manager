@@ -1,0 +1,19 @@
+{
+  "scenario_type": "irrelevant_change",
+  "category": "finance",
+  "competitor": "NovaPay",
+  "current_tool": "VaultLedger",
+  "date": "2023-07-26",
+  "competitor_changes": [
+    "shipped table management for restaurants with real-time seat allocation and inventory tracking",
+    "improved inventory forecasting with AI-driven demand predictions"
+  ],
+  "current_tool_status": [
+    "no changes relevant to this scenario"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "the competitor's new features are irrelevant to a UK B2B management consultancy"
+  ]
+}

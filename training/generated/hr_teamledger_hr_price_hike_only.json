@@ -1,0 +1,18 @@
+{
+  "scenario_type": "price_hike_only",
+  "category": "hr",
+  "competitor": "TeamLedger HR",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "performance review module now quarterly and annual cycles"
+  ],
+  "current_tool_status": [
+    "performance review module outdated — no continuous feedback, only annual cycles"
+  ],
+  "pricing_delta": "from £510 to £428",
+  "compliance_changes": "GDPR erasure still manual — no automation",
+  "notes": [
+    "no new features shipped by PeoplePulse"
+  ]
+}

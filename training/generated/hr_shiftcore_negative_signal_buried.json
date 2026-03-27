@@ -1,0 +1,19 @@
+{
+  "scenario_type": "negative_signal_buried",
+  "category": "hr",
+  "competitor": "ShiftCore",
+  "current_tool": "PeoplePulse",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "price cut to £330",
+    "new feature: continuous performance feedback"
+  ],
+  "current_tool_status": [
+    "Performance review module is outdated — no continuous feedback, only annual cycles"
+  ],
+  "pricing_delta": "price cut by £55",
+  "compliance_changes": "GDPR right-to-erasure automated process now available",
+  "notes": [
+    "GDPR right-to-erasure automated process available in ShiftCore, but requires Advanced plan; continuous performance feedback in ShiftCore available, but annual cycle only"
+  ]
+}

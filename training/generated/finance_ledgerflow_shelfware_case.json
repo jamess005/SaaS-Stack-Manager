@@ -1,0 +1,27 @@
+{
+  "scenario_type": "shelfware_case",
+  "category": "finance",
+  "competitor": "LedgerFlow",
+  "current_tool": "VaultLedger",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "multi-currency invoicing",
+    "real-time bank feeds",
+    "IFRS 15 revenue recognition module",
+    "fast reconciliation engine",
+    "audit trail export: PDF with digital signature",
+    "UK payroll sync",
+    "project billing and profitability",
+    "cash flow forecasting"
+  ],
+  "current_tool_status": [
+    "inactive seats rose from 45 to 68",
+    "feature adoption is declining",
+    "team is paying for unused capacity"
+  ],
+  "pricing_delta": "competitor pricing would eliminate wasted seat cost",
+  "compliance_changes": "competitor compliant with SOC2 Type 2, GDPR EU residency, UK residency, SSO SAML, audit log, audit log PDF signed, MTD VAT, IFRS 15",
+  "notes": [
+    "consider re-evaluation due to significant degradation in current tool"
+  ]
+}

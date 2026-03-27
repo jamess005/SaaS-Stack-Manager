@@ -1,0 +1,20 @@
+{
+  "scenario_type": "current_tool_rally",
+  "category": "project_mgmt",
+  "competitor": "SprintDesk",
+  "current_tool": "TaskBridge",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "minor documentation refresh"
+  ],
+  "current_tool_status": [
+    "fully resolved: Gantt chart view auto-updates on dependency changes (v5.0)",
+    "substantially improved: resource capacity planning available through integration with ResourceLog (v5.1)",
+    "fully resolved: Slack integration restored with native TaskBridge connector (v5.2)"
+  ],
+  "pricing_delta": "unchanged",
+  "compliance_changes": "unchanged",
+  "notes": [
+    "current tool's utilisation: 75% (up from 65%); active users: 120 / 150 seats"
+  ]
+}

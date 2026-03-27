@@ -1,0 +1,29 @@
+{
+  "scenario_type": "hard_compliance_failure",
+  "category": "crm",
+  "competitor": "ClientPulse",
+  "current_tool": "NexusCRM",
+  "date": "2024-07-26",
+  "competitor_changes": [
+    "native LinkedIn Sales Navigator enrichment",
+    "unlimited email sequences with A/B testing",
+    "Outlook and Gmail native integration",
+    "mobile app",
+    "deal timeline and activity log",
+    "role-based access controls",
+    "real-time pipeline reporting and quota tracking",
+    "Microsoft Teams notifications"
+  ],
+  "current_tool_status": [
+    "mobile app is unstable — crashes reported on iOS 17+",
+    "API rate limits cause sync delays with InsightDeck"
+  ],
+  "pricing_delta": "£418 - £510 = -£92",
+  "compliance_changes": "SOC2 certification not Type 2, UK residency not available, no SSO on any tier, no audit log",
+  "notes": [
+    "migration complexity rated HIGH by vendor",
+    "no territory management module",
+    "no built-in CPQ or quote generation",
+    "Vendor-assisted onboarding required for SSO setup"
+  ]
+}
