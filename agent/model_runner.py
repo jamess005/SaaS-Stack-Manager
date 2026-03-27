@@ -37,7 +37,7 @@ LOCAL_LLAMA_8B = (
 # ── Dry-run fixture map ────────────────────────────────────────────────────────
 # Maps (category, competitor_slug) → path to expected_outputs fixture JSON.
 # Any pair not in this map falls back to the SWITCH fixture.
-_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "expected_outputs"
+_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 _DRY_RUN_MAP: dict[tuple[str, str], str] = {
     ("finance", "ledgerflow"): "switch_verdict.json",

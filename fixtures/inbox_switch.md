@@ -1,39 +1,17 @@
-FROM: LedgerFlow Product Team
-DATE: 2024-11-15
-RE: LedgerFlow Q4 2024 Release — Multi-Currency, IFRS 15, and Real-Time Banking Now GA
+LedgerFlow — Release Notes v3.4 (November 2024)
 
----
+PRICING: Business tier now £380/mo flat (no per-seat charges).
 
-LedgerFlow is pleased to announce general availability of three capabilities that
-complete our UK professional services feature set.
+NEW FEATURES:
+- Multi-currency invoicing: 40+ currencies including EUR native, with automatic
+  exchange rate lookup and journal entry generation.
+- IFRS 15 revenue recognition module: full compliance, configurable recognition
+  schedules, audit-ready export.
+- Real-time Barclays Business bank feed: intraday sync, instant transaction
+  matching.
+- Audit trail export: PDF with digital signature, configurable retention period.
 
-**1. Multi-Currency Invoicing — GA on Business Tier**
+COMPLIANCE: SOC 2 Type II certification renewed. UK/EU data residency confirmed.
+SSO (SAML 2.0) available on Business tier.
 
-Multi-currency invoicing is now generally available on all Business tier accounts and
-above at no additional cost. Supported currencies include EUR, USD, CHF, SGD, AED, and
-34 additional currencies. EUR is fully native — invoices, payments, and reconciliation
-are handled end-to-end without manual journal entries.
-
-**2. IFRS 15 Revenue Recognition Module — GA**
-
-Our IFRS 15 revenue recognition module is now generally available across all tiers.
-The module is compliant with FRC guidance and has been reviewed by our external audit
-partners. Existing customers on workaround workflows can migrate directly.
-
-**3. Real-Time Barclays Business Bank Feed**
-
-Following our partnership with the Barclays API team, real-time bank feed sync is now
-live for Barclays Business accounts. Transactions appear within 60 seconds of posting.
-HSBC, Lloyds, Starling, and Monzo feeds also included.
-
-**Pricing and Migration**
-
-Monthly pricing remains unchanged: Business tier £380/mo flat (up to 10 seats).
-
-Every migrating account receives a dedicated onboarding engineer for 15 working hours
-at no additional cost. The onboarding engineer handles data migration, PayAxis
-integration validation, and a full month-end cycle parallel run.
-
----
-
-*LedgerFlow — Built for UK professional services*
+SUPPORT: 24/7 SLA now included on Business tier.

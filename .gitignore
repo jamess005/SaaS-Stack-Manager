@@ -20,7 +20,7 @@ env/
 .env.*
 *.key
 
-# Model weights — never commit these
+# Model weights — never commit
 models/
 *.bin
 *.safetensors
@@ -30,27 +30,27 @@ models/
 *.ckpt
 *.pkl
 
-# Training outputs
+# Training outputs — generated at runtime, not versioned
+training/generated/
+training/traces/
 training/checkpoints/
 training/runs/
 training/logs/
 wandb/
 
-# Agent output files (generated at runtime — not versioned)
+# Internal design docs
+/ARCHITECTURE.md
+/BLUEPRINT.md
+
+# Agent runtime outputs
 market_inbox/*.md
-
-# Verdict outputs (generated at runtime — not versioned)
-outputs/*.md
-
-# Hold register (runtime state — not versioned)
+/outputs/
 hold_register.json
 
-# Coverage
+# Coverage / test artifacts
 .coverage
 coverage.xml
 htmlcov/
-
-# Pytest
 .pytest_cache/
 
 # IDEs

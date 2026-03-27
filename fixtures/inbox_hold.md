@@ -1,38 +1,20 @@
-FROM: WorkForge Product Team
-DATE: 2024-11-12
-RE: WorkForge November Update — GDPR Erasure Automation Now Available
+WorkForge HR — Roadmap Update Q4 2024
 
----
+PRICING: Professional tier £340/mo (up to 200 employees). No change.
 
-WorkForge is pleased to confirm that automated GDPR right-to-erasure processing is
-now generally available across all tiers from November 15th, 2024.
+ROADMAP ANNOUNCEMENTS:
+- UK payroll integration (Sage/Xero): targeted Q1 2025 via public roadmap post.
+  Currently in closed beta with 12 pilot customers.
+- Right-to-work automated checks: planned Q2 2025.
+- Enhanced GDPR data subject request automation: scoped, not yet in development.
 
-**What's new: GDPR Right-to-Erasure Automation**
+SHIPPED THIS QUARTER:
+- Performance review module: self-assessment forms and manager scoring now live.
+- SSO (SAML 2.0) on Professional tier: available from v4.2.
+- Basic eNPS survey tool: launched in beta.
 
-Data subjects can now submit erasure requests via a self-service portal. Requests are
-automatically routed, processed across all WorkForge data stores, and completed with
-a compliance certificate issued within 72 hours. No support ticket required.
+COMPLIANCE: UK GDPR data residency (EU region). SOC 2 Type II audit in progress,
+certification expected H1 2025.
 
-This feature is available on all WorkForge tiers at no additional cost.
-
-**WorkForge Core pricing**
-
-WorkForge Core is priced at £2.80/seat/month.
-
-For a 150-seat deployment this is £420/mo. WorkForge Core includes:
-
-- Full HRIS with leave management and absence tracking
-- Employee self-service portal
-- Automated GDPR erasure (new)
-- UK payroll sync — native PayAxis integration on all tiers
-- Onboarding workflow templates (15 templates included)
-- Continuous performance feedback module
-
-**Compliance**
-
-WorkForge holds SOC2 Type II certification (renewed October 2024). SAML 2.0 SSO is
-included on all tiers. Data residency: UK and EU only.
-
----
-
-*WorkForge — HR that works for your team.*
+NOTE: UK payroll integration (the primary blocker) is on roadmap for Q1 2025
+but not yet shipped. SOC 2 Type II pending.

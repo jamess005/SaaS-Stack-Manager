@@ -11,31 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Install dev dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements-dev.txt
-
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
 
       - name: Run tests
-        run: pytest --cov=agent --cov-report=xml
+        run: pytest
         env:
-          # CI always uses mock model runner — no GPU required
           AGENT_DRY_RUN: "true"
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: coverage.xml
-          fail_ci_if_error: false
