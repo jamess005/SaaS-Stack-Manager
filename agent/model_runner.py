@@ -598,9 +598,19 @@ def _build_verdict_user(context: dict, roi_result: dict,
         f"Threshold met: {'YES' if roi_result['roi_threshold_met'] else 'NO'}"
     )
 
+    # Extract PASS/FAIL from compliance output robustly — the model sometimes
+    # prefixes with "Based on the provided information:" before stating the verdict.
+    _upper = compliance_result.upper()
+    if "FAIL" in _upper:
+        compliance_line = "FAIL"
+    elif "PASS" in _upper or "COMPLIANT" in _upper:
+        compliance_line = "PASS"
+    else:
+        compliance_line = compliance_result.split("\n")[0]
+
     return (
         f"{category}: {tool_name} (£{tool_cost}/mo) vs {comp_name} (£{comp_cost}/mo)\n\n"
-        f"Compliance: {compliance_result.split(chr(10))[0]}\n\n"
+        f"Compliance: {compliance_line}\n\n"
         f"Push signals [{push_strength}]:\n{push_bullets}\n\n"
         f"Pull signals [{pull_strength}]:\n{pull_bullets}\n\n"
         f"ROI: {roi_summary}"
