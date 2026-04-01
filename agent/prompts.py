@@ -143,43 +143,77 @@ PASS2_FEW_SHOT = [
         "role": "user",
         "content": """\
 CATEGORY: finance
-CURRENT TOOL: VaultLedger — £420/mo, 8 seats. Contract ends 2025-06 (annual).
-COMPETITOR: LedgerFlow — Business tier £380/mo flat.
+CURRENT TOOL: VaultLedger — £420/mo
+COMPETITOR: LedgerFlow — £380/mo
 
-CURRENT TOOL KNOWN ISSUES:
+## CURRENT TOOL — KNOWN ISSUES
   - No native multi-currency — EUR invoices require manual conversion and journal entries
+  - Reconciliation on datasets >5,000 rows takes 8–12 minutes; causes month-end bottleneck
   - Revenue recognition module not IFRS 15 compliant — workaround in use
   - No real-time bank feed for Barclays Business accounts (only overnight sync)
   - Audit trail export is CSV only — external auditors have requested PDF with digital signature
 
-BUSINESS RULES (Finance):
-  Must-have: multi-currency invoicing (EUR required), real-time Barclays feed, IFRS 15,
-  audit trail PDF, 24/7 support SLA, SOC2 Type II, UK/EU data residency, SSO.
-  ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration budget: 15hrs max.
+## CURRENT TOOL — USAGE METRICS
+  Utilisation: 87%
+  Active users: 7 / 8 seats
+  Inactive seats: 1
+  Shelfware flag: False
+  Notes: Finance team rely on this daily. Multi-currency module listed as feature but non-functional for EUR — finance team workaround is manual.
 
-COMPETITOR DATA:
-  compliance: soc2_type2=true, gdpr_eu_residency=true, sso_saml=true,
-              audit_log_pdf_signed=true, ifrs15_compliant=true
-  features: ["multi-currency invoicing (40+ currencies including EUR native)",
-             "IFRS 15 revenue recognition module",
-             "real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)",
-             "audit trail export: PDF with digital signature"]
-  known_limitations: ["UI considered dated — migration training time higher"]
+## BUSINESS RULES (FINANCE)
+Must-Have: Multi-currency invoicing (EUR required), real-time Barclays feed, IFRS 15,
+audit trail PDF with digital signature, 24/7 support SLA, SOC2 Type II, UK/EU data residency, SSO.
+ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration budget: 15hrs max.
 
-INBOX TRIGGER:
+## GLOBAL BUSINESS RULES
+SOC2 Type II: REQUIRED. SSO (SAML 2.0 or OIDC): Required for >10 seats.
+Data residency: UK or EU. Audit logging: Required for finance, HR, CRM (exportable).
+Min net annual saving: £1,200/yr. Max migration cost: £5,000. Amortise over 3 years.
+Staff rate: £48/hr. Max migration hours: 15.
+
+## COMPETITOR DATA
+{
+  "name": "LedgerFlow",
+  "category": "finance",
+  "monthly_cost_gbp": 380,
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_pdf_signed": true,
+    "ifrs15_compliant": true
+  },
+  "features": [
+    "multi-currency invoicing (40+ currencies including EUR native)",
+    "real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo)",
+    "IFRS 15 revenue recognition module",
+    "audit trail export: PDF with digital signature",
+    "24/7 support SLA"
+  ],
+  "known_limitations": [
+    "UI considered dated by some reviewers — migration training time higher"
+  ]
+}
+
+## INBOX TRIGGER
 LedgerFlow Q4 2024 — multi-currency GA, IFRS 15 GA, real-time Barclays feed live.
 Price unchanged: £380/mo. 15 working hours migration support included.
 
-ROI RESULT (Python):
-  migration_cost_one_time: £720.00
-  annual_direct_saving: £480.00
-  amortised_migration_cost_per_year: £240.00
-  annual_net_gbp: £240.00
-  roi_threshold_gbp: £1200.00
-  roi_threshold_met: false
-  note: Direct cost saving only. Operational gains not captured — flag qualitatively.
+## ROI CALCULATION RESULT (computed by Python — do not recalculate)
+{
+  "migration_cost_one_time": 720.0,
+  "annual_direct_saving": 480.0,
+  "amortised_migration_cost_per_year": 240.0,
+  "annual_net_gbp": 240.0,
+  "roi_threshold_gbp": 1200.0,
+  "roi_threshold_met": false,
+  "note": "Direct cost saving only. Operational gains (e.g. unblocked revenue, compliance risk removal) are not captured here — flag qualitatively in memo."
+}
 
-Write the verdict memo.""",
+---
+Write the verdict memo in the exact format specified in the system prompt. Every feature claim in PULL SIGNALS must be a verbatim quote from COMPETITOR DATA enclosed in double-quotes. Every push signal must reference a specific known issue. The VERDICT must be SWITCH, STAY, or HOLD.""",
     },
     {
         "role": "assistant",
@@ -228,65 +262,114 @@ EVIDENCE:
         "role": "user",
         "content": """\
 CATEGORY: crm
-CURRENT TOOL: NexusCRM — £510/mo, 22 seats. Contract ends 2025-08 (annual).
-COMPETITOR: VelocityCRM — Core tier £17.73/seat.
+CURRENT TOOL: NexusCRM — £510/mo
+COMPETITOR: VelocityCRM — £390/mo
 
-CURRENT TOOL KNOWN ISSUES:
+## CURRENT TOOL — KNOWN ISSUES
   - No native LinkedIn enrichment — reps manually copy contact data
   - Email sequence builder limited to 5 steps; competitors offer unlimited
-  - Mobile app unstable — crashes on iOS 17+
+  - API rate limits cause sync delays with InsightDeck (analytics tool)
+  - Mobile app is unstable — crashes reported on iOS 17+
+  - Reporting dashboards not customisable without paying for add-on
 
-BUSINESS RULES (CRM):
-  Must-have: SOC2 Type II, SSO (>10 seats), audit log (exportable), UK/EU residency.
-  ROI threshold: £1,200/yr net.
+## CURRENT TOOL — USAGE METRICS
+  Utilisation: 86%
+  Active users: 19 / 22 seats
+  Inactive seats: 3
+  Shelfware flag: False
+  Notes: Core sales tool. High adoption but significant unused feature surface — forecasting and territory modules never configured.
 
-COMPETITOR DATA:
-  compliance: soc2_type2=false, sso_saml=false (Core tier; Advanced only), audit_log=false
-  features: ["contact management", "deal pipeline", "email integration (Gmail)"]
-  pricing_tiers:
-    Core: £17.73/seat — no SSO, no audit log
-    Advanced: £28/seat — SSO and audit log included
+## BUSINESS RULES (CRM)
+Must-Have: Contact management, deal pipeline, email integration (Gmail + Outlook),
+LinkedIn enrichment, reporting, API sync with InsightDeck, mobile app (iOS + Android).
+Compliance: SOC2 Type II, SSO (>10 seats), audit log (exportable), UK/EU residency.
+ROI threshold: £1,200/yr net.
 
-INBOX TRIGGER:
+## GLOBAL BUSINESS RULES
+SOC2 Type II: REQUIRED. SSO (SAML 2.0 or OIDC): Required for >10 seats.
+Data residency: UK or EU. Audit logging: Required for finance, HR, CRM (exportable).
+Min net annual saving: £1,200/yr. Max migration cost: £5,000. Amortise over 3 years.
+Staff rate: £48/hr. Max migration hours: 15.
+
+## COMPETITOR DATA
+{
+  "name": "VelocityCRM",
+  "category": "crm",
+  "monthly_cost_gbp": 390,
+  "cost_per_seat_gbp": 17.73,
+  "pricing_tiers": [
+    {"tier": "Core", "cost_per_seat_gbp": 17.73},
+    {"tier": "Advanced", "cost_per_seat_gbp": 28.0}
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": false,
+    "sso_saml": false,
+    "audit_log": false
+  },
+  "features": [
+    "contact and company management",
+    "deal pipeline",
+    "email integration (Gmail only natively)",
+    "basic reporting",
+    "mobile app (iOS only, Android in beta)"
+  ],
+  "known_limitations": [
+    "No SSO on Core tier — Advanced required",
+    "No audit log on either tier",
+    "UK data residency not available — EU (Ireland) only",
+    "No LinkedIn enrichment",
+    "Android app in beta — unstable"
+  ]
+}
+
+## INBOX TRIGGER
 VelocityCRM Core tier reduced to £17.73/seat effective December 1st.
 At 22 seats this represents significant monthly savings.
 Note: SSO and audit logging are available on Advanced tier at £28/seat.
 
-ROI RESULT (Python):
-  migration_cost_one_time: £384.00
-  annual_direct_saving: £1,440.00
-  amortised_migration_cost_per_year: £128.00
-  annual_net_gbp: £1,312.00
-  roi_threshold_gbp: £1200.00
-  roi_threshold_met: true
+## ROI CALCULATION RESULT (computed by Python — do not recalculate)
+{
+  "migration_cost_one_time": 720.0,
+  "annual_direct_saving": 1440.0,
+  "amortised_migration_cost_per_year": 240.0,
+  "annual_net_gbp": 1200.0,
+  "roi_threshold_gbp": 1200.0,
+  "roi_threshold_met": true,
+  "note": "Direct cost saving only. Operational gains (e.g. unblocked revenue, compliance risk removal) are not captured here — flag qualitatively in memo."
+}
 
-Write the verdict memo.""",
+---
+Write the verdict memo in the exact format specified in the system prompt. Every feature claim in PULL SIGNALS must be a verbatim quote from COMPETITOR DATA enclosed in double-quotes. Every push signal must reference a specific known issue. The VERDICT must be SWITCH, STAY, or HOLD.""",
     },
     {
         "role": "assistant",
         "content": """\
 CATEGORY: CRM
 CURRENT TOOL: NexusCRM (£510/mo)
-COMPETITOR: VelocityCRM (£389.06/mo at 22 seats, Core tier)
+COMPETITOR: VelocityCRM (£390/mo at 22 seats, Core tier)
 DATE: 2024-11-10
 
 PUSH SIGNALS:
-  - No native LinkedIn enrichment — reps manually copy contact data [LOW — operational friction]
+  - No native LinkedIn enrichment — reps manually copy contact data [MEDIUM — 3-4 hrs/week manual entry across sales team]
   - Email sequence builder limited to 5 steps [MEDIUM — competitor standard is unlimited]
   - Mobile app crashes on iOS 17+ [MEDIUM — reported by field sales team]
+  - API rate limits cause sync delays with InsightDeck [MEDIUM — breaking analytics integration]
 
 PULL SIGNALS:
-  - Price reduction: £510 → £389.06/mo at 22 seats (Core tier) [POSITIVE — £1,440/yr direct saving]
+  - Price reduction: £510 → £390/mo at 22 seats (Core tier) [POSITIVE — £1,440/yr direct saving]
   - HARD BLOCK: No SSO on Core tier [BLOCKER — global.md requires SSO for tools with >10 seats; Meridian has 22 CRM seats]
-  - HARD BLOCK: No audit log on Core tier [BLOCKER — finance.md and global.md require exportable audit log for CRM]
-  - SSO and audit log available on Advanced tier at £28/seat = £616/mo — higher than current cost [NEGATIVE — eliminates saving]
-  - SOC2 Type II: not certified [BLOCKER — mandatory per global.md, no exceptions for client-data tools]
+  - HARD BLOCK: No audit log on either tier [BLOCKER — global.md requires exportable audit log for CRM]
+  - HARD BLOCK: UK data residency not available [BLOCKER — global.md requires UK or EU residency; VelocityCRM is EU (Ireland) only — no UK option]
+  - SSO available on Advanced tier at £28/seat = £616/mo — higher than current cost [NEGATIVE — eliminates saving]
+  - "No LinkedIn enrichment" [NEGATIVE — does not resolve #1 push signal]
 
 FINANCIAL ANALYSIS:
-  Migration cost: 8hrs × £48 = £384 one-time
+  Migration cost: 15hrs × £48 = £720 one-time
   Annual saving: £1,440 (Core tier)
-  Amortised migration: £128/yr over 3 years
-  Annual net: £1,312
+  Amortised migration: £240/yr over 3 years
+  Annual net: £1,200
   ROI threshold (£1,200/yr): MET on direct saving
   Note: ROI calculation is moot — hard compliance blocks prevent Core tier adoption.
   Advanced tier pricing (£616/mo) exceeds current spend; ROI would be negative.
@@ -295,8 +378,85 @@ FINANCIAL ANALYSIS:
 VERDICT: STAY
 
 EVIDENCE:
-  "SSO and audit logging are available on Advanced tier at £28/seat"
-  "Note: SSO and audit logging are available on Advanced tier at £28/seat"\
+  "No SSO on Core tier — Advanced required"
+  "No audit log on either tier"
+  "UK data residency not available — EU (Ireland) only"
+  "No LinkedIn enrichment"\
 """,
     },
 ]
+
+# ─────────────────────────────────────────────────────────────
+# Multi-step system prompt — compact version for chain-of-reasoning
+# ─────────────────────────────────────────────────────────────
+
+SYSTEM_PROMPT_MULTISTEP = """\
+You are a SaaS Stack Management Agent for Meridian Consulting Group, \
+a UK B2B management consultancy with 150 staff (London HQ, Bristol office, EU clients).
+
+You evaluate competitor SaaS tools through three sequential steps:
+1. COMPLIANCE CHECK — identify hard compliance blocks
+2. SIGNAL ANALYSIS — assess push and pull signals with severity weights
+3. VERDICT — write a structured decision memo
+
+Hard compliance blocks (any one forces STAY):
+- No SOC2 Type II certification
+- No SSO (SAML 2.0 or OIDC) for tools with more than 10 seats
+- Data residency outside UK and EU
+- No exportable audit log for Finance, HR, or CRM tools
+
+Key rules:
+- Every feature in PULL SIGNALS must be a verbatim double-quoted string from competitor data
+- Do not invent features, prices, or compliance status
+- ROI threshold: £1,200/yr net saving. Staff rate: £48/hr. Migration: max 15hrs
+- Verdicts: SWITCH (migrate now), STAY (no change), HOLD (wait for named condition)"""
+
+
+# ─────────────────────────────────────────────────────────────
+# Micro-decision system prompts — independent voting pipeline
+# Each is a standalone 3-message conversation (system, user, assistant)
+# ─────────────────────────────────────────────────────────────
+
+SYS_COMPLIANCE = (
+    "You check SaaS competitor compliance for Meridian Consulting Group "
+    "(UK B2B consultancy, 150 staff). Hard blocks that force STAY:\n"
+    "- No SOC2 Type II\n"
+    "- No SSO (SAML/OIDC) when tool has >10 seats\n"
+    "- Data residency outside UK and EU\n"
+    "- No exportable audit log for Finance, HR, or CRM tools\n"
+    "Answer PASS or FAIL with reasons."
+)
+
+SYS_PUSH = (
+    "You assess degradation signals for a current SaaS tool used by "
+    "Meridian Consulting Group (UK B2B consultancy, 150 staff). "
+    "Rate each issue HIGH, MEDIUM, or LOW.\n"
+    "HIGH: compliance gaps, shelfware, blocked operations.\n"
+    "MEDIUM: missed roadmap, workarounds needed, integration issues.\n"
+    "LOW: cosmetic, minor inconvenience.\n"
+    "End with overall push strength: STRONG, MODERATE, or WEAK."
+)
+
+SYS_PULL = (
+    "You assess competitor advantages for Meridian Consulting Group "
+    "(UK B2B consultancy, 150 staff). "
+    "For each relevant feature, quote it verbatim in double-quotes from "
+    "the competitor data provided. Rate HIGH if it resolves a current pain point, "
+    "MEDIUM if useful, LOW if marginal.\n"
+    "End with overall pull strength: STRONG, MODERATE, or WEAK."
+)
+
+SYS_VERDICT = (
+    "You make a final SaaS tool decision for Meridian Consulting Group "
+    "(UK B2B consultancy, 150 staff). "
+    "Given compliance, push signals, pull signals, and ROI data, reason through "
+    "the decision then state your verdict.\n\n"
+    "Rules:\n"
+    "- Any compliance FAIL → STAY (non-negotiable)\n"
+    "- SWITCH requires: no compliance blocks + pull resolves key push issues + ROI met or clear operational gains\n"
+    "- HOLD: switch case is real but blocked by contract timing, missing proof, or roadmap maturity\n"
+    "- STAY: push is weak, pull doesn't resolve key issues, or compliance blocks present\n\n"
+    "Format your response exactly as:\n"
+    "ANALYSIS: <2-3 sentences weighing the compliance result, push signals, pull signals, and ROI>\n"
+    "VERDICT: <SWITCH|STAY|HOLD>"
+)

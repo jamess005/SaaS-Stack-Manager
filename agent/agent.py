@@ -29,10 +29,10 @@ import sys
 from pathlib import Path
 
 from agent.context_loader import load_context, parse_inbox_filename
-from agent.model_runner import load_model, run_pass2
+from agent.model_runner import load_model, run_voting
 from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_verdict
-from agent.prompts import PASS2_FEW_SHOT, SYSTEM_PROMPT
 from agent.roi_calculator import calculate_roi, extract_pass1_vars
+from agent.signal_interpreter import parse_signal_payload
 
 # Project root = parent of this file's directory (agent/agent.py → project root)
 _PROJECT_ROOT = Path(__file__).parent.parent
@@ -112,6 +112,8 @@ def run_agent(
     dry_run: bool = False,
     outputs_dir: Path | None = None,
     register_path: Path | None = None,
+    model_path: str | None = None,
+    adapter_path: str | None = None,
 ) -> dict:
     """
     Run the full pipeline for one inbox file.
@@ -121,6 +123,9 @@ def run_agent(
         dry_run: Force dry-run mode (also activated by AGENT_DRY_RUN env var).
         outputs_dir: Override the output directory (used in tests for isolation).
         register_path: Override hold_register.json path (used in tests for isolation).
+        model_path: Local path to the base model directory. If omitted, falls back
+                    to the default HuggingFace model ID in load_model().
+        adapter_path: Path to a fine-tuned LoRA adapter directory. Optional.
 
     Returns:
         {
@@ -155,10 +160,11 @@ def run_agent(
     inbox_text = inbox_path.read_text(encoding="utf-8")
 
     # ── Step 3: Load model ─────────────────────────────────────────────────────
-    tokenizer, model = load_model()
+    tokenizer, model = load_model(model_path=model_path, adapter_path=adapter_path)
 
     # ── Step 4: Extract financial variables from context (Python, no model) ───
-    pass1_payload = extract_pass1_vars(context)
+    signal = parse_signal_payload(inbox_text)
+    pass1_payload = extract_pass1_vars(context, signal)
     logger.info("Financial variables: %s", pass1_payload)
 
     # ── Step 5: ROI calculation ────────────────────────────────────────────────
@@ -169,24 +175,20 @@ def run_agent(
         roi_result["roi_threshold_met"],
     )
 
-    # ── Step 6: Pass 2 — verdict memo generation ───────────────────────────────
-    logger.info("Running Pass 2 (verdict memo)...")
-    memo_text = run_pass2(
-        inbox_text, context, roi_result, SYSTEM_PROMPT, PASS2_FEW_SHOT, tokenizer, model
-    )
+    # ── Step 6: Voting pipeline — independent micro-decisions ────────────────
+    logger.info("Running independent voting pipeline...")
+    memo_text = run_voting(inbox_text, context, roi_result, tokenizer, model)
 
     # ── Step 7: Validate; retry once on failure ────────────────────────────────
     is_valid, errors = validate_verdict(memo_text)
     if not is_valid:
-        logger.warning("Validation failed (%d errors). Retrying Pass 2...", len(errors))
+        logger.warning("Validation failed (%d errors). Retrying...", len(errors))
         for err in errors:
             logger.warning("  - %s", err)
-        memo_text = run_pass2(
+        memo_text = run_voting(
             inbox_text,
             context,
             roi_result,
-            SYSTEM_PROMPT,
-            PASS2_FEW_SHOT,
             tokenizer,
             model,
             retry_hint=errors,
@@ -242,13 +244,28 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use fixture responses instead of loading the model (no GPU required).",
     )
+    parser.add_argument(
+        "--model-path",
+        default=None,
+        help="Local path to the base model directory (e.g. /path/to/qwen2.5-3b-instruct).",
+    )
+    parser.add_argument(
+        "--adapter-path",
+        default=None,
+        help="Path to a fine-tuned LoRA adapter directory (e.g. training/checkpoints/).",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     try:
-        result = run_agent(Path(args.inbox_file), dry_run=args.dry_run)
+        result = run_agent(
+            Path(args.inbox_file),
+            dry_run=args.dry_run,
+            model_path=args.model_path,
+            adapter_path=args.adapter_path,
+        )
         print(f"\nVerdict:  {result['verdict']}")
         print(f"Output:   {result['output_path']}")
         if result["hold_registered"]:

@@ -5,12 +5,14 @@ Extracts financial variables directly from structured context data and computes
 the migration ROI. All inputs come from JSON files — no model inference required.
 """
 
+from agent.signal_interpreter import infer_competitor_monthly_cost
+
 _STAFF_HOURLY_RATE_GBP = 48.0     # global.md: blended staff rate
 _ROI_THRESHOLD_GBP = 1200.0       # global.md: minimum annual net to justify switch
 _MIGRATION_HOURS_DEFAULT = 15.0   # global.md: maximum migration budget (conservative default)
 
 
-def extract_pass1_vars(context: dict) -> dict:
+def extract_pass1_vars(context: dict, signal: dict | None = None) -> dict:
     """
     Extract financial variables directly from loaded context.
 
@@ -31,7 +33,7 @@ def extract_pass1_vars(context: dict) -> dict:
         }
     """
     current = float(context["current_stack_entry"]["monthly_cost_gbp"])
-    competitor = float(context["competitor_data"]["monthly_cost_gbp"])
+    competitor = infer_competitor_monthly_cost(context, signal)
     return {
         "current_monthly_cost": current,
         "competitor_monthly_cost": competitor,

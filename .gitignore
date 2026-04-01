@@ -33,6 +33,7 @@ models/
 # Training outputs — generated at runtime, not versioned
 training/generated/
 training/traces/
+training/traces_fresh/
 training/checkpoints/
 training/runs/
 training/logs/
