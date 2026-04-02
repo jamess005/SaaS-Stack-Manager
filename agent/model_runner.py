@@ -605,7 +605,8 @@ def _compliance_pass_python(context: dict) -> tuple[bool, list[str]]:
     if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
         failures.append("No UK or EU data residency")
 
-    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
+    audit_log_ok = compliance.get("audit_log") and compliance.get("audit_log_exportable", True)
+    if category in ("finance", "hr", "crm") and not audit_log_ok:
         failures.append(f"No exportable audit log (required for {category})")
 
     return len(failures) == 0, failures
@@ -659,7 +660,7 @@ def _parse_compliance_changes(
             ),
         },
     ]
-    result = _generate(tokenizer, model, msgs, max_new_tokens=60, temperature=0.0)
+    result = _generate(tokenizer, model, msgs, max_new_tokens=60, temperature=0.1)
     result_upper = result.upper()
 
     updated = dict(compliance)
@@ -857,7 +858,7 @@ def run_voting(
         logger.debug("Dry-run voting memo (%d chars).", len(memo))
         return memo
 
-    signal = parse_signal_payload(inbox_text)
+    signal = parse_signal_payload(inbox_text) or {}
 
     from agent.prompts import SYS_COMPLIANCE, SYS_PULL, SYS_PUSH, SYS_VERDICT
 
@@ -929,7 +930,7 @@ def run_lean(
     """
     if _is_dry_run():
         fixture = _load_fixture(context["category"], context.get("competitor_slug", ""))
-        return fixture.get("memo_text", "ANALYSIS: Dry run.\nVERDICT: SWITCH")
+        return fixture.get("memo_text", "ANALYSIS: Dry run — no model call.\nVERDICT: SWITCH")
 
     from agent.prompts import _CATEGORY_RULES_COMPACT, SYS_VERDICT_LEAN
 
@@ -965,6 +966,24 @@ def run_lean(
     logger.info("Compliance PASS (Python gate)")
 
     # Step 3: Build compact user message
+    user_content = _build_lean_user(context, roi_result, signal)
+
+    messages = [
+        {"role": "system", "content": SYS_VERDICT_LEAN},
+        {"role": "user", "content": user_content},
+    ]
+
+    result = _generate(tokenizer, model, messages, max_new_tokens=200, temperature=0.1)
+    logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
+    return result.strip()
+
+
+def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> str:
+    """Build the compact user message used by the lean verdict pipeline."""
+    from agent.prompts import _CATEGORY_RULES_COMPACT
+
+    category = context["category"]
+    signal = signal or {}
     tool_name = context["current_stack_entry"]["tool"]
     issues = context["current_stack_entry"].get("known_issues", [])
     issues_text = "\n".join(f"- {i}" for i in issues) if issues else "(none)"
@@ -996,12 +1015,4 @@ def run_lean(
     if notes_text:
         user_content += f"\nBuried signals / notes:\n{notes_text}\n"
     user_content += f"\nROI: {roi_summary}"
-
-    messages = [
-        {"role": "system", "content": SYS_VERDICT_LEAN},
-        {"role": "user", "content": user_content},
-    ]
-
-    result = _generate(tokenizer, model, messages, max_new_tokens=200, temperature=0.1)
-    logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
-    return result.strip()
+    return user_content

@@ -19,7 +19,7 @@
     }
   ],
   "compliance": {
-    "soc2_type2": true,
+    "soc2_type2": false,
     "gdpr_eu_residency": true,
     "uk_residency": true,
     "sso_saml": true,

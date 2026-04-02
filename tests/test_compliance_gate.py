@@ -89,6 +89,21 @@ def test_audit_log_not_required_project_mgmt():
     assert passed
 
 
+def test_audit_log_not_exportable_fails_hr():
+    c = {**FULL_PASS, "audit_log": True, "audit_log_exportable": False}
+    passed, failures = _compliance_pass_python(_ctx("hr", 8, c))
+    assert not passed
+    assert any("audit" in f.lower() for f in failures)
+
+
+def test_audit_log_exportable_default_passes():
+    """Competitors without audit_log_exportable key default to passing."""
+    c = {k: v for k, v in FULL_PASS.items() if k != "audit_log_exportable"}
+    c["audit_log"] = True
+    passed, failures = _compliance_pass_python(_ctx("crm", 8, c))
+    assert passed
+
+
 def test_multiple_failures_all_reported():
     c = {"soc2_type2": False, "sso_saml": False,
          "uk_residency": False, "gdpr_eu_residency": False, "audit_log": False}
