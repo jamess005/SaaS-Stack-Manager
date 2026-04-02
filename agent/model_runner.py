@@ -667,8 +667,7 @@ def _parse_compliance_changes(
         label_upper = label.upper()
         # Look for "<LABEL_FIRST_WORD>...YES" pattern
         pattern = re.compile(
-            rf"{re.escape(label_upper.split()[0])}[^Y\n]{{0,30}}YES",
-            re.IGNORECASE,
+            rf"{re.escape(label_upper.split()[0])}[^\n]{{0,40}}\bYES\b",
         )
         if pattern.search(result_upper):
             updated[field_key] = True

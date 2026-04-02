@@ -2,6 +2,7 @@
 import os
 
 import pytest
+from unittest.mock import patch
 from agent.model_runner import _compliance_pass_python
 
 
@@ -128,3 +129,63 @@ def test_parse_compliance_changes_noop_empty_text():
     result = _parse_compliance_changes("", compliance, "analytics", 12, None, None)
     assert result == compliance
     del os.environ["AGENT_DRY_RUN"]
+
+
+def test_parse_compliance_changes_updates_soc2_on_yes():
+    """When model returns YES for SOC2, the field is updated to True."""
+    from agent.model_runner import _parse_compliance_changes
+
+    compliance = {"soc2_type2": False, "sso_saml": True,
+                  "uk_residency": True, "gdpr_eu_residency": True, "audit_log": True}
+
+    # Simulate model returning YES for SOC2 Type II
+    with patch("agent.model_runner._generate", return_value="- SOC2 TYPE II CERTIFICATION: YES"):
+        with patch("agent.model_runner._is_dry_run", return_value=False):
+            result = _parse_compliance_changes(
+                "acquired SOC2 Type II certification", compliance, "analytics", 12, None, None
+            )
+    assert result["soc2_type2"] is True
+    # Original dict must not be mutated
+    assert compliance["soc2_type2"] is False
+
+
+def test_parse_compliance_changes_no_update_on_no():
+    """When model returns NO for SOC2, the field stays False."""
+    from agent.model_runner import _parse_compliance_changes
+
+    compliance = {"soc2_type2": False, "sso_saml": True,
+                  "uk_residency": True, "gdpr_eu_residency": True, "audit_log": True}
+
+    with patch("agent.model_runner._generate", return_value="- SOC2 TYPE II CERTIFICATION: NO"):
+        with patch("agent.model_runner._is_dry_run", return_value=False):
+            result = _parse_compliance_changes(
+                "no compliance changes", compliance, "analytics", 12, None, None
+            )
+    assert result["soc2_type2"] is False
+
+
+def test_parse_compliance_changes_dry_run_with_failing_checks():
+    """dry-run returns unchanged dict even when there are failing checks."""
+    from agent.model_runner import _parse_compliance_changes
+
+    compliance = {"soc2_type2": False}  # failing check exists
+    os.environ["AGENT_DRY_RUN"] = "true"
+    result = _parse_compliance_changes("acquired SOC2", compliance, "analytics", 8, None, None)
+    assert result == compliance
+    del os.environ["AGENT_DRY_RUN"]
+
+
+def test_parse_compliance_changes_updates_both_residency_flags():
+    """When residency is confirmed YES, both uk_residency and gdpr_eu_residency are set."""
+    from agent.model_runner import _parse_compliance_changes
+
+    compliance = {"soc2_type2": True, "sso_saml": True,
+                  "uk_residency": False, "gdpr_eu_residency": False, "audit_log": True}
+
+    with patch("agent.model_runner._generate", return_value="- UK OR EU DATA RESIDENCY: YES"):
+        with patch("agent.model_runner._is_dry_run", return_value=False):
+            result = _parse_compliance_changes(
+                "acquired UK data residency", compliance, "analytics", 8, None, None
+            )
+    assert result["uk_residency"] is True
+    assert result["gdpr_eu_residency"] is True
