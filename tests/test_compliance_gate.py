@@ -91,4 +91,17 @@ def test_multiple_failures_all_reported():
          "uk_residency": False, "gdpr_eu_residency": False, "audit_log": False}
     passed, failures = _compliance_pass_python(_ctx("crm", 22, c))
     assert not passed
-    assert len(failures) >= 3  # SOC2, SSO, residency, audit log
+    assert len(failures) >= 4  # SOC2, SSO, residency, audit log (all four)
+
+
+def test_sso_pass_exact_boundary():
+    # seat_count == 10 is NOT above the >10 threshold — SSO should not be required
+    c = {**FULL_PASS, "sso_saml": False}
+    passed, _ = _compliance_pass_python(_ctx("analytics", 10, c))
+    assert passed
+
+
+def test_uk_residency_accepted():
+    c = {**FULL_PASS, "gdpr_eu_residency": False, "uk_residency": True}
+    passed, _ = _compliance_pass_python(_ctx("finance", 8, c))
+    assert passed
