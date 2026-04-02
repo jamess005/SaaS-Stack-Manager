@@ -907,3 +907,101 @@ def run_voting(
 
     logger.debug("Voting memo (%d chars).", len(memo))
     return memo.strip()
+
+
+def run_lean(
+    inbox_text: str,
+    context: dict,
+    roi_result: dict,
+    tokenizer: Any,
+    model: Any,
+) -> str:
+    """
+    Lean single-pass pipeline.
+
+    1. Parse signal for compliance_changes.
+    2. If compliance_changes present and model available: tiny constrained call to
+       update the compliance boolean state.
+    3. Python compliance gate: if any hard block → return STAY immediately.
+    4. Single compact model call → "ANALYSIS: ...\\nVERDICT: SWITCH|STAY|HOLD"
+
+    Returns a string with ANALYSIS and VERDICT lines.
+    """
+    if _is_dry_run():
+        fixture = _load_fixture(context["category"], context.get("competitor_slug", ""))
+        return fixture.get("memo_text", "ANALYSIS: Dry run.\nVERDICT: SWITCH")
+
+    from agent.prompts import _CATEGORY_RULES_COMPACT, SYS_VERDICT_LEAN
+
+    signal = parse_signal_payload(inbox_text)
+    category = context["category"]
+    seat_count = context["current_stack_entry"].get("seat_count", 0)
+
+    # Step 1: Optionally update compliance state from signal text
+    compliance_changes = signal_compliance_changes(signal)
+    compliance = dict(context["competitor_data"].get("compliance", {}))
+    if compliance_changes:
+        compliance = _parse_compliance_changes(
+            compliance_changes, compliance, category, seat_count, tokenizer, model
+        )
+
+    # Build a context view with (possibly updated) compliance
+    effective_context = {
+        **context,
+        "competitor_data": {**context["competitor_data"], "compliance": compliance},
+    }
+
+    # Step 2: Python compliance gate — short-circuit to STAY if any block
+    passed, failures = _compliance_pass_python(effective_context)
+    if not passed:
+        failure_str = "; ".join(failures)
+        logger.info("Compliance FAIL (Python gate): %s", failure_str)
+        return (
+            f"ANALYSIS: Compliance blocks present — {failure_str}. "
+            f"Hard compliance blocks are non-negotiable. VERDICT is STAY.\n"
+            f"VERDICT: STAY"
+        )
+
+    logger.info("Compliance PASS (Python gate)")
+
+    # Step 3: Build compact user message
+    tool_name = context["current_stack_entry"]["tool"]
+    issues = context["current_stack_entry"].get("known_issues", [])
+    issues_text = "\n".join(f"- {i}" for i in issues) if issues else "(none)"
+
+    comp_changes = signal_competitor_changes(signal)
+    tool_changes = signal_current_tool_status(signal)
+    notes = signal_notes(signal)
+
+    comp_text = "\n".join(f"- {c}" for c in comp_changes) if comp_changes else "(none)"
+    tool_change_text = "\n".join(f"- {c}" for c in tool_changes) if tool_changes else "(unchanged this period)"
+    notes_text = "\n".join(f"- {n}" for n in notes) if notes else ""
+
+    category_rules = _CATEGORY_RULES_COMPACT.get(category, "")
+
+    roi_summary = (
+        f"Migration: £{roi_result['migration_cost_one_time']:.0f}, "
+        f"Annual net: £{roi_result['annual_net_gbp']:.0f}, "
+        f"Threshold: {'MET' if roi_result['roi_threshold_met'] else 'NOT MET'}"
+    )
+
+    user_content = (
+        f"Category: {category} — current tool: {tool_name}\n"
+        f"{category_rules}\n\n"
+        f"Current tool known issues:\n{issues_text}\n\n"
+        f"Changes this period:\n"
+        f"  Current tool: {tool_change_text}\n"
+        f"  Competitor: {comp_text}\n"
+    )
+    if notes_text:
+        user_content += f"\nBuried signals / notes:\n{notes_text}\n"
+    user_content += f"\nROI: {roi_summary}"
+
+    messages = [
+        {"role": "system", "content": SYS_VERDICT_LEAN},
+        {"role": "user", "content": user_content},
+    ]
+
+    result = _generate(tokenizer, model, messages, max_new_tokens=200, temperature=0.1)
+    logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
+    return result.strip()

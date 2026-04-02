@@ -199,3 +199,23 @@ def extract_hold_metadata(memo_text: str) -> dict | None:
         "reassess_condition": reassess,
         "review_by": review_by,
     }
+
+
+_lean_analysis_re = re.compile(r"^\s*ANALYSIS\s*:", re.IGNORECASE | re.MULTILINE)
+
+
+def validate_lean_output(text: str) -> tuple[bool, list[str]]:
+    """
+    Validate lean pipeline output (ANALYSIS + VERDICT lines only).
+
+    Returns (is_valid, errors).
+    """
+    errors: list[str] = []
+    if not _lean_analysis_re.search(text):
+        errors.append("Missing ANALYSIS: line")
+    verdict_match = _verdict_line_re.search(text)
+    if not verdict_match:
+        errors.append("Missing VERDICT: line")
+    elif verdict_match.group(1).upper() not in _VALID_VERDICTS:
+        errors.append(f"Invalid verdict: {verdict_match.group(1)!r}")
+    return len(errors) == 0, errors
