@@ -1,4 +1,6 @@
 # tests/test_compliance_gate.py
+import os
+
 import pytest
 from agent.model_runner import _compliance_pass_python
 
@@ -105,3 +107,24 @@ def test_uk_residency_accepted():
     c = {**FULL_PASS, "gdpr_eu_residency": False, "uk_residency": True}
     passed, _ = _compliance_pass_python(_ctx("finance", 8, c))
     assert passed
+
+
+def test_parse_compliance_changes_noop_when_already_passing():
+    """If all required fields already True, returns unchanged dict."""
+    from agent.model_runner import _parse_compliance_changes
+    os.environ["AGENT_DRY_RUN"] = "true"
+    compliance = {"soc2_type2": True, "sso_saml": True,
+                  "uk_residency": True, "audit_log": True}
+    result = _parse_compliance_changes("acquired SOC2", compliance, "crm", 22, None, None)
+    assert result == compliance
+    del os.environ["AGENT_DRY_RUN"]
+
+
+def test_parse_compliance_changes_noop_empty_text():
+    """Empty changes text returns unchanged dict."""
+    from agent.model_runner import _parse_compliance_changes
+    os.environ["AGENT_DRY_RUN"] = "true"
+    compliance = {"soc2_type2": False}
+    result = _parse_compliance_changes("", compliance, "analytics", 12, None, None)
+    assert result == compliance
+    del os.environ["AGENT_DRY_RUN"]

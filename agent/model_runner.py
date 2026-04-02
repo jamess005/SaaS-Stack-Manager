@@ -611,6 +611,74 @@ def _compliance_pass_python(context: dict) -> tuple[bool, list[str]]:
     return len(failures) == 0, failures
 
 
+def _parse_compliance_changes(
+    changes_text: str,
+    compliance: dict,
+    category: str,
+    seat_count: int,
+    tokenizer: Any,
+    model: Any,
+) -> dict:
+    """
+    Interpret free-text compliance_changes using a tiny constrained model call.
+
+    Only asks about requirements that are currently False and relevant to this
+    category/seat_count. If nothing is failing or text is empty, returns
+    compliance unchanged (no model call).
+
+    Returns updated compliance dict (original is not mutated).
+    """
+    if not changes_text or not changes_text.strip():
+        return compliance
+
+    # Determine which checks are currently failing
+    checks: list[tuple[str, str]] = []  # (field_key, human_label)
+    if not compliance.get("soc2_type2"):
+        checks.append(("soc2_type2", "SOC2 Type II certification"))
+    if seat_count > 10 and not compliance.get("sso_saml"):
+        checks.append(("sso_saml", "SSO (SAML/OIDC)"))
+    if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
+        checks.append(("uk_residency", "UK or EU data residency"))
+    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
+        checks.append(("audit_log", "exportable audit log"))
+
+    if not checks:
+        return compliance  # All requirements already met — no model call needed
+
+    if _is_dry_run():
+        return compliance  # In dry-run, assume no change
+
+    checks_block = "\n".join(f"- {label}: YES or NO" for _, label in checks)
+    msgs = [
+        {"role": "system", "content": "Answer YES or NO for each item. No other text."},
+        {
+            "role": "user",
+            "content": (
+                f"Text: {changes_text.strip()}\n\n"
+                f"Does this text indicate the competitor now has:\n{checks_block}"
+            ),
+        },
+    ]
+    result = _generate(tokenizer, model, msgs, max_new_tokens=60, temperature=0.0)
+    result_upper = result.upper()
+
+    updated = dict(compliance)
+    for field_key, label in checks:
+        label_upper = label.upper()
+        # Look for "<LABEL_FIRST_WORD>...YES" pattern
+        pattern = re.compile(
+            rf"{re.escape(label_upper.split()[0])}[^Y\n]{{0,30}}YES",
+            re.IGNORECASE,
+        )
+        if pattern.search(result_upper):
+            updated[field_key] = True
+            # For residency, set both flags when text says yes
+            if field_key == "uk_residency":
+                updated["gdpr_eu_residency"] = True
+
+    return updated
+
+
 def _build_verdict_user(context: dict, roi_result: dict,
                         compliance_result: str, push_result: str, pull_result: str) -> str:
     """Build standalone verdict vote user message."""
