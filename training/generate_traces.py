@@ -1,48 +1,23 @@
 """
-Phase 2 — Training trace generation script.
+Phase 2 — Lean single-step training trace generation script.
 
-Reads all generated signal JSON files from training/generated/ and runs the
-voting pipeline using the local Llama 3.1 8B (4-bit NF4) as the teacher model.
+Reads generated signal JSON files from training/generated/ and runs the lean
+pipeline teacher to produce compact outputs in this format:
 
-Financial variable extraction is handled by Python (extract_pass1_vars) — no model
-call required for that step. The model generates four micro-decisions:
-compliance, push, pull, and final verdict.
+    ANALYSIS: ...
+    VERDICT: SWITCH|STAY|HOLD
 
-For each valid signal file, four JSONL training records are produced:
-    [system + step-specific user prompt] → [assistant step output]
+For each valid signal file, one JSONL training record is produced:
+    [SYS_VERDICT_LEAN + compact user prompt] -> [lean assistant output]
 
-Only traces where the assembled memo passes validate_verdict() are saved.
-Invalid outputs are logged and skipped so malformed reasoning is not written.
-
-Output:
-  training/traces/traces.jsonl   — one JSON object per line
-  training/traces/traces_report.json — summary (total, passed, failed, by scenario)
-
-Usage:
-    # Generate traces (automatically skips files already in traces.jsonl)
-    python training/generate_traces.py
-
-    # Start fresh (delete existing traces.jsonl first)
-    python training/generate_traces.py --fresh
-
-    # Dry-run: run pipeline but print traces to stdout instead of saving
-    python training/generate_traces.py --dry-run
-
-    # Filter to one category or limit count
-    python training/generate_traces.py --category finance
-    python training/generate_traces.py --limit 10
-
-Environment (required for ROCm on RX 7800 XT):
-    HSA_OVERRIDE_GFX_VERSION=11.0.0
-    ROCR_VISIBLE_DEVICES=0
-    HIP_VISIBLE_DEVICES=0
+Only traces that pass validate_lean_output() are saved.
+Invalid outputs are logged and skipped.
 """
 
 import argparse
 import json
 import logging
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -55,11 +30,11 @@ _TRACES_DIR = _PROJECT_ROOT / "training" / "traces"
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
-from agent.model_runner import LOCAL_LLAMA_8B, _assemble_verdict_memo, _build_compliance_user, _build_pull_user, _build_push_user, _build_verdict_user, _generate, load_model  # noqa: E402
-from agent.output_validator import validate_verdict  # noqa: E402
-from agent.prompts import SYS_COMPLIANCE, SYS_PULL, SYS_PUSH, SYS_VERDICT  # noqa: E402
+from agent.model_runner import LOCAL_LLAMA_8B, _build_lean_user, _compliance_pass_python, _generate, _parse_compliance_changes, load_model, run_lean  # noqa: E402
+from agent.output_validator import validate_lean_output  # noqa: E402
+from agent.prompts import SYS_VERDICT_LEAN  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
-from agent.signal_interpreter import parse_signal_payload  # noqa: E402
+from agent.signal_interpreter import parse_signal_payload, signal_compliance_changes  # noqa: E402
 from training.generate_signals import SCENARIO_TYPES  # noqa: E402
 
 logging.basicConfig(
@@ -68,6 +43,88 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Authoritative verdict per deterministic scenario.  The teacher (untuned Llama)
+# is consulted only for reasoning; the final VERDICT label is always overridden
+# with the canonical value so training labels are consistent.
+_CANONICAL_VERDICT: dict[str, str] = {
+    "pull_dominant":           "SWITCH",
+    "push_dominant":           "SWITCH",
+    "shelfware_case":          "SWITCH",
+    "hold_resolved":           "SWITCH",
+    "fluff_update":            "STAY",
+    "current_tool_rally":      "STAY",
+    "irrelevant_change":       "STAY",
+    "negative_signal_buried":  "STAY",
+    "hard_compliance_failure": "STAY",
+    "competitor_nearly_ready": "HOLD",
+    # Ambiguous — verdict depends on signal magnitude; teacher output kept as-is.
+    # "both_signals":          None,
+    # "price_hike_only":       None,
+    # "dual_improvement":      None,
+}
+
+
+# Per-scenario reasoning hints injected into Llama teacher prompt.
+# Guides Llama to produce ANALYSIS that supports the canonical verdict,
+# preventing the ANALYSIS-VERDICT incoherence that confuses fine-tuning.
+_REASONING_HINTS: dict[str, str] = {
+    "competitor_nearly_ready": (
+        "The key competitor feature is in beta or not yet GA. "
+        "Issue a HOLD verdict and explicitly state what must happen (GA release) before switching."
+    ),
+    "negative_signal_buried": (
+        "Look carefully in the notes section for limitations, tier restrictions, or maturity caveats "
+        "that negate the apparent gains. These buried signals justify a STAY verdict."
+    ),
+    "hard_compliance_failure": (
+        "A hard compliance block exists. Compliance blocks are non-negotiable — "
+        "the switch is not possible regardless of features. Issue a STAY verdict."
+    ),
+    "irrelevant_change": (
+        "The competitor's changes are not relevant to this business's use case. "
+        "No compelling reason to switch. Issue a STAY verdict."
+    ),
+    "fluff_update": (
+        "The competitor update is vague or superficial — no concrete new features. "
+        "No pull signal. Issue a STAY verdict."
+    ),
+    "current_tool_rally": (
+        "The current tool has improved and addressed the key push factors. "
+        "The urgency to switch has been removed. Issue a STAY verdict."
+    ),
+    "pull_dominant": (
+        "The competitor has shipped a feature that resolves a key push issue. "
+        "Issue a SWITCH verdict and state the resolved issue clearly."
+    ),
+    "push_dominant": (
+        "The current tool's reliability or compliance has degraded significantly. "
+        "Issue a SWITCH verdict and name the specific degradation."
+    ),
+    "shelfware_case": (
+        "The current tool has become shelfware — seat utilisation is very low. "
+        "Issue a SWITCH verdict and quantify the waste."
+    ),
+    "hold_resolved": (
+        "The previous blocking condition for a HOLD verdict has now been resolved. "
+        "Issue a SWITCH verdict and name the resolved condition."
+    ),
+}
+
+
+def _enforce_verdict(lean_output: str, canonical_verdict: str) -> str:
+    """Replace the VERDICT: line in lean_output with the canonical verdict."""
+    import re
+    corrected = re.sub(
+        r"VERDICT:\s*(SWITCH|STAY|HOLD)[^\n]*",
+        f"VERDICT: {canonical_verdict}",
+        lean_output,
+        count=1,
+    )
+    if corrected == lean_output:
+        # No VERDICT line found — append one
+        corrected = lean_output.rstrip() + f"\nVERDICT: {canonical_verdict}"
+    return corrected
 
 
 def _parse_generated_filename(stem: str) -> tuple[str, str, str] | None:
@@ -137,55 +194,6 @@ def _build_trace(
     }
 
 
-def _generate_vote_outputs(inbox_text: str, context: dict, roi_result: dict, tokenizer: Any, model: Any) -> dict:
-    signal = parse_signal_payload(inbox_text)
-
-    compliance_messages = [
-        {"role": "system", "content": SYS_COMPLIANCE},
-        {"role": "user", "content": _build_compliance_user(context, signal)},
-    ]
-    compliance_result = _generate(tokenizer, model, compliance_messages, max_new_tokens=100, temperature=0.1).strip()
-
-    push_messages = [
-        {"role": "system", "content": SYS_PUSH},
-        {"role": "user", "content": _build_push_user(context, signal)},
-    ]
-    push_result = _generate(tokenizer, model, push_messages, max_new_tokens=300, temperature=0.3).strip()
-
-    pull_messages = [
-        {"role": "system", "content": SYS_PULL},
-        {"role": "user", "content": _build_pull_user(context, inbox_text)},
-    ]
-    pull_result = _generate(tokenizer, model, pull_messages, max_new_tokens=400, temperature=0.3).strip()
-
-    verdict_messages = [
-        {"role": "system", "content": SYS_VERDICT},
-        {
-            "role": "user",
-            "content": _build_verdict_user(
-                context, roi_result, compliance_result, push_result, pull_result
-            ),
-        },
-    ]
-    verdict_result = _generate(tokenizer, model, verdict_messages, max_new_tokens=250, temperature=0.1).strip()
-
-    memo = _assemble_verdict_memo(
-        context, roi_result, compliance_result, push_result, pull_result, verdict_result
-    )
-
-    return {
-        "compliance_messages": compliance_messages,
-        "compliance_result": compliance_result,
-        "push_messages": push_messages,
-        "push_result": push_result,
-        "pull_messages": pull_messages,
-        "pull_result": pull_result,
-        "verdict_messages": verdict_messages,
-        "verdict_result": verdict_result,
-        "memo": memo,
-    }
-
-
 def _append_jsonl(path: Path, record: dict) -> None:
     """Append one JSON record as a line to a JSONL file."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,7 +230,7 @@ def process_one(
         trigger = json.load(f)
     inbox_text = json.dumps(trigger, indent=2, ensure_ascii=False)
 
-    expected_steps = {"compliance", "push", "pull", "verdict"}
+    expected_steps = {"lean"}
     if expected_steps.issubset({step for stem, step in processed_keys if stem == signal_path.stem}):
         return {"status": "skip", "reason": f"Already processed: {signal_path.stem}"}
 
@@ -232,15 +240,46 @@ def process_one(
     roi_result = calculate_roi(pass1_payload)
 
     if dry_run:
-        print(f"\n{'='*60}")
-        print(f"TRACE: {signal_path.name}")
-        print(json.dumps({"pass1_payload": pass1_payload, "roi_result": roi_result}, indent=2))
-        return {"status": "ok", "reason": None}
+        os.environ["AGENT_DRY_RUN"] = "true"
 
-    vote_outputs = _generate_vote_outputs(inbox_text, context, roi_result, tokenizer, model)
+    hint = _REASONING_HINTS.get(scenario)
+    if hint and not dry_run:
+        _signal = parse_signal_payload(inbox_text)
+        _category = context["category"]
+        _seat_count = context["current_stack_entry"].get("seat_count", 0)
+        _compliance_text = signal_compliance_changes(_signal)
+        _compliance = dict(context["competitor_data"].get("compliance", {}))
+        if _compliance_text:
+            _compliance = _parse_compliance_changes(
+                _compliance_text, _compliance, _category, _seat_count, tokenizer, model
+            )
+        _effective_context = {
+            **context,
+            "competitor_data": {**context["competitor_data"], "compliance": _compliance},
+        }
+        _passed, _failures = _compliance_pass_python(_effective_context)
+        if not _passed:
+            _failure_str = "; ".join(_failures)
+            lean_result = (
+                f"ANALYSIS: Compliance blocks present — {_failure_str}. "
+                f"Hard compliance blocks are non-negotiable — STAY.\n"
+                f"VERDICT: STAY"
+            )
+        else:
+            _hint_system = SYS_VERDICT_LEAN + f"\n\nNOTE: {hint}"
+            _user_content = _build_lean_user(_effective_context, roi_result, _signal)
+            _messages = [
+                {"role": "system", "content": _hint_system},
+                {"role": "user", "content": _user_content},
+            ]
+            lean_result = _generate(
+                tokenizer, model, _messages, max_new_tokens=200, temperature=0.1
+            ).strip()
+    else:
+        lean_result = run_lean(inbox_text, context, roi_result, tokenizer, model)
 
-    # Validate assembled memo; retry once on malformed output.
-    is_valid, errors = validate_verdict(vote_outputs["memo"])
+    # Validate lean output; retry once on malformed output.
+    is_valid, errors = validate_lean_output(lean_result)
     if not is_valid:
         logger.warning(
             "Validation failed for %s (%d errors), retrying: %s",
@@ -248,8 +287,8 @@ def process_one(
             len(errors),
             "; ".join(errors[:2]),
         )
-        vote_outputs = _generate_vote_outputs(inbox_text, context, roi_result, tokenizer, model)
-        is_valid, errors = validate_verdict(vote_outputs["memo"])
+        lean_result = run_lean(inbox_text, context, roi_result, tokenizer, model)
+        is_valid, errors = validate_lean_output(lean_result)
 
     if not is_valid:
         logger.warning(
@@ -259,53 +298,38 @@ def process_one(
             "; ".join(errors[:2]),
         )
         return {"status": "skip", "reason": f"Validation failed after retry: {errors[0]}"}
-
+    # Override VERDICT with canonical label for all deterministic scenarios.
+    if scenario in _CANONICAL_VERDICT:
+        lean_result = _enforce_verdict(lean_result, _CANONICAL_VERDICT[scenario])
     if dry_run:
+        signal = parse_signal_payload(inbox_text)
+        user_content = _build_lean_user(context, roi_result, signal)
         print(f"\n{'='*60}")
         print(f"TRACE: {signal_path.name}")
-        print(f"Verdict memo preview: {vote_outputs['memo'][:300]}...")
+        print(json.dumps({
+            "messages": [
+                {"role": "system", "content": SYS_VERDICT_LEAN},
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": lean_result},
+            ]
+        }, ensure_ascii=False, indent=2))
         return {"status": "ok", "reason": None}
 
-    step_records = [
-        _build_trace(
-            vote_outputs["compliance_messages"],
-            vote_outputs["compliance_result"],
-            category,
-            competitor_slug,
-            scenario,
-            signal_path.stem,
-            "compliance",
-        ),
-        _build_trace(
-            vote_outputs["push_messages"],
-            vote_outputs["push_result"],
-            category,
-            competitor_slug,
-            scenario,
-            signal_path.stem,
-            "push",
-        ),
-        _build_trace(
-            vote_outputs["pull_messages"],
-            vote_outputs["pull_result"],
-            category,
-            competitor_slug,
-            scenario,
-            signal_path.stem,
-            "pull",
-        ),
-        _build_trace(
-            vote_outputs["verdict_messages"],
-            vote_outputs["verdict_result"],
-            category,
-            competitor_slug,
-            scenario,
-            signal_path.stem,
-            "verdict",
-        ),
-    ]
-    for trace in step_records:
-        _append_jsonl(traces_path, trace)
+    signal = parse_signal_payload(inbox_text)
+    user_content = _build_lean_user(context, roi_result, signal)
+    step_record = _build_trace(
+        [
+            {"role": "system", "content": SYS_VERDICT_LEAN},
+            {"role": "user", "content": user_content},
+        ],
+        lean_result,
+        category,
+        competitor_slug,
+        scenario,
+        signal_path.stem,
+        "lean",
+    )
+    _append_jsonl(traces_path, step_record)
 
     logger.info("Saved trace for: %s", signal_path.name)
     return {"status": "ok", "reason": None}
@@ -355,7 +379,7 @@ def main() -> None:
             before = len(signal_files)
             signal_files = [
                 f for f in signal_files
-                if not {"compliance", "push", "pull", "verdict"}.issubset(
+                if not {"lean"}.issubset(
                     {step for stem, step in already_done if stem == f.stem}
                 )
             ]
@@ -398,7 +422,7 @@ def main() -> None:
         "passed": stats["ok"],
         "skipped": stats["skip"],
         "errors": stats["error"],
-        "total_step_traces_written": stats["ok"] * 4,
+        "total_step_traces_written": stats["ok"],
         "signal_files_per_scenario": scenario_counts,
     }
 
@@ -417,10 +441,10 @@ def main() -> None:
             )
 
     logger.info(
-        "Done. %d/%d signal files → %d step traces. %d skipped, %d errors.",
+        "Done. %d/%d signal files → %d lean traces. %d skipped, %d errors.",
         stats["ok"],
         len(signal_files),
-        stats["ok"] * 4,
+        stats["ok"],
         stats["skip"],
         stats["error"],
     )
