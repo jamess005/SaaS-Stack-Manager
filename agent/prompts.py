@@ -460,3 +460,57 @@ SYS_VERDICT = (
     "ANALYSIS: <2-3 sentences weighing the compliance result, push signals, pull signals, and ROI>\n"
     "VERDICT: <SWITCH|STAY|HOLD>"
 )
+
+# ─────────────────────────────────────────────────────────────
+# Lean pipeline prompts — single-pass verdict generation
+# ─────────────────────────────────────────────────────────────
+
+# Per-category must-have features (compact — model context only)
+_CATEGORY_RULES_COMPACT: dict[str, str] = {
+    "analytics": (
+        "Must-have: real-time connectors (NexusCRM/VaultLedger/TaskBridge), "
+        "self-serve embedded reporting, data lineage/audit trail, mobile dashboards."
+    ),
+    "crm": (
+        "Must-have: LinkedIn enrichment, unlimited email sequencing, "
+        "InsightDeck API sync, mobile (iOS+Android), SSO, exportable audit log."
+    ),
+    "finance": (
+        "Must-have: multi-currency invoicing (EUR native), real-time Barclays feed, "
+        "IFRS 15 compliance, audit trail PDF with digital signature, 24/7 SLA."
+    ),
+    "hr": (
+        "Must-have: automated GDPR right-to-erasure, PayAxis payroll integration, "
+        "performance review module, onboarding workflow templates."
+    ),
+    "project_mgmt": (
+        "Nice-to-have: built-in time tracking, client portal with approvals, "
+        "auto-updating Gantt charts, resource capacity planning."
+    ),
+}
+
+SYS_VERDICT_LEAN = """\
+Evaluate whether Meridian Consulting Group (UK B2B consultancy, 150 staff) should \
+SWITCH to a competitor SaaS tool, STAY with the current tool, or issue a HOLD verdict.
+
+Compliance has already been checked — the competitor passed all hard blocks.
+
+SWITCH — competitor resolves one or more key push issues AND (ROI threshold met OR \
+clear operational gains such as unblocked revenue or removed compliance risk).
+STAY   — competitor does not resolve the key push issues, push signals are weak, \
+or the ROI and operational case is insufficient.
+HOLD   — switch case is real but a named condition must be met first: feature in \
+beta (not GA), contract timing, or insufficient proof of delivery.
+
+ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration: max 15 hours.
+A feature improvement that resolves a HIGH push issue can justify SWITCH even \
+if direct ROI is negative, provided the operational gain is clearly articulated.
+
+Both the current tool AND the competitor can improve simultaneously — evaluate the \
+delta: which improvements matter more for this business right now?
+
+Format your response exactly as:
+ANALYSIS: <2-4 sentences — name the key push issue(s), state whether competitor \
+changes resolve them, and weigh ROI or operational gain>
+VERDICT: <SWITCH|STAY|HOLD>\
+"""
