@@ -574,6 +574,43 @@ def _extract_signal_bullets(result_text: str, max_lines: int = 5) -> str:
     return "\n".join(lines) if lines else "  (none)"
 
 
+# ── Python compliance gate ─────────────────────────────────────────────────────
+
+
+def _compliance_pass_python(context: dict) -> tuple[bool, list[str]]:
+    """
+    Check competitor compliance against hard requirements using structured JSON only.
+
+    Hard blocks (any one forces STAY):
+      - No SOC2 Type II
+      - No SSO (SAML/OIDC) when seat_count > 10
+      - No UK or EU data residency
+      - No exportable audit log for Finance, HR, or CRM
+
+    Returns:
+        (passed, failures) — passed is True only when failures is empty.
+    """
+    category = context["category"]
+    seat_count = context["current_stack_entry"].get("seat_count", 0)
+    compliance = context["competitor_data"].get("compliance", {})
+
+    failures: list[str] = []
+
+    if not compliance.get("soc2_type2"):
+        failures.append("No SOC2 Type II certification")
+
+    if seat_count > 10 and not compliance.get("sso_saml"):
+        failures.append(f"No SSO (SAML/OIDC) — tool has {seat_count} seats (threshold: >10)")
+
+    if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
+        failures.append("No UK or EU data residency")
+
+    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
+        failures.append(f"No exportable audit log (required for {category})")
+
+    return len(failures) == 0, failures
+
+
 def _build_verdict_user(context: dict, roi_result: dict,
                         compliance_result: str, push_result: str, pull_result: str) -> str:
     """Build standalone verdict vote user message."""
