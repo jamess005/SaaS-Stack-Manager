@@ -37,7 +37,7 @@ _section_re = {s: re.compile(rf"^\s*{re.escape(s)}\s*:", re.IGNORECASE | re.MULT
 # Handles: "VERDICT: SWITCH", "**VERDICT:** SWITCH", "**VERDICT:** **STAY**", "**VERDICT: STAY**"
 # [*\s]* after the colon handles all combinations of closing/opening bold markers
 # and whitespace: "VERDICT: STAY", "**VERDICT:** STAY", "**VERDICT:** **STAY**"
-_verdict_line_re = re.compile(r"\*{0,2}VERDICT\*{0,2}\s*:[*\s]*(SWITCH|STAY|HOLD)\*{0,2}", re.IGNORECASE | re.MULTILINE)
+_verdict_line_re = re.compile(r"\*{0,2}VERDICT\*{0,2}\s*:[*\s]*(\w+)\*{0,2}", re.IGNORECASE | re.MULTILINE)
 
 # Matches a quoted string "..." (at least one character inside)
 _quoted_string_re = re.compile(r'"[^"\n]+"')

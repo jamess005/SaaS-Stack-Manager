@@ -286,7 +286,9 @@ def main() -> None:
                         help="Local path to base model directory.")
     parser.add_argument("--adapter-path",
                         default=str(_PROJECT_ROOT / "training" / "checkpoints_grpo"),
-                        help="Path to fine-tuned LoRA adapter directory.")
+                        help="Path to fine-tuned LoRA adapter directory. Pass 'none' to run base model only.")
+    parser.add_argument("--no-adapter", action="store_true",
+                        help="Load base model with no LoRA adapter (diagnostic baseline).")
     parser.add_argument("--limit", type=int, default=2,
                         help="Number of samples per scenario type (default: 2).")
     parser.add_argument("--scenario", default=None, choices=SCENARIO_TYPES,
@@ -306,9 +308,10 @@ def main() -> None:
     console.print(f"\n[bold]Evaluating {len(samples)} signal(s)[/bold] "
                   f"({'dry-run' if args.dry_run else 'live model'})")
 
+    adapter = None if (args.no_adapter or args.adapter_path.lower() == "none") else args.adapter_path
     tokenizer, model = load_model(
         model_path=args.model_path,
-        adapter_path=args.adapter_path,
+        adapter_path=adapter,
     )
 
     results: list[dict] = []
