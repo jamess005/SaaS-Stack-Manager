@@ -51,7 +51,11 @@ _OUTPUT_DIR = _PROJECT_ROOT / "training" / "generated"
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
-from agent.model_runner import LOCAL_LLAMA_8B, load_model  # noqa: E402
+from agent.model_runner import load_model  # noqa: E402
+
+# Use Qwen-1.5B at bf16 for signal generation — avoids ROCm bitsandbytes OOM
+# that occurs during Llama-8B 4-bit NF4 weight conversion.
+_SIGNAL_GEN_MODEL = "/home/james/ml-proj/models/qwen2.5-1.5b-instruct"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -74,6 +78,12 @@ SCENARIO_TYPES = [
     "hard_compliance_failure",  # Competitor fails a hard compliance requirement (SSO/SOC2/residency)
     "hold_resolved",        # Competitor resolves the condition that previously triggered a HOLD
     "irrelevant_change",    # Competitor ships real feature that's irrelevant to this business
+    # ── New scenarios added for class balance (1:1:1 STAY/SWITCH/HOLD) ──────────
+    "compliance_newly_met",     # SWITCH: competitor acquires cert that was the sole blocker
+    "roadmap_confirmed_hold",   # HOLD: competitor commits to missing feature — confirmed Q-date
+    "contract_renewal_hold",    # HOLD: current contract renews in 60 days — hold for window
+    "vendor_acquisition_hold",  # HOLD: current vendor being acquired — wait for roadmap clarity
+    "pilot_in_progress_hold",   # HOLD: 30-day POC underway — hold pending proof of delivery
 ]
 
 # Scenario-specific framing instructions for the generation prompt.
@@ -195,6 +205,78 @@ _SCENARIO_INSTRUCTIONS: dict[str, str] = {
         "Pricing: unchanged for both sides. "
         "This scenario produces a STAY verdict — the urgency to switch has been removed."
     ),
+    # ── New scenarios for class balance ──────────────────────────────────────────
+    "compliance_newly_met": (
+        "COMPLIANCE UNLOCKED — SWITCH CASE. The competitor has just acquired a compliance "
+        "certification that was previously missing and was the sole hard block preventing a "
+        "switch. Name the specific certification acquired (e.g. 'SOC2 Type II certification "
+        "achieved 2025-03-01', 'UK data residency now available in London region', 'SSO via "
+        "SAML 2.0 now live on all tiers'). The certification must directly resolve one of the "
+        "hard compliance requirements in the global business rules. "
+        "Combine this with 1-2 existing features that now become accessible (previously blocked "
+        "by compliance). "
+        "CURRENT TOOL STATUS: existing push issues persist unchanged. "
+        "PRICING: unchanged. "
+        "The net result: the previously insurmountable compliance block is now resolved, and "
+        "the existing ROI case or operational gains justify switching. Verdict should be SWITCH."
+    ),
+    "roadmap_confirmed_hold": (
+        "HOLD — CONFIRMED ROADMAP COMMITMENT. The competitor announces that a specific missing "
+        "feature (one that directly addresses the current tool's main push issue) is on the "
+        "confirmed product roadmap with a named delivery quarter — e.g. 'confirmed for Q3 2025', "
+        "'scheduled for release in August 2025'. This is NOT yet in beta — it is a firm "
+        "commitment with a date. "
+        "COMPETITOR CHANGES: state the roadmap commitment with the specific feature name and "
+        "quarter. No other feature changes. "
+        "CURRENT TOOL STATUS: existing issues persist, no improvement. "
+        "PRICING: unchanged. "
+        "The trigger creates a HOLD: the case for switching is real and the timeline is "
+        "concrete — reassess in 60 days when the feature approaches its delivery date."
+    ),
+    "contract_renewal_hold": (
+        "HOLD — CONTRACT RENEWAL WINDOW. The current tool's annual contract comes up for "
+        "renewal in 60 days. The competitor has shipped meaningful improvements and the ROI "
+        "case is borderline positive, but switching mid-contract would incur early termination "
+        "fees that wipe out the saving. "
+        "COMPETITOR CHANGES: 1-2 genuine new features that improve the competitive picture "
+        "without being decisive on their own. "
+        "CURRENT TOOL STATUS: existing push issues persist. "
+        "NOTES: state the contract renewal timing explicitly — e.g. 'current contract renews "
+        "2025-09-01 — early exit penalty of £X applies before that date'. Include the penalty "
+        "amount (invent a plausible figure between £500 and £2,000). "
+        "PRICING: unchanged. "
+        "The verdict is HOLD: wait for the renewal window to switch cleanly without penalty."
+    ),
+    "vendor_acquisition_hold": (
+        "HOLD — VENDOR ACQUISITION UNCERTAINTY. The current tool's vendor has just announced "
+        "it is being acquired by a larger company. The acquisition introduces roadmap uncertainty "
+        "— it is unclear which features will be retained, discontinued, or repriced. "
+        "CURRENT TOOL STATUS: the acquisition announcement is the main signal — state it "
+        "clearly with acquirer name (invent a plausible corporate name) and expected close "
+        "date. Existing issues persist. "
+        "COMPETITOR CHANGES: the competitor has shipped a minor improvement (1 feature) — "
+        "not decisive on its own. "
+        "NOTES: state that the acquiring company has a track record of sunsetting niche "
+        "products or significantly increasing prices post-acquisition. "
+        "PRICING: unchanged for now but flagged as 'under review post-acquisition'. "
+        "The verdict is HOLD: the acquisition risk is real but the competitor isn't ready "
+        "enough to switch today — reassess in 60 days when acquisition terms are clearer."
+    ),
+    "pilot_in_progress_hold": (
+        "HOLD — PROOF OF CONCEPT IN PROGRESS. A 30-day pilot of the competitor is currently "
+        "underway following last quarter's evaluation. The pilot has not yet concluded. "
+        "COMPETITOR CHANGES: the competitor has shipped 1 improvement during the pilot period "
+        "(a minor enhancement — not a decisive new feature). "
+        "CURRENT TOOL STATUS: existing issues persist. No deterioration during the pilot. "
+        "NOTES: state that the pilot is ongoing — e.g. 'Pilot started 2025-02-01, concludes "
+        "2025-03-03. Integration testing with PayAxis/Azure AD in progress. Data migration "
+        "dry-run scheduled for week 3.' Include one specific unresolved concern from the pilot "
+        "(e.g. 'API rate limits under load not yet validated', 'GDPR data transfer mechanism "
+        "under legal review'). "
+        "PRICING: pilot pricing in effect — full pricing TBD on contract. "
+        "The verdict is HOLD: do not switch until the pilot concludes and the open items "
+        "are resolved."
+    ),
 }
 
 # Known competitors per category (derived from data/competitors/)
@@ -314,7 +396,7 @@ Rules:
     ]
 
 
-def _generate_text(tokenizer, model, messages: list[dict], max_new_tokens: int = 600) -> str:
+def _generate_text(tokenizer, model, messages: list[dict], max_new_tokens: int = 350) -> str:
     """Run inference on the 8B model and return the generated text."""
     import torch  # type: ignore
 
@@ -500,7 +582,7 @@ def main() -> None:
     tokenizer, model = None, None
     if not args.dry_run:
         os.environ.setdefault("HSA_OVERRIDE_GFX_VERSION", "11.0.0")
-        tokenizer, model = load_model(model_path=LOCAL_LLAMA_8B, quantize_bits=4)
+        tokenizer, model = load_model(model_path=_SIGNAL_GEN_MODEL, quantize_bits=0, adapter_path=None)
 
     if single_run and not batch_run:
         generate_one(args.category, args.competitor, args.scenario, tokenizer, model, output_dir, args.dry_run)

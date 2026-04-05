@@ -35,6 +35,7 @@ training/generated/
 training/traces/
 training/traces_fresh/
 training/checkpoints/
+training/checkpoints_grpo/
 training/runs/
 training/logs/
 wandb/

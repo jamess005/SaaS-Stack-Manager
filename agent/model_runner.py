@@ -70,25 +70,28 @@ def _load_fixture(category: str, competitor_slug: str) -> dict:
 # ── Model loading ──────────────────────────────────────────────────────────────
 
 
+_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-1.5b-instruct"
+_DEFAULT_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_grpo")
+
+
 def load_model(
-    model_name: str = "Qwen/Qwen2.5-3B-Instruct",
-    model_path: str | None = None,
-    adapter_path: str | None = None,
-    quantize_bits: int = 4,
+    model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
+    model_path: str | None = _DEFAULT_MODEL_PATH,
+    adapter_path: str | None = _DEFAULT_ADAPTER_PATH,
+    quantize_bits: int = 0,
 ) -> tuple[Any, Any]:
     """
-    Load tokenizer and quantised model for inference.
+    Load tokenizer and model for inference.
 
     Args:
-        model_name: HuggingFace model ID. Ignored if model_path is provided.
-        model_path: Local filesystem path to a model snapshot directory.
-                    Takes priority over model_name. Use LOCAL_LLAMA_8B for the
-                    locally cached Llama 3.1 8B teacher model.
-        adapter_path: Path to a LoRA adapter directory (output of fine_tune.py).
-                      If provided, the adapter is applied on top of the base model
-                      using PEFT's PeftModel.from_pretrained().
-        quantize_bits: Quantisation level. 4 = NF4 4-bit (~4-5GB VRAM).
-                       8 = INT8 (~8-10GB VRAM).
+        model_name:    HuggingFace model ID. Ignored if model_path is provided.
+        model_path:    Local filesystem path to a model snapshot directory.
+                       Defaults to the 1.5B model at /home/james/ml-proj/models/.
+        adapter_path:  Path to a LoRA adapter directory (output of grpo_train.py).
+                       If provided, the adapter is applied on top of the base model
+                       using PEFT's PeftModel.from_pretrained().
+        quantize_bits: 4 = NF4 4-bit (for large teacher models like Llama-8B).
+                       0 = bf16, no quantization (default, for 1.5B inference model).
 
     Returns:
         (tokenizer, model) — both None in dry-run mode.
@@ -110,14 +113,12 @@ def load_model(
         )
 
     import torch  # type: ignore[import-untyped]
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig  # type: ignore[import-untyped]
+    from transformers import AutoModelForCausalLM, AutoTokenizer  # type: ignore[import-untyped]
 
     source = model_path or model_name
-    logger.info("Loading model: %s (quantize_bits=%d)", source, quantize_bits)
 
     # ROCm (AMD): device_map="auto" triggers HIP kernel dispatch failures on
     # ROCm 7.x. Use explicit device_map={"": 0} for all loading paths.
-    # 4-bit NF4 via bitsandbytes works on ROCm with explicit device placement.
     is_rocm = hasattr(torch.version, "hip") and torch.version.hip is not None
     if is_rocm:
         logger.info(
@@ -125,26 +126,33 @@ def load_model(
             torch.version.hip,
         )
 
-    if quantize_bits == 8:
-        quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-    else:
+    device_map = {"": 0} if is_rocm else "auto"
+
+    tokenizer = AutoTokenizer.from_pretrained(source, trust_remote_code=True)
+
+    if quantize_bits == 4:
+        from transformers import BitsAndBytesConfig  # type: ignore[import-untyped]
+        logger.info("Loading model: %s (4-bit NF4)", source)
         quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=True,
         )
-
-    # On ROCm, always use explicit device placement to avoid accelerate dispatch.
-    device_map = {"": 0} if is_rocm else "auto"
-
-    tokenizer = AutoTokenizer.from_pretrained(source, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        source,
-        quantization_config=quantization_config,
-        device_map=device_map,
-        trust_remote_code=True,
-    )
+        model = AutoModelForCausalLM.from_pretrained(
+            source,
+            quantization_config=quantization_config,
+            device_map=device_map,
+            trust_remote_code=True,
+        )
+    else:
+        logger.info("Loading model: %s (bf16)", source)
+        model = AutoModelForCausalLM.from_pretrained(
+            source,
+            dtype=torch.bfloat16,
+            device_map=device_map,
+            trust_remote_code=True,
+        )
 
     if adapter_path:
         from peft import PeftModel  # type: ignore[import-untyped]
@@ -973,7 +981,7 @@ def run_lean(
         {"role": "user", "content": user_content},
     ]
 
-    result = _generate(tokenizer, model, messages, max_new_tokens=200, temperature=0.1)
+    result = _generate(tokenizer, model, messages, max_new_tokens=400, temperature=0.1)
     logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
     return result.strip()
 

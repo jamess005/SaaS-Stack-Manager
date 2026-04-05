@@ -33,8 +33,11 @@ _VALID_VERDICTS = {"SWITCH", "STAY", "HOLD"}
 # Matches a line starting with the section header followed by a colon
 _section_re = {s: re.compile(rf"^\s*{re.escape(s)}\s*:", re.IGNORECASE | re.MULTILINE) for s in _REQUIRED_SECTIONS}
 
-# Matches the VERDICT line and captures the verdict word
-_verdict_line_re = re.compile(r"^\s*VERDICT\s*:\s*(\w+)", re.IGNORECASE | re.MULTILINE)
+# Matches the VERDICT line and captures the verdict word.
+# Handles: "VERDICT: SWITCH", "**VERDICT:** SWITCH", "**VERDICT:** **STAY**", "**VERDICT: STAY**"
+# [*\s]* after the colon handles all combinations of closing/opening bold markers
+# and whitespace: "VERDICT: STAY", "**VERDICT:** STAY", "**VERDICT:** **STAY**"
+_verdict_line_re = re.compile(r"\*{0,2}VERDICT\*{0,2}\s*:[*\s]*(SWITCH|STAY|HOLD)\*{0,2}", re.IGNORECASE | re.MULTILINE)
 
 # Matches a quoted string "..." (at least one character inside)
 _quoted_string_re = re.compile(r'"[^"\n]+"')
@@ -201,7 +204,9 @@ def extract_hold_metadata(memo_text: str) -> dict | None:
     }
 
 
-_lean_analysis_re = re.compile(r"^\s*ANALYSIS\s*:", re.IGNORECASE | re.MULTILINE)
+# Allow optional markdown bold markers (**) around ANALYSIS and VERDICT labels.
+# The GRPO-trained model emits **ANALYSIS:** and **VERDICT:** style output.
+_lean_analysis_re = re.compile(r"^\s*\*{0,2}ANALYSIS\*{0,2}\s*:", re.IGNORECASE | re.MULTILINE)
 
 
 def validate_lean_output(text: str) -> tuple[bool, list[str]]:

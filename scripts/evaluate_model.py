@@ -39,8 +39,8 @@ _OUTPUTS_DIR = _PROJECT_ROOT / "outputs"
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
-from agent.model_runner import load_model, run_voting  # noqa: E402
-from agent.output_validator import extract_verdict_class, validate_verdict  # noqa: E402
+from agent.model_runner import load_model, run_lean  # noqa: E402
+from agent.output_validator import extract_verdict_class, validate_lean_output  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
 from agent.signal_interpreter import parse_signal_payload  # noqa: E402
 from training.generate_signals import SCENARIO_TYPES  # noqa: E402
@@ -59,7 +59,12 @@ EXPECTED_VERDICT: dict[str, str | None] = {
     "push_dominant":           "SWITCH",
     "shelfware_case":          "SWITCH",
     "hold_resolved":           "SWITCH",
+    "compliance_newly_met":    "SWITCH",
     "competitor_nearly_ready": "HOLD",
+    "roadmap_confirmed_hold":  "HOLD",
+    "contract_renewal_hold":   "HOLD",
+    "vendor_acquisition_hold": "HOLD",
+    "pilot_in_progress_hold":  "HOLD",
     # Ambiguous — verdict depends on signal magnitude, not scenario type alone
     "both_signals":            None,
     "price_hike_only":         None,
@@ -142,14 +147,13 @@ def _evaluate_one(
     pass1_payload = extract_pass1_vars(context, parse_signal_payload(inbox_text))
     roi_result = calculate_roi(pass1_payload)
 
-    memo = run_voting(inbox_text, context, roi_result, tokenizer, model)
+    memo = run_lean(inbox_text, context, roi_result, tokenizer, model)
 
     # Retry once on validation failure
-    is_valid, errors = validate_verdict(memo)
+    is_valid, _errors = validate_lean_output(memo)
     if not is_valid:
-        memo = run_voting(inbox_text, context, roi_result, tokenizer, model,
-                             retry_hint=errors)
-        is_valid, _ = validate_verdict(memo)
+        memo = run_lean(inbox_text, context, roi_result, tokenizer, model)
+        is_valid, _ = validate_lean_output(memo)
 
     verdict = extract_verdict_class(memo)
     expected = EXPECTED_VERDICT.get(scenario)
@@ -278,10 +282,10 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--model-path",
-                        default="/home/james/ml-proj/models/qwen2.5-3b-instruct",
+                        default="/home/james/ml-proj/models/qwen2.5-1.5b-instruct",
                         help="Local path to base model directory.")
     parser.add_argument("--adapter-path",
-                        default=str(_PROJECT_ROOT / "training" / "checkpoints"),
+                        default=str(_PROJECT_ROOT / "training" / "checkpoints_grpo"),
                         help="Path to fine-tuned LoRA adapter directory.")
     parser.add_argument("--limit", type=int, default=2,
                         help="Number of samples per scenario type (default: 2).")
