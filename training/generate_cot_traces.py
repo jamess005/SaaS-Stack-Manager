@@ -157,15 +157,25 @@ def _severity(text: str) -> str:
 
 
 _HOLD_NOTE_KW = frozenset([
-    "hold:", "acquisition", "beta", "roadmap", "contract", "pilot", "renewal", "not ga",
+    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga", "preview",
 ])
 
+_HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
 
-def _detect_hold_signal(notes: list[str]) -> str:
-    """Return the first note that looks like a hold condition, or 'NONE'."""
+_ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
+
+
+def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None) -> str:
+    """Return the first hold condition found in notes (or competitor_changes), or 'NONE'."""
     for note in notes:
-        if any(kw in note.lower() for kw in _HOLD_NOTE_KW):
+        note_lower = note.lower()
+        if note_lower.startswith(_ADVISORY_PREFIXES):
+            continue
+        if any(kw in note_lower for kw in _HOLD_NOTE_KW):
             return note
+    for change in (comp_changes or []):
+        if any(kw in change.lower() for kw in _HOLD_COMP_KW):
+            return change
     return "NONE"
 
 
@@ -204,7 +214,7 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict) -> str:
     )
     if notes_text:
         msg += f"\nBuried signals / notes:\n{notes_text}\n"
-    hold_signal = _detect_hold_signal(notes)
+    hold_signal = _detect_hold_signal(notes, comp_changes)
     msg += f"\nROI: {roi_summary}"
     msg += f"\nHold signal: {hold_signal}"
     return msg
@@ -250,17 +260,33 @@ def _pull_section(signal: dict) -> str:
     return "PULL SIGNALS:\n" + "\n".join(lines)
 
 
+_COMPLIANCE_HARD_TERMS = frozenset([
+    "soc2", "soc 2", "sso", "saml", "oidc", "audit log", "audit trail",
+    "uk residency", "eu residency", "gdpr residency", "data residency",
+])
+
+
 def _compliance_line(signal: dict) -> str:
+    """Generate compliance status line for the CoT trace.
+
+    Only reports BLOCKED for the four hard requirements (SOC2, SSO, residency,
+    audit log).  Soft requirements like ISO27001 don't block the switch decision.
+    """
     cc = signal_compliance_changes(signal)
-    if not cc or cc.lower() in ("unchanged", "no change", ""):
+    if not cc or cc.lower().strip() in ("unchanged", "no change", ""):
         return "COMPLIANCE: PASSED"
     cc_l = cc.lower()
-    achieved = {"achieved", "certified", "now available", "acquired", "live",
-                "met", "passed", "compliant", "now meets", "now compliant"}
-    blocked = {"not ", "no ", "lacks", "missing", "failed", "blocked", "unavailable"}
-    if any(kw in cc_l for kw in achieved):
+    achieved = {
+        "achieved", "certified", "added", "now available", "launched", "shipped",
+        "compliant", "now meets", "now compliant", "met", "passed", "attained",
+        "enabled", "live",
+    }
+    hard_blocked = {"not soc2", "no sso", "lacks sso", "no saml", "lacks saml",
+                    "no uk", "no eu", "not gdpr", "no audit log", "lacks audit log",
+                    "no audit trail", "lacks audit trail"}
+    if any(kw in cc_l for kw in achieved) and any(ht in cc_l for ht in _COMPLIANCE_HARD_TERMS):
         return f"COMPLIANCE: Previously BLOCKED — now MET ({cc})"
-    if any(kw in cc_l for kw in blocked):
+    if any(kw in cc_l for kw in hard_blocked):
         return f"COMPLIANCE: BLOCKED — {cc}"
     return "COMPLIANCE: PASSED"
 
@@ -276,9 +302,22 @@ def _roi_line(roi: dict) -> str:
 def _hold_line(signal: dict, scenario: str) -> str:
     if scenario in _HOLD_SCENARIOS:
         notes = signal_notes(signal)
+        comp_ch = signal_competitor_changes(signal)
+        # Use the first note that actually looks like a hold condition
+        hold = next(
+            (n for n in notes if not n.lower().startswith(_ADVISORY_PREFIXES)
+             and any(kw in n.lower() for kw in _HOLD_NOTE_KW)),
+            None,
+        )
+        # For competitor_nearly_ready, also check competitor_changes for beta/roadmap/preview
+        if hold is None and scenario == "competitor_nearly_ready":
+            hold = next((c for c in comp_ch if any(kw in c.lower() for kw in _HOLD_COMP_KW)), None)
+        if hold:
+            return f"HOLD CONDITION: {hold}"
+        # Fallback to first note if present
         if notes:
             return f"HOLD CONDITION: {notes[0]}"
-    return "HOLD CONDITION: NONE"  # Still used in full CoT trace output
+    return "HOLD CONDITION: NONE"
 
 
 # ── ANALYSIS text templates (scenario-specific) ───────────────────────────────
@@ -363,8 +402,16 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
             f"the incumbent's recovery. Hold signal: NONE. Insufficient case for SWITCH or HOLD. STAY."
         )
     if scenario == "competitor_nearly_ready":
+        # Prefer a real hold condition from notes; fall back to comp_changes "beta"/"roadmap" signal
+        blocking = next(
+            (n for n in notes if not n.lower().startswith(_ADVISORY_PREFIXES)
+             and any(kw in n.lower() for kw in _HOLD_NOTE_KW)),
+            None,
+        )
+        if blocking is None:
+            blocking = next((c for c in comp_ch if any(kw in c.lower() for kw in _HOLD_COMP_KW)), top_note)
         return (
-            f"HOLD CONFIRMED. BLOCKED: {top_note}. "
+            f"HOLD CONFIRMED. BLOCKED: {blocking}. "
             f"The feature is not GA — it cannot be relied upon in production. "
             f"Pull signal quality is irrelevant until GA delivery is confirmed. "
             f"Hold signal active. HOLD — reassess when the block clears."

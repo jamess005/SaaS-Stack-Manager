@@ -625,64 +625,58 @@ def _parse_compliance_changes(
     compliance: dict,
     category: str,
     seat_count: int,
-    tokenizer: Any,
-    model: Any,
+    tokenizer: Any = None,
+    model: Any = None,
 ) -> dict:
     """
-    Interpret free-text compliance_changes using a tiny constrained model call.
+    Interpret free-text compliance_changes using keyword heuristics.
 
-    Only asks about requirements that are currently False and relevant to this
-    category/seat_count. If nothing is failing or text is empty, returns
-    compliance unchanged (no model call).
+    Looks for positive signals (achieved/added/now available) paired with
+    hard-requirement keywords (soc2, sso, residency, audit log).  Negative
+    or unchanged text is ignored.  No model call required.
 
     Returns updated compliance dict (original is not mutated).
     """
     if not changes_text or not changes_text.strip():
         return compliance
 
-    # Determine which checks are currently failing
-    checks: list[tuple[str, str]] = []  # (field_key, human_label)
-    if not compliance.get("soc2_type2"):
-        checks.append(("soc2_type2", "SOC2 Type II certification"))
-    if seat_count > 10 and not compliance.get("sso_saml"):
-        checks.append(("sso_saml", "SSO (SAML/OIDC)"))
-    if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
-        checks.append(("uk_residency", "UK or EU data residency"))
-    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
-        checks.append(("audit_log", "exportable audit log"))
-
-    if not checks:
-        return compliance  # All requirements already met — no model call needed
-
-    if _is_dry_run():
-        return compliance  # In dry-run, assume no change
-
-    checks_block = "\n".join(f"- {label}: YES or NO" for _, label in checks)
-    msgs = [
-        {"role": "system", "content": "Answer YES or NO for each item. No other text."},
-        {
-            "role": "user",
-            "content": (
-                f"Text: {changes_text.strip()}\n\n"
-                f"Does this text indicate the competitor now has:\n{checks_block}"
-            ),
-        },
-    ]
-    result = _generate(tokenizer, model, msgs, max_new_tokens=60, temperature=0.1)
-    result_upper = result.upper()
-
+    text = changes_text.lower()
     updated = dict(compliance)
-    for field_key, label in checks:
-        label_upper = label.upper()
-        # Look for "<LABEL_FIRST_WORD>...YES" pattern
-        pattern = re.compile(
-            rf"{re.escape(label_upper.split()[0])}[^\n]{{0,40}}\bYES\b",
-        )
-        if pattern.search(result_upper):
-            updated[field_key] = True
-            # For residency, set both flags when text says yes
-            if field_key == "uk_residency":
-                updated["gdpr_eu_residency"] = True
+
+    _POSITIVE = frozenset([
+        "achieved", "certified", "added", "now available", "launched", "shipped",
+        "compliant", "now meets", "now compliant", "met", "passed", "attained",
+        "enabled", "available", "live",
+    ])
+
+    def _positive_context(snippet: str) -> bool:
+        return any(kw in snippet for kw in _POSITIVE)
+
+    # SOC2 Type II
+    if not compliance.get("soc2_type2"):
+        if ("soc2" in text or "soc 2" in text) and _positive_context(text):
+            updated["soc2_type2"] = True
+
+    # SSO / SAML (only matters if seat_count > 10)
+    if seat_count > 10 and not compliance.get("sso_saml"):
+        if ("sso" in text or "saml" in text or "oidc" in text) and _positive_context(text):
+            updated["sso_saml"] = True
+
+    # UK / EU data residency
+    if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
+        if "uk" in text and "residency" in text and _positive_context(text):
+            updated["uk_residency"] = True
+            updated["gdpr_eu_residency"] = True
+        elif ("eu" in text or "gdpr" in text) and "residency" in text and _positive_context(text):
+            updated["gdpr_eu_residency"] = True
+
+    # Audit log (required for finance, hr, crm)
+    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
+        if ("audit log" in text or "audit trail" in text) and _positive_context(text):
+            # Don't set if the text explicitly says it's still inadequate
+            if "csv only" not in text and "not available" not in text:
+                updated["audit_log"] = True
+                updated["audit_log_exportable"] = True
 
     return updated
 
@@ -987,15 +981,32 @@ def run_lean(
 
 
 _HOLD_NOTE_KW = frozenset([
-    "hold:", "acquisition", "beta", "roadmap", "contract", "pilot", "renewal", "not ga",
+    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga", "preview",
 ])
 
+# Competitor-changes keywords that indicate a hold condition (feature not yet GA)
+_HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
 
-def _detect_hold_signal(notes: list[str]) -> str:
-    """Return the first note that looks like a hold condition, or 'NONE'."""
+# Notes that start with these words are advisory, not hold conditions
+_ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
+
+
+def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None) -> str:
+    """Return the first hold condition found in notes (or competitor_changes), or 'NONE'.
+
+    Notes that are advisory (starting with "consider", "suggest", etc.) are skipped
+    to avoid false positives from phrases like "consider re-evaluating the contract".
+    Competitor changes are checked for beta/roadmap/not-ga signals.
+    """
     for note in notes:
-        if any(kw in note.lower() for kw in _HOLD_NOTE_KW):
+        note_lower = note.lower()
+        if note_lower.startswith(_ADVISORY_PREFIXES):
+            continue
+        if any(kw in note_lower for kw in _HOLD_NOTE_KW):
             return note
+    for change in (comp_changes or []):
+        if any(kw in change.lower() for kw in _HOLD_COMP_KW):
+            return change
     return "NONE"
 
 
@@ -1035,7 +1046,7 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> st
     )
     if notes_text:
         user_content += f"\nBuried signals / notes:\n{notes_text}\n"
-    hold_signal = _detect_hold_signal(notes)
+    hold_signal = _detect_hold_signal(notes, comp_changes)
     user_content += f"\nROI: {roi_summary}"
     user_content += f"\nHold signal: {hold_signal}"
     return user_content
