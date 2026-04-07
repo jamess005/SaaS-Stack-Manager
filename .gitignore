@@ -36,6 +36,8 @@ training/traces/
 training/traces_fresh/
 training/checkpoints/
 training/checkpoints_grpo/
+training/checkpoints_sft_cot/
+training/sft_cot_traces.jsonl
 training/runs/
 training/logs/
 wandb/

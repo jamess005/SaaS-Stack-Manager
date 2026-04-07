@@ -510,7 +510,21 @@ Both the current tool AND the competitor can improve simultaneously — evaluate
 delta: which improvements matter more for this business right now?
 
 Format your response exactly as:
+PUSH SIGNALS:
+  - <current tool issue> — Severity: HIGH/MEDIUM/LOW
+  [or: None flagged this period]
+
+PULL SIGNALS:
+  - <competitor change> — Substance: CONCRETE/VAGUE
+  [or: None identified]
+
+COMPLIANCE: PASSED
+ROI: Migration £<X> | Annual net £<Y> → Threshold MET/NOT MET
+
+HOLD CONDITION: NONE
+[or: <reason if a named condition blocks switching>]
+
 ANALYSIS: <2-4 sentences — name the key push issue(s), state whether competitor \
-changes resolve them, and weigh ROI or operational gain>
+changes resolve them, weigh ROI or operational gain, and state hold condition if any>
 VERDICT: <SWITCH|STAY|HOLD>\
 """

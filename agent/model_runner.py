@@ -986,6 +986,19 @@ def run_lean(
     return result.strip()
 
 
+_HOLD_NOTE_KW = frozenset([
+    "hold:", "acquisition", "beta", "roadmap", "contract", "pilot", "renewal", "not ga",
+])
+
+
+def _detect_hold_signal(notes: list[str]) -> str:
+    """Return the first note that looks like a hold condition, or 'NONE'."""
+    for note in notes:
+        if any(kw in note.lower() for kw in _HOLD_NOTE_KW):
+            return note
+    return "NONE"
+
+
 def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> str:
     """Build the compact user message used by the lean verdict pipeline."""
     from agent.prompts import _CATEGORY_RULES_COMPACT
@@ -1022,5 +1035,7 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> st
     )
     if notes_text:
         user_content += f"\nBuried signals / notes:\n{notes_text}\n"
+    hold_signal = _detect_hold_signal(notes)
     user_content += f"\nROI: {roi_summary}"
+    user_content += f"\nHold signal: {hold_signal}"
     return user_content
