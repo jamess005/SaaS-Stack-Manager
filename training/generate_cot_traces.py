@@ -157,7 +157,7 @@ def _severity(text: str) -> str:
 
 
 _HOLD_NOTE_KW = frozenset([
-    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga", "preview",
+    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga",
 ])
 
 _HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
@@ -217,6 +217,9 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict) -> str:
     hold_signal = _detect_hold_signal(notes, comp_changes)
     msg += f"\nROI: {roi_summary}"
     msg += f"\nHold signal: {hold_signal}"
+    prev_verdict = signal.get("previous_verdict")
+    if prev_verdict:
+        msg += f"\nPrevious verdict: {prev_verdict}"
     return msg
 
 
@@ -300,18 +303,18 @@ def _roi_line(roi: dict) -> str:
 
 
 def _hold_line(signal: dict, scenario: str) -> str:
+    notes = signal_notes(signal)
+    comp_ch = signal_competitor_changes(signal)
+    # Use the first note that actually looks like a hold condition
+    hold = next(
+        (n for n in notes if not n.lower().startswith(_ADVISORY_PREFIXES)
+         and any(kw in n.lower() for kw in _HOLD_NOTE_KW)),
+        None,
+    )
+    # For competitor_nearly_ready, also check competitor_changes for beta/roadmap/preview
+    if hold is None and scenario == "competitor_nearly_ready":
+        hold = next((c for c in comp_ch if any(kw in c.lower() for kw in _HOLD_COMP_KW)), None)
     if scenario in _HOLD_SCENARIOS:
-        notes = signal_notes(signal)
-        comp_ch = signal_competitor_changes(signal)
-        # Use the first note that actually looks like a hold condition
-        hold = next(
-            (n for n in notes if not n.lower().startswith(_ADVISORY_PREFIXES)
-             and any(kw in n.lower() for kw in _HOLD_NOTE_KW)),
-            None,
-        )
-        # For competitor_nearly_ready, also check competitor_changes for beta/roadmap/preview
-        if hold is None and scenario == "competitor_nearly_ready":
-            hold = next((c for c in comp_ch if any(kw in c.lower() for kw in _HOLD_COMP_KW)), None)
         if hold:
             return f"HOLD CONDITION: {hold}"
         # Fallback to first note if present
@@ -347,6 +350,15 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
         )
     if scenario == "push_dominant":
         push = top_tool if tool_ch else issue
+        pull_sub = _substance(top_comp)
+        if pull_sub == "VAGUE":
+            return (
+                f"Push signal: HIGH — {tool} is critically degrading ({push}). "
+                f"Pull signal: VAGUE — {comp} delivers only '{top_comp}'. "
+                f"Push dominance: escalating failure rate justifies leaving a degrading tool "
+                f"even when pull signal is weak. ROI gate: {roi_str}. "
+                f"Compliance gate: PASSED. Hold signal: NONE. SWITCH."
+            )
         return (
             f"Push signal: HIGH — {tool} is degrading ({push}). "
             f"Pull signal: CONCRETE — {comp} resolves this with {top_comp}. "
@@ -354,17 +366,38 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
             f"All gates clear. SWITCH."
         )
     if scenario == "shelfware_case":
+        # Explicitly address notes that could confuse the model into STAY/HOLD.
+        advisory_note = next((n for n in notes if n.lower().startswith(_ADVISORY_PREFIXES)), None)
+        if advisory_note:
+            notes_clarification = (
+                f" Advisory note '{advisory_note[:60]}' is NOT a hold condition."
+            )
+        elif notes:
+            notes_clarification = (
+                " Competitor limitations or restrictions in notes do not block this"
+                " SWITCH — the decision is driven by cost waste, not competitor quality."
+            )
+        else:
+            notes_clarification = ""
         return (
             f"SWITCH CONFIRMED — shelfware case. {tool} is underutilised ({top_tool}). "
-            f"Paying for unused capacity with no improvement in utilisation justifies switching. "
-            f"ROI gate: {roi_str}. Compliance: PASSED. Hold signal: NONE. "
-            f"Switch driven by waste elimination, not by competitor features. SWITCH."
+            f"Paying for unused capacity with no utilisation improvement justifies switching. "
+            f"Shelfware waste elimination overrides the standard ROI threshold — "
+            f"the cost of inaction is the ongoing waste. "
+            f"Compliance: PASSED. Hold signal: NONE. "
+            f"Switch driven by waste elimination, not by competitor features.{notes_clarification} SWITCH."
         )
     if scenario == "hold_resolved":
+        if met:
+            roi_note = f"ROI gate: PASSED ({roi_str})."
+        else:
+            roi_note = f"ROI gate: {roi_str} — overridden: hold release is the binding gate."
         return (
-            f"SWITCH CONFIRMED. {comp} delivers '{top_comp}' — confirmed GA delivery, blocking condition cleared. "
-            f"The prior hold no longer applies. "
-            f"ROI gate: {roi_str}. Compliance: PASSED. Hold signal: NONE. All gates clear. SWITCH."
+            f"INPUT CONTEXT: [Previous verdict: HOLD] + [Hold signal: NONE] — the prior hold is cleared. "
+            f"RULE: when Previous verdict is HOLD and Hold signal is NONE, the case converts to SWITCH. "
+            f"{comp} delivers '{top_comp}' — blocking condition resolved. "
+            f"{roi_note} Compliance: PASSED. "
+            f"SWITCH — prior HOLD cleared."
         )
     if scenario == "compliance_newly_met":
         return (
@@ -388,8 +421,15 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
             f"Hold signal: NONE. No switch case. STAY."
         )
     if scenario == "negative_signal_buried":
+        # Prefer hold-looking notes (preview/beta/tbd/roadmap) as explicit disqualifiers.
+        # This teaches the model: these keywords in buried notes = DISQUALIFYING (STAY), not HOLD.
+        _NSB_DISQUAL_KW = frozenset({"preview", "beta", "tbd", "roadmap"})
+        hold_note = next(
+            (n for n in notes if any(kw in n.lower() for kw in _NSB_DISQUAL_KW)), None
+        )
+        disqualifier = hold_note if hold_note else top_note
         return (
-            f"Buried signal: DISQUALIFYING — {top_note}. "
+            f"Buried signal: DISQUALIFYING — {disqualifier}. "
             f"Despite {comp} showing {top_comp}, this hidden negative cancels the pull case. "
             f"Reading only surface signals would suggest SWITCH; reading all signals gives STAY. "
             f"Hold signal: NONE. The case fails on evidence. STAY."

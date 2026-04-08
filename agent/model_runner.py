@@ -981,7 +981,7 @@ def run_lean(
 
 
 _HOLD_NOTE_KW = frozenset([
-    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga", "preview",
+    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga",
 ])
 
 # Competitor-changes keywords that indicate a hold condition (feature not yet GA)
@@ -1049,4 +1049,7 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> st
     hold_signal = _detect_hold_signal(notes, comp_changes)
     user_content += f"\nROI: {roi_summary}"
     user_content += f"\nHold signal: {hold_signal}"
+    prev_verdict = signal.get("previous_verdict")
+    if prev_verdict:
+        user_content += f"\nPrevious verdict: {prev_verdict}"
     return user_content
