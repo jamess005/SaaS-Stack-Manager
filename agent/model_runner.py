@@ -639,12 +639,14 @@ def _parse_compliance_changes(
     """
     if not changes_text or not changes_text.strip():
         return compliance
+    if _is_dry_run():
+        return compliance
 
     text = changes_text.lower()
     updated = dict(compliance)
 
     _POSITIVE = frozenset([
-        "achieved", "certified", "added", "now available", "launched", "shipped",
+        "achieved", "acquired", "certified", "added", "now available", "launched", "shipped",
         "compliant", "now meets", "now compliant", "met", "passed", "attained",
         "enabled", "available", "live",
     ])
