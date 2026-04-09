@@ -129,18 +129,33 @@ def validate_verdict(memo_text: str) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
+_verdict_word_re = re.compile(r"\b(SWITCH|STAY|HOLD)\b", re.IGNORECASE)
+
+
 def extract_verdict_class(memo_text: str) -> str | None:
     """
     Extract the verdict class string from a memo.
+
+    Primary: looks for a ``VERDICT: <word>`` line.
+    Fallback: scans the full text for the last standalone SWITCH/STAY/HOLD word.
+    This handles malformed outputs where the model expressed a verdict without
+    the required prefix line.
 
     Returns:
         "SWITCH", "STAY", "HOLD", or None if not found or value is invalid.
     """
     match = _verdict_line_re.search(memo_text)
-    if not match:
-        return None
-    word = match.group(1).upper()
-    return word if word in _VALID_VERDICTS else None
+    if match:
+        word = match.group(1).upper()
+        if word in _VALID_VERDICTS:
+            return word
+
+    # Fallback: take the last verdict word anywhere in the output
+    all_matches = _verdict_word_re.findall(memo_text)
+    if all_matches:
+        return all_matches[-1].upper()
+
+    return None
 
 
 def extract_hold_metadata(memo_text: str) -> dict | None:

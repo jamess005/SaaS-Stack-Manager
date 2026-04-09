@@ -158,7 +158,7 @@ def _evaluate_one(
     verdict = extract_verdict_class(memo)
     expected = EXPECTED_VERDICT.get(scenario)
 
-    return {
+    result: dict = {
         "status": "ok",
         "scenario": scenario,
         "category": category,
@@ -168,6 +168,9 @@ def _evaluate_one(
         "format_valid": is_valid,
         "source_file": signal_path.name,
     }
+    if not is_valid:
+        result["raw_output"] = memo
+    return result
 
 
 # ── Reporting ──────────────────────────────────────────────────────────────────

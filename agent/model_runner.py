@@ -274,7 +274,7 @@ def _generate(tokenizer, model, messages: list[dict], max_new_tokens: int, tempe
             attention_mask=attention_mask,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
-            do_sample=True,
+            do_sample=temperature > 0,
             pad_token_id=tokenizer.eos_token_id,
             repetition_penalty=1.1,
         )
@@ -673,11 +673,17 @@ def _parse_compliance_changes(
             updated["gdpr_eu_residency"] = True
 
     # Audit log (required for finance, hr, crm)
-    if category in ("finance", "hr", "crm") and not compliance.get("audit_log"):
-        if ("audit log" in text or "audit trail" in text) and _positive_context(text):
-            # Don't set if the text explicitly says it's still inadequate
-            if "csv only" not in text and "not available" not in text:
-                updated["audit_log"] = True
+    if category in ("finance", "hr", "crm"):
+        if not compliance.get("audit_log"):
+            if ("audit log" in text or "audit trail" in text) and _positive_context(text):
+                # Don't set if the text explicitly says it's still inadequate
+                if "csv only" not in text and "not available" not in text:
+                    updated["audit_log"] = True
+                    updated["audit_log_exportable"] = True
+        elif not compliance.get("audit_log_exportable"):
+            # audit_log exists but export wasn't available — handle separately
+            _export_kw = ("audit log export", "exportable audit", "audit trail export")
+            if any(kw in text for kw in _export_kw) and _positive_context(text):
                 updated["audit_log_exportable"] = True
 
     return updated
@@ -977,7 +983,7 @@ def run_lean(
         {"role": "user", "content": user_content},
     ]
 
-    result = _generate(tokenizer, model, messages, max_new_tokens=400, temperature=0.1)
+    result = _generate(tokenizer, model, messages, max_new_tokens=400, temperature=0.0)
     logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
     return result.strip()
 
