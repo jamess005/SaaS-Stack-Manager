@@ -389,15 +389,20 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
         )
     if scenario == "hold_resolved":
         if met:
-            roi_note = f"ROI gate: PASSED ({roi_str})."
+            roi_note = f"ROI: {roi_str} — gate PASSED."
         else:
-            roi_note = f"ROI gate: {roi_str} — overridden: hold release is the binding gate."
+            roi_note = (
+                f"ROI: {roi_str} — negative, but hold release is the binding gate; "
+                f"ROI does NOT block when a prior HOLD is cleared."
+            )
         return (
-            f"INPUT CONTEXT: [Previous verdict: HOLD] + [Hold signal: NONE] — the prior hold is cleared. "
-            f"RULE: when Previous verdict is HOLD and Hold signal is NONE, the case converts to SWITCH. "
-            f"{comp} delivers '{top_comp}' — blocking condition resolved. "
-            f"{roi_note} Compliance: PASSED. "
-            f"SWITCH — prior HOLD cleared."
+            f"Hold condition resolved — {comp} delivers '{top_comp}', removing the blocking condition. "
+            f"Hold signal: NONE (no new hold condition detected). "
+            f"Compliance: PASSED. {roi_note} "
+            f"Prior verdict was HOLD because a specific condition blocked the switch. "
+            f"That condition is now gone. With no hold signal remaining and compliance passing, "
+            f"the verdict is SWITCH — not HOLD (hold is cleared), not STAY (there is a pull signal). "
+            f"SWITCH."
         )
     if scenario == "compliance_newly_met":
         return (
