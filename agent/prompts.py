@@ -502,6 +502,11 @@ or the ROI and operational case is insufficient.
 HOLD   — switch case is real but a named condition must be met first: feature in \
 beta (not GA), contract timing, or insufficient proof of delivery.
 
+Signal position matters: pre-GA language (beta, preview, roadmap) in competitor \
+changes = competitor nearly ready → HOLD (wait for GA). Pre-GA language only in \
+buried notes = competitor not viable → STAY (not HOLD). Trust the Hold signal \
+field: if NONE, there is no hold condition regardless of what notes contain.
+
 ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration: max 15 hours.
 A feature improvement that resolves a HIGH push issue can justify SWITCH even \
 if direct ROI is negative, provided the operational gain is clearly articulated.
