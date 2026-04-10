@@ -216,6 +216,7 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict) -> str:
         msg += f"\nBuried signals / notes:\n{notes_text}\n"
     hold_signal = _detect_hold_signal(notes, comp_changes)
     msg += f"\nROI: {roi_summary}"
+    msg += "\nCompliance: PASSED"
     msg += f"\nHold signal: {hold_signal}"
     prev_verdict = signal.get("previous_verdict")
     if prev_verdict:
@@ -288,7 +289,7 @@ def _compliance_line(signal: dict) -> str:
                     "no uk", "no eu", "not gdpr", "no audit log", "lacks audit log",
                     "no audit trail", "lacks audit trail"}
     if any(kw in cc_l for kw in achieved) and any(ht in cc_l for ht in _COMPLIANCE_HARD_TERMS):
-        return f"COMPLIANCE: Previously BLOCKED — now MET ({cc})"
+        return "COMPLIANCE: Previously BLOCKED — now MET"
     if any(kw in cc_l for kw in hard_blocked):
         return f"COMPLIANCE: BLOCKED — {cc}"
     return "COMPLIANCE: PASSED"
@@ -325,7 +326,7 @@ def _hold_line(signal: dict, scenario: str) -> str:
 
 # ── ANALYSIS text templates (scenario-specific) ───────────────────────────────
 
-def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
+def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: int = 0) -> str:
     comp = signal.get("competitor", "Competitor")
     tool = context["current_stack_entry"]["tool"]
     known = context["current_stack_entry"].get("known_issues", [])
@@ -343,35 +344,86 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
     roi_str = f"ROI threshold {'met' if met else 'not met'} at £{net:+.0f}/yr net"
 
     if scenario == "pull_dominant":
-        return (
-            f"{comp} delivers '{top_comp}' — a concrete new capability that directly resolves '{issue}'. "
-            f"This is not a vague update; it addresses the specific push issue. "
-            f"ROI gate: {roi_str}. Compliance: PASSED. Hold signal: NONE. All gates clear. SWITCH."
-        )
+        templates = [
+            # V0 — pull signal resolves push issue
+            (
+                f"{comp} delivers '{top_comp}' — a concrete new capability that directly resolves '{issue}'. "
+                f"This is not a vague update; it addresses the specific push issue. "
+                f"ROI gate: {roi_str}. Compliance: PASSED. Hold signal: NONE. All gates clear. SWITCH."
+            ),
+            # V1 — gate-check-first
+            (
+                f"Gate check: Compliance PASSED. Hold signal NONE. ROI {roi_str}. All clear. "
+                f"Pull quality: CONCRETE — '{top_comp}' from {comp} resolves '{issue}'. "
+                f"All gates clear. SWITCH."
+            ),
+            # V2 — delivered capability, derive from evidence
+            (
+                f"{comp} ships '{top_comp}'. This is a delivered capability, not a roadmap item — "
+                f"it can be relied upon today. It addresses {tool}'s primary gap: {issue}. "
+                f"When a concrete pull signal resolves the primary push driver and all blocking gates "
+                f"clear (compliance PASSED, hold NONE, {roi_str}), the switch case is established. SWITCH."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "push_dominant":
         push = top_tool if tool_ch else issue
         pull_sub = _substance(top_comp)
         if pull_sub == "VAGUE":
-            return (
-                f"Push signal: HIGH — {tool} is critically degrading ({push}). "
-                f"Pull signal: VAGUE — {comp} delivers only '{top_comp}'. "
-                f"Push dominance: escalating failure rate justifies leaving a degrading tool "
-                f"even when pull signal is weak. ROI gate: {roi_str}. "
-                f"Compliance gate: PASSED. Hold signal: NONE. SWITCH."
-            )
-        return (
-            f"Push signal: HIGH — {tool} is degrading ({push}). "
-            f"Pull signal: CONCRETE — {comp} resolves this with {top_comp}. "
-            f"ROI gate: {roi_str}. Compliance gate: PASSED. Hold signal: NONE. "
-            f"All gates clear. SWITCH."
-        )
+            templates = [
+                # V0 — push dominance explanation
+                (
+                    f"Push signal: HIGH — {tool} is critically degrading ({push}). "
+                    f"Pull signal: VAGUE — {comp} delivers only '{top_comp}'. "
+                    f"Push dominance: escalating failure rate justifies leaving a degrading tool "
+                    f"even when pull signal is weak. ROI gate: {roi_str}. "
+                    f"Compliance gate: PASSED. Hold signal: NONE. SWITCH."
+                ),
+                # V1 — urgency framing
+                (
+                    f"The tool is failing: {push}. At HIGH push severity the rule changes — "
+                    f"a weak pull signal is sufficient when the incumbent is critically degrading. "
+                    f"{comp}'s '{top_comp}' provides a viable exit path. "
+                    f"Compliance: PASSED. Hold: NONE. ROI: {roi_str}. SWITCH."
+                ),
+                # V2 — derive from the severity principle
+                (
+                    f"{tool} is critically degrading: {push}. A tool in active failure cannot "
+                    f"wait for a perfect pull signal. The pull signal ('{top_comp}') is vague, "
+                    f"but vague pull is sufficient when push severity is HIGH — the priority is "
+                    f"exiting the failing tool. All blocking gates clear: compliance PASSED, "
+                    f"hold NONE, {roi_str}. SWITCH."
+                ),
+            ]
+        else:
+            templates = [
+                # V0 — double signal
+                (
+                    f"Push signal: HIGH — {tool} is degrading ({push}). "
+                    f"Pull signal: CONCRETE — {comp} resolves this with {top_comp}. "
+                    f"ROI gate: {roi_str}. Compliance gate: PASSED. Hold signal: NONE. "
+                    f"All gates clear. SWITCH."
+                ),
+                # V1 — aligned signals
+                (
+                    f"Both signals aligned: {tool} degrades ({push}) while {comp} delivers {top_comp}. "
+                    f"Push and pull reinforce the same decision. Compliance PASSED. Hold NONE. "
+                    f"ROI {roi_str}. SWITCH."
+                ),
+                # V2 — derive from both signal strengths
+                (
+                    f"{tool} is degrading: {push}. {comp} delivers a concrete resolution: '{top_comp}'. "
+                    f"The ideal switch scenario — the push driver has a concrete answer from the competitor. "
+                    f"Blocking gates: compliance PASSED, hold NONE, {roi_str}. SWITCH."
+                ),
+            ]
+        return templates[variant % len(templates)]
+
     if scenario == "shelfware_case":
-        # Explicitly address notes that could confuse the model into STAY/HOLD.
         advisory_note = next((n for n in notes if n.lower().startswith(_ADVISORY_PREFIXES)), None)
         if advisory_note:
-            notes_clarification = (
-                f" Advisory note '{advisory_note[:60]}' is NOT a hold condition."
-            )
+            notes_clarification = f" Advisory note '{advisory_note[:60]}' is NOT a hold condition."
         elif notes:
             notes_clarification = (
                 " Competitor limitations or restrictions in notes do not block this"
@@ -379,14 +431,34 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
             )
         else:
             notes_clarification = ""
-        return (
-            f"SWITCH CONFIRMED — shelfware case. {tool} is underutilised ({top_tool}). "
-            f"Paying for unused capacity with no utilisation improvement justifies switching. "
-            f"Shelfware waste elimination overrides the standard ROI threshold — "
-            f"the cost of inaction is the ongoing waste. "
-            f"Compliance: PASSED. Hold signal: NONE. "
-            f"Switch driven by waste elimination, not by competitor features.{notes_clarification} SWITCH."
-        )
+        templates = [
+            # V0 — waste elimination
+            (
+                f"SWITCH CONFIRMED — shelfware case. {tool} is underutilised ({top_tool}). "
+                f"Paying for unused capacity with no utilisation improvement justifies switching. "
+                f"Shelfware waste elimination overrides the standard ROI threshold — "
+                f"the cost of inaction is the ongoing waste. "
+                f"Compliance: PASSED. Hold signal: NONE. "
+                f"Switch driven by waste elimination, not by competitor features.{notes_clarification} SWITCH."
+            ),
+            # V1 — cost framing
+            (
+                f"Decision driver: waste, not competitor quality. {tool} is {top_tool}. "
+                f"The organisation pays for idle capacity with no utilisation plan. "
+                f"The cost of staying (continued waste) exceeds migration cost. "
+                f"Compliance PASSED. Hold NONE.{notes_clarification} SWITCH."
+            ),
+            # V2 — cost of inaction reasoning
+            (
+                f"Shelfware case: {top_tool}. The cost of staying is not zero — it is the "
+                f"ongoing waste of paying for unused capacity. When the cost of inaction "
+                f"(continued waste) is certain and the cost of action (migration) is one-time, "
+                f"the economics favour switching. The standard ROI threshold relaxes for shelfware. "
+                f"Compliance PASSED.{notes_clarification} SWITCH."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "hold_resolved":
         if met:
             roi_note = f"ROI: {roi_str} — gate PASSED."
@@ -395,59 +467,176 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
                 f"ROI: {roi_str} — negative, but hold release is the binding gate; "
                 f"ROI does NOT block when a prior HOLD is cleared."
             )
-        return (
-            f"Hold condition resolved — {comp} delivers '{top_comp}', removing the blocking condition. "
-            f"Hold signal: NONE (no new hold condition detected). "
-            f"Compliance: PASSED. {roi_note} "
-            f"Prior verdict was HOLD because a specific condition blocked the switch. "
-            f"That condition is now gone. With no hold signal remaining and compliance passing, "
-            f"the verdict is SWITCH — not HOLD (hold is cleared), not STAY (there is a pull signal). "
-            f"SWITCH."
-        )
+        templates = [
+            # V0 — blocking condition resolved
+            (
+                f"Hold condition resolved — {comp} delivers '{top_comp}', removing the blocking condition. "
+                f"Hold signal: NONE (no new hold condition detected). "
+                f"Compliance: PASSED. {roi_note} "
+                f"Prior verdict was HOLD because a specific condition blocked the switch. "
+                f"That condition is now gone. With no hold signal remaining and compliance passing, "
+                f"the verdict is SWITCH — not HOLD (hold is cleared), not STAY (there is a pull signal). "
+                f"SWITCH."
+            ),
+            # V1 — gate re-check framing
+            (
+                f"Prior HOLD is cleared. {comp} delivers '{top_comp}', resolving the blocking condition. "
+                f"Gate re-check: Hold signal NONE. Compliance PASSED. {roi_note} "
+                f"With the hold released and no new blocking condition, verdict converts to SWITCH. SWITCH."
+            ),
+            # V2 — derive from hold-release logic
+            (
+                f"A prior HOLD was in place because a specific condition blocked the switch. "
+                f"{comp} now delivers '{top_comp}', resolving that condition. "
+                f"When the blocking condition that caused HOLD is removed, the switch case "
+                f"reasserts — the pull signal still exists and compliance still passes. "
+                f"{roi_note} SWITCH."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "compliance_newly_met":
-        return (
-            f"Compliance gate: previously BLOCKED, now PASSED — {cc}. "
-            f"Pull signal: CONCRETE — {comp} delivers {top_comp} resolving {issue}. "
-            f"ROI gate: {roi_str}. Hold signal: NONE. "
-            f"All gates clear. SWITCH."
-        )
+        templates = [
+            # V0 — gate unblocked
+            (
+                f"Compliance gate: previously BLOCKED, now PASSED. "
+                f"Pull signal: CONCRETE — {comp} delivers {top_comp} resolving {issue}. "
+                f"ROI gate: {roi_str}. Hold signal: NONE. "
+                f"All gates clear. SWITCH."
+            ),
+            # V1 — unblocking framing
+            (
+                f"Compliance unblocked. The only previous barrier has been cleared. "
+                f"Pull signal CONCRETE: {top_comp} from {comp} resolves {issue}. "
+                f"ROI: {roi_str}. Hold: NONE. All gates now clear. SWITCH."
+            ),
+            # V2 — derive from gate unblock logic
+            (
+                f"Compliance was the sole blocking gate. It is now cleared. "
+                f"With the blocker removed, evaluate the remaining signals on their merits: "
+                f"'{top_comp}' from {comp} directly resolves '{issue}' — a concrete pull. "
+                f"ROI {roi_str}. Hold NONE. The switch case that compliance previously blocked "
+                f"now goes through. SWITCH."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "fluff_update":
-        return (
-            f"Pull signal: VAGUE — '{top_comp}' is marketing language with no concrete feature delivery. "
-            f"VAGUE pull signals provide no basis for SWITCH regardless of push signal severity. "
-            f"Notes about migration complexity or implementation risk are not HOLD conditions — "
-            f"only contract locks, beta features, active pilots, or vendor acquisitions trigger HOLD. "
-            f"Hold signal: NONE. No switch case, no hold case. STAY."
-        )
+        templates = [
+            # V0 — vague pull = no basis
+            (
+                f"Pull signal: VAGUE — '{top_comp}' is marketing language with no concrete feature delivery. "
+                f"VAGUE pull signals provide no basis for SWITCH regardless of push signal severity. "
+                f"Notes about migration complexity or implementation risk are not HOLD conditions — "
+                f"only contract locks, beta features, active pilots, or vendor acquisitions trigger HOLD. "
+                f"Hold signal: NONE. No switch case, no hold case. STAY."
+            ),
+            # V1 — substance test
+            (
+                f"Pull signal fails the substance test: '{top_comp}' is vague. "
+                f"No specific feature, integration, or capability is described — only marketing language. "
+                f"VAGUE pull cannot justify SWITCH regardless of push severity. "
+                f"Hold signal: NONE. STAY."
+            ),
+            # V2 — derive from what a valid pull signal requires
+            (
+                f"A SWITCH requires evidence that the competitor resolves the push driver. "
+                f"'{top_comp}' provides no such evidence — it names no specific feature or "
+                f"capability, only a vague improvement. Vague language cannot be evaluated "
+                f"against a specific push problem. Without a verifiable resolution, the switch "
+                f"case does not exist. Hold signal: NONE. STAY."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "irrelevant_change":
-        return (
-            f"Pull signal: IRRELEVANT — {comp} delivers {top_comp}, which does not address {issue}. "
-            f"A change that misses the primary push signal is worthless as a pull. "
-            f"Hold signal: NONE. No switch case. STAY."
-        )
+        templates = [
+            # V0 — missed target
+            (
+                f"Pull signal: IRRELEVANT — {comp} delivers {top_comp}, which does not address {issue}. "
+                f"A change that misses the primary push signal is worthless as a pull. "
+                f"Hold signal: NONE. No switch case. STAY."
+            ),
+            # V1 — relevance test
+            (
+                f"Relevance check fails: '{top_comp}' from {comp} does not address the push driver ({issue}). "
+                f"A feature improvement in an unrelated area cannot justify switching. "
+                f"Hold signal: NONE. STAY."
+            ),
+            # V2 — derive from relevance requirement
+            (
+                f"The push driver is '{issue}'. A valid pull signal must address this specific gap. "
+                f"'{top_comp}' from {comp} does not — it is an improvement in a different area. "
+                f"A feature update that misses the primary pain point cannot justify a switch, "
+                f"regardless of how significant that update is in its own domain. "
+                f"Hold signal: NONE. STAY."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "negative_signal_buried":
-        # Prefer hold-looking notes (preview/beta/tbd/roadmap) as explicit disqualifiers.
-        # This teaches the model: these keywords in buried notes = DISQUALIFYING (STAY), not HOLD.
         _NSB_DISQUAL_KW = frozenset({"preview", "beta", "tbd", "roadmap"})
         hold_note = next(
             (n for n in notes if any(kw in n.lower() for kw in _NSB_DISQUAL_KW)), None
         )
         disqualifier = hold_note if hold_note else top_note
-        return (
-            f"Buried signal: DISQUALIFYING — {disqualifier}. "
-            f"Despite {comp} showing {top_comp}, this hidden negative cancels the pull case. "
-            f"Reading only surface signals would suggest SWITCH; reading all signals gives STAY. "
-            f"Hold signal: NONE. The case fails on evidence. STAY."
-        )
+        templates = [
+            # V0 — disqualifier in notes kills pull case; hold signal is NONE
+            (
+                f"Hold signal: NONE — no hold condition is present. "
+                f"The pre-GA signal ('{disqualifier}') appears in buried signals / notes, "
+                f"not in competitor changes. "
+                f"Pre-GA language in notes is a DISQUALIFIER: it reveals the competitor is not viable, "
+                f"not that we should wait. "
+                f"HOLD requires a concrete blocking lock (contract, acquisition, active pilot). "
+                f"The buried note kills the pull case. STAY."
+            ),
+            # V1 — positional contrast: notes vs competitor changes
+            (
+                f"Surface reading: pull signal looks CONCRETE, suggests SWITCH. "
+                f"Buried evidence: '{disqualifier}' — found in notes, not in competitor changes. "
+                f"Location matters: pre-GA language in competitor changes = competitor nearly ready (HOLD). "
+                f"Pre-GA language in notes = competitor not viable (STAY). "
+                f"Hold signal: NONE. This is a disqualifier, not a hold condition. STAY."
+            ),
+            # V2 — derive from positional reasoning
+            (
+                f"The pre-GA signal ('{disqualifier}') is in buried notes, not in competitor changes. "
+                f"This positional difference is decisive: pre-GA in competitor changes means "
+                f"'wait for GA' (HOLD). Pre-GA in buried notes means the competitor itself is not "
+                f"viable — it cannot be the destination of a switch. "
+                f"Hold signal: NONE. Surface signals are overridden by buried evidence. STAY."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "current_tool_rally":
         rally = top_tool if tool_ch else "active improvements"
-        return (
-            f"Push signal: WEAKENING — {tool} is improving ({rally}). "
-            f"The urgency to switch is diminishing. {comp}'s changes ({top_comp}) do not outpace "
-            f"the incumbent's recovery. Hold signal: NONE. Insufficient case for SWITCH or HOLD. STAY."
-        )
+        templates = [
+            # V0 — weakening push
+            (
+                f"Push signal: WEAKENING — {tool} is improving ({rally}). "
+                f"The urgency to switch is diminishing. {comp}'s changes ({top_comp}) do not outpace "
+                f"the incumbent's recovery. Hold signal: NONE. Insufficient case for SWITCH or HOLD. STAY."
+            ),
+            # V1 — incumbent recovery
+            (
+                f"The incumbent is recovering: {tool} delivers {rally}. "
+                f"When the current tool actively resolves its own issues, the urgency to switch drops. "
+                f"{comp}'s '{top_comp}' no longer provides a decisive advantage. STAY."
+            ),
+            # V2 — derive from delta between improving incumbent vs competitor
+            (
+                f"{tool} is actively improving: {rally}. The push signal weakens when the "
+                f"incumbent resolves its own issues. A switch requires the competitor to be "
+                f"decisively better — when the current tool is closing the gap, that threshold "
+                f"is harder to clear. {comp}'s '{top_comp}' does not create a sufficient delta "
+                f"over an improving incumbent. Hold signal: NONE. STAY."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "competitor_nearly_ready":
-        # Prefer a real hold condition from notes; fall back to comp_changes "beta"/"roadmap" signal
         blocking = next(
             (n for n in notes if not n.lower().startswith(_ADVISORY_PREFIXES)
              and any(kw in n.lower() for kw in _HOLD_NOTE_KW)),
@@ -455,73 +644,232 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict) -> str:
         )
         if blocking is None:
             blocking = next((c for c in comp_ch if any(kw in c.lower() for kw in _HOLD_COMP_KW)), top_note)
-        return (
-            f"HOLD CONFIRMED. BLOCKED: {blocking}. "
-            f"The feature is not GA — it cannot be relied upon in production. "
-            f"Pull signal quality is irrelevant until GA delivery is confirmed. "
-            f"Hold signal active. HOLD — reassess when the block clears."
+        has_shelfware = any(
+            "shelfware" in s.lower() or "inactive" in s.lower()
+            for s in tool_ch
         )
+        templates = [
+            # V0 — hold signal active from competitor changes
+            (
+                f"Hold signal: {blocking} — found in competitor changes, not buried notes. "
+                f"Pre-GA language in competitor changes means the competitor is nearly ready, "
+                f"not that it should be rejected. "
+                f"The feature is not GA — it cannot be relied upon in production yet. "
+                f"HOLD — reassess when the feature ships GA."
+            ),
+            # V1 — positional contrast: competitor changes vs notes
+            (
+                f"Hold signal active: '{blocking}' — in competitor changes, not buried notes. "
+                f"Pre-GA language in competitor changes = competitor nearly ready → HOLD (wait for GA). "
+                f"This is different from pre-GA in buried notes, which would be a disqualifier → STAY. "
+                f"Even a CONCRETE pull signal is irrelevant until the feature ships GA. HOLD."
+            ),
+            # V2 — derive from GA requirement and positional reasoning
+            (
+                f"The blocking condition ('{blocking}') is in competitor changes — "
+                f"the competitor is nearly ready, not absent. "
+                f"Committing to a pre-GA feature risks relying on capability that may ship late or differently. "
+                f"Hold signal active from competitor changes. "
+                f"The prudent gate is to suspend the decision until GA is confirmed. "
+                f"HOLD — reassess at GA confirmation."
+            ),
+            # V3 — competing signals (shelfware, advisory notes) do not override the hold gate
+            (
+                (
+                    f"Shelfware pressure confirms motivation to move. "
+                    if has_shelfware else
+                    f"Genuine pressure signals are present. "
+                ) +
+                f"However, the binding constraint is the Hold signal: '{blocking}' — "
+                f"in competitor changes, meaning the feature is pre-GA. "
+                f"Pre-GA language in competitor changes = competitor nearly ready → HOLD, "
+                f"not STAY and not SWITCH. "
+                f"Advisory notes or cost pressure do not override the hold gate. "
+                f"HOLD — reassess when the feature ships GA."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "roadmap_confirmed_hold":
-        return (
-            f"HOLD CONFIRMED. BLOCKED: {top_note}. "
-            f"Roadmap items are promises, not delivered capability — this gate is NOT cleared. "
-            f"Pull signal quality is irrelevant until the feature ships. "
-            f"Hold signal active. HOLD — reassess only when delivered."
-        )
+        templates = [
+            # V0 — promise not delivery
+            (
+                f"HOLD CONFIRMED. BLOCKED: {top_note}. "
+                f"Roadmap items are promises, not delivered capability — this gate is NOT cleared. "
+                f"Pull signal quality is irrelevant until the feature ships. "
+                f"Hold signal active. HOLD — reassess only when delivered."
+            ),
+            # V1 — promise vs delivery
+            (
+                f"HOLD. Blocking condition: {top_note}. "
+                f"A roadmap commitment is not delivered capability. "
+                f"The gate is not cleared until the feature ships. "
+                f"Pull signals are irrelevant until delivery is confirmed. HOLD."
+            ),
+            # V2 — derive from the difference between roadmap and shipped capability
+            (
+                f"The blocking condition is '{top_note}'. A roadmap item is a future intention. "
+                f"Switching on the basis of undelivered capability introduces real risk: the "
+                f"feature may ship late, incompletely, or not at all. The correct approach is to "
+                f"wait for confirmed delivery before committing. HOLD — reassess when the feature ships."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "contract_renewal_hold":
-        return (
-            f"HOLD CONFIRMED. BLOCKED: {top_note}. "
-            f"Contract terms prevent switching now without penalty. "
-            f"The commercial gate is not cleared regardless of signal strength. "
-            f"Hold signal active. HOLD — reassess at renewal."
-        )
+        templates = [
+            # V0 — commercial gate
+            (
+                f"HOLD CONFIRMED. BLOCKED: {top_note}. "
+                f"Contract terms prevent switching now without penalty. "
+                f"The commercial gate is not cleared regardless of signal strength. "
+                f"Hold signal active. HOLD — reassess at renewal."
+            ),
+            # V1 — penalty framing
+            (
+                f"HOLD. Commercial gate blocked: {top_note}. "
+                f"The contract has not expired — switching now incurs penalties. "
+                f"Competitor signal strength cannot override a hard commercial block. "
+                f"HOLD until the renewal window. HOLD."
+            ),
+            # V2 — derive from commercial constraint logic
+            (
+                f"The contract '{top_note}' creates a hard commercial constraint. "
+                f"Switching before the contract expires incurs penalties that the ROI calculation "
+                f"does not account for. The signal strength is irrelevant — the commercial gate "
+                f"overrides the technical decision until the renewal window opens. "
+                f"HOLD — reassess at contract renewal."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "vendor_acquisition_hold":
-        return (
-            f"HOLD CONFIRMED. BLOCKED: {top_note}. "
-            f"A vendor acquisition creates uncertainty — "
-            f"pull signal strength is irrelevant when the vendor's future is unknown. "
-            f"Even CONCRETE pull signals cannot override an active acquisition hold. "
-            f"Hold signal active. HOLD — reassess once transition stabilises."
-        )
+        templates = [
+            # V0 — uncertainty
+            (
+                f"HOLD CONFIRMED. BLOCKED: {top_note}. "
+                f"A vendor acquisition creates uncertainty — "
+                f"pull signal strength is irrelevant when the vendor's future is unknown. "
+                f"Even CONCRETE pull signals cannot override an active acquisition hold. "
+                f"Hold signal active. HOLD — reassess once transition stabilises."
+            ),
+            # V1 — risk framing
+            (
+                f"HOLD. Acquisition uncertainty: {top_note}. "
+                f"Vendor acquisitions introduce product, roadmap, and support unknowns. "
+                f"Committing to an acquired competitor mid-transition is high risk. "
+                f"HOLD until transition stabilises. HOLD."
+            ),
+            # V2 — derive from acquisition uncertainty logic
+            (
+                f"The acquisition '{top_note}' makes the competitor an unstable landing zone. "
+                f"Product strategy, pricing, support, and roadmap are all subject to change "
+                f"during a transition. Switching mid-acquisition means committing to a target "
+                f"that may look different in six months. Even strong pull signals cannot overcome "
+                f"this structural uncertainty. HOLD until the transition stabilises."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
     if scenario == "pilot_in_progress_hold":
-        return (
-            f"HOLD CONFIRMED. BLOCKED: {top_note}. "
-            f"A pilot is in progress — the switch case has not yet been validated. "
-            f"Acting on incomplete evidence skips due diligence. "
-            f"Hold signal active. HOLD — reassess after pilot results."
-        )
-    # Ambiguous scenarios
+        templates = [
+            # V0 — incomplete evidence
+            (
+                f"HOLD CONFIRMED. BLOCKED: {top_note}. "
+                f"A pilot is in progress — the switch case has not yet been validated. "
+                f"Acting on incomplete evidence skips due diligence. "
+                f"Hold signal active. HOLD — reassess after pilot results."
+            ),
+            # V1 — due diligence framing
+            (
+                f"HOLD. Active pilot: {top_note}. "
+                f"The evaluation is ongoing — pilot results have not been reviewed. "
+                f"Committing before the pilot concludes defeats the purpose of the evaluation. "
+                f"HOLD until pilot data is available. HOLD."
+            ),
+            # V2 — derive from due diligence logic
+            (
+                f"A pilot is underway: {top_note}. The pilot exists precisely to validate "
+                f"whether the switch is the right decision. Acting before it concludes means "
+                f"ignoring the evidence the organisation is in the process of collecting. "
+                f"The rational position is to wait for that evidence. HOLD — reassess after pilot results."
+            ),
+        ]
+        return templates[variant % len(templates)]
+
+    # Ambiguous scenarios — two variants (shorter, less critical to vary heavily)
     if scenario == "both_signals":
         if met and comp_ch:
-            return (
-                f"Both push and pull signals are active. {comp} delivers {top_comp}, "
-                f"addressing {issue}. {roi_str.capitalize()}. Pull dominates — SWITCH."
-            )
-        return (
-            f"Both push and pull signals are present but pull is insufficient. "
-            f"{comp} shows {top_comp}, but {roi_str}. No clear dominant signal — STAY."
-        )
+            templates = [
+                (
+                    f"Both push and pull signals are active. {comp} delivers {top_comp}, "
+                    f"addressing {issue}. {roi_str.capitalize()}. Pull dominates — SWITCH."
+                ),
+                (
+                    f"Push and pull both present. Pull dominates: '{top_comp}' from {comp} resolves '{issue}'. "
+                    f"ROI met. SWITCH."
+                ),
+            ]
+        else:
+            templates = [
+                (
+                    f"Both push and pull signals are present but pull is insufficient. "
+                    f"{comp} shows {top_comp}, but {roi_str}. No clear dominant signal — STAY."
+                ),
+                (
+                    f"Both signals active but pull is weak. '{top_comp}' does not overcome {roi_str}. STAY."
+                ),
+            ]
+        return templates[variant % len(templates)]
+
     if scenario == "price_hike_only":
         if met:
-            return (
-                f"Current tool pricing has increased and {roi_str}. "
-                f"The cost delta alone meets the SWITCH threshold."
-            )
-        return (
-            f"Current tool pricing has increased, but {roi_str}. "
-            f"Price change without feature improvement does not clear the SWITCH threshold."
-        )
+            templates = [
+                (
+                    f"Current tool pricing has increased and {roi_str}. "
+                    f"The cost delta alone meets the SWITCH threshold."
+                ),
+                (
+                    f"Price increase triggers SWITCH: {roi_str}. Cost delta is sufficient. SWITCH."
+                ),
+            ]
+        else:
+            templates = [
+                (
+                    f"Current tool pricing has increased, but {roi_str}. "
+                    f"Price change without feature improvement does not clear the SWITCH threshold."
+                ),
+                (
+                    f"Price hike present but {roi_str}. Insufficient alone to justify SWITCH. STAY."
+                ),
+            ]
+        return templates[variant % len(templates)]
+
     if scenario == "dual_improvement":
         if met and comp_ch:
-            return (
-                f"Both tools improved this period. The delta favours {comp}: {top_comp} "
-                f"addresses {issue} more directly than {tool}'s {top_tool}. "
-                f"{roi_str.capitalize()}."
-            )
-        return (
-            f"Both tools improved this period. {tool} rallies with {top_tool} while "
-            f"{comp} delivers {top_comp}. {roi_str}. Without a decisive edge, STAY."
-        )
+            templates = [
+                (
+                    f"Both tools improved this period. The delta favours {comp}: {top_comp} "
+                    f"addresses {issue} more directly than {tool}'s {top_tool}. "
+                    f"{roi_str.capitalize()}."
+                ),
+                (
+                    f"Both improved; competitor edge is decisive: '{top_comp}' resolves '{issue}'. "
+                    f"{roi_str}. SWITCH."
+                ),
+            ]
+        else:
+            templates = [
+                (
+                    f"Both tools improved this period. {tool} rallies with {top_tool} while "
+                    f"{comp} delivers {top_comp}. {roi_str}. Without a decisive edge, STAY."
+                ),
+                (
+                    f"Dual improvement, no decisive advantage. {roi_str}. STAY."
+                ),
+            ]
+        return templates[variant % len(templates)]
+
     return f"Signal evaluated for {comp} vs {tool}. {roi_str.capitalize()}."
 
 
@@ -533,13 +881,13 @@ def _infer_ambiguous_verdict(roi: dict, signal: dict) -> str:
 
 # ── Full CoT trace assembly ───────────────────────────────────────────────────
 
-def _build_cot_trace(scenario: str, signal: dict, context: dict, roi: dict, verdict: str) -> str:
+def _build_cot_trace(scenario: str, signal: dict, context: dict, roi: dict, verdict: str, variant: int = 0) -> str:
     push = _push_section(context, signal)
     pull = _pull_section(signal)
     comp_line = _compliance_line(signal)
     roi_line = _roi_line(roi)
     hold_line = _hold_line(signal, scenario)
-    analysis_text = _analysis(scenario, signal, context, roi)
+    analysis_text = _analysis(scenario, signal, context, roi, variant=variant)
 
     return (
         f"{push}\n\n"
@@ -588,12 +936,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate CoT SFT training traces.")
     parser.add_argument("--limit", type=int, default=8,
                         help="Signal files to sample per scenario type (default: 8).")
+    parser.add_argument("--variants", type=int, default=3,
+                        help="ANALYSIS variants to generate per signal file (default: 3).")
     parser.add_argument("--output", default=str(_OUTPUT_PATH),
                         help="Output JSONL path.")
     args = parser.parse_args()
 
     samples = _collect_samples(args.limit)
-    print(f"Processing {len(samples)} signal files "
+    total = len(samples) * args.variants
+    print(f"Processing {len(samples)} signal files × {args.variants} variants = {total} traces "
           f"({args.limit} per scenario, {len(SCENARIO_TYPES) - len(_SKIP_SCENARIOS)} scenarios)...")
 
     records: list[dict] = []
@@ -622,15 +973,15 @@ def main() -> None:
         verdict = expected if expected is not None else _infer_ambiguous_verdict(roi, signal)
 
         user_msg = _build_user_message(context, roi, signal)
-        cot_trace = _build_cot_trace(scenario, signal, context, roi, verdict)
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYS_VERDICT_LEAN},
-                {"role": "user",   "content": user_msg},
-                {"role": "assistant", "content": cot_trace},
-            ]
-        })
+        for v in range(args.variants):
+            cot_trace = _build_cot_trace(scenario, signal, context, roi, verdict, variant=v)
+            records.append({
+                "messages": [
+                    {"role": "system", "content": SYS_VERDICT_LEAN},
+                    {"role": "user",   "content": user_msg},
+                    {"role": "assistant", "content": cot_trace},
+                ]
+            })
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
