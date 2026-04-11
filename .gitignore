@@ -51,6 +51,10 @@ market_inbox/*.md
 /outputs/
 hold_register.json
 
+# Drift monitoring — runtime logs and generated dashboard
+outputs/drift_log.jsonl
+outputs/drift_dashboard.html
+
 # Coverage / test artifacts
 .coverage
 coverage.xml

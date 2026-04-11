@@ -29,6 +29,7 @@ import sys
 from pathlib import Path
 
 from agent.context_loader import load_context, parse_inbox_filename
+from agent.drift_tracker import check_accuracy_due, extract_quality_signals, log_live_run
 from agent.model_runner import load_model, run_voting
 from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_verdict
 from agent.roi_calculator import calculate_roi, extract_pass1_vars
@@ -180,6 +181,7 @@ def run_agent(
     memo_text = run_voting(inbox_text, context, roi_result, tokenizer, model)
 
     # ── Step 7: Validate; retry once on failure ────────────────────────────────
+    validation_attempts = 1
     is_valid, errors = validate_verdict(memo_text)
     if not is_valid:
         logger.warning("Validation failed (%d errors). Retrying...", len(errors))
@@ -193,6 +195,7 @@ def run_agent(
             model,
             retry_hint=errors,
         )
+        validation_attempts = 2
         is_valid, errors = validate_verdict(memo_text)
         if not is_valid:
             logger.error("Retry failed. Writing memo with [VALIDATION FAILED] prefix.")
@@ -219,6 +222,15 @@ def run_agent(
             hold_data = _build_minimal_hold_entry(category, context, competitor_slug)
         _append_hold_register(hold_data, register_path)
         hold_registered = True
+
+    # ── Step 10: Drift tracking ────────────────────────────────────────────────
+    quality = extract_quality_signals(memo_text, roi_result, is_valid, validation_attempts)
+    log_live_run(category, competitor_slug, verdict, quality)
+    if check_accuracy_due():
+        logger.info(
+            "Drift advisory: 10+ live runs since last accuracy check — "
+            "run: python scripts/drift_check.py"
+        )
 
     return {
         "verdict": verdict,
