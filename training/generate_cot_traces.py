@@ -179,6 +179,22 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
     return "NONE"
 
 
+_DISQUALIFIER_NOTE_KW = frozenset(["preview", "early access"])
+
+
+def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
+    """Return a disqualifier note if pre-GA language appears in notes and no hold is active."""
+    if hold_signal != "NONE":
+        return "NONE"
+    for note in notes:
+        note_lower = note.lower()
+        if note_lower.startswith(_ADVISORY_PREFIXES):
+            continue
+        if any(kw in note_lower for kw in _DISQUALIFIER_NOTE_KW):
+            return note
+    return "NONE"
+
+
 # ── User message builder (matches _build_lean_user in model_runner.py) ────────
 
 def _build_user_message(context: dict, roi_result: dict, signal: dict) -> str:
@@ -215,9 +231,12 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict) -> str:
     if notes_text:
         msg += f"\nBuried signals / notes:\n{notes_text}\n"
     hold_signal = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold_signal)
     msg += f"\nROI: {roi_summary}"
     msg += "\nCompliance: PASSED"
     msg += f"\nHold signal: {hold_signal}"
+    if disqualifier != "NONE":
+        msg += f"\nDisqualifier: {disqualifier}"
     prev_verdict = signal.get("previous_verdict")
     if prev_verdict:
         msg += f"\nPrevious verdict: {prev_verdict}"
@@ -575,37 +594,35 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
         return templates[variant % len(templates)]
 
     if scenario == "negative_signal_buried":
-        _NSB_DISQUAL_KW = frozenset({"preview", "beta", "tbd", "roadmap"})
+        _NSB_DISQUAL_KW = frozenset({"preview", "early access"})
         hold_note = next(
             (n for n in notes if any(kw in n.lower() for kw in _NSB_DISQUAL_KW)), None
         )
         disqualifier = hold_note if hold_note else top_note
         templates = [
-            # V0 — disqualifier in notes kills pull case; hold signal is NONE
+            # V0 — Disqualifier field present; hold signal NONE
             (
+                f"Disqualifier: {disqualifier} — pre-GA language in buried notes, not competitor changes. "
                 f"Hold signal: NONE — no hold condition is present. "
-                f"The pre-GA signal ('{disqualifier}') appears in buried signals / notes, "
-                f"not in competitor changes. "
-                f"Pre-GA language in notes is a DISQUALIFIER: it reveals the competitor is not viable, "
-                f"not that we should wait. "
+                f"A Disqualifier means the competitor is not viable: this is not a hold condition. "
                 f"HOLD requires a concrete blocking lock (contract, acquisition, active pilot). "
                 f"The buried note kills the pull case. STAY."
             ),
-            # V1 — positional contrast: notes vs competitor changes
+            # V1 — positional contrast via Disqualifier label
             (
                 f"Surface reading: pull signal looks CONCRETE, suggests SWITCH. "
-                f"Buried evidence: '{disqualifier}' — found in notes, not in competitor changes. "
-                f"Location matters: pre-GA language in competitor changes = competitor nearly ready (HOLD). "
-                f"Pre-GA language in notes = competitor not viable (STAY). "
-                f"Hold signal: NONE. This is a disqualifier, not a hold condition. STAY."
+                f"Disqualifier field: '{disqualifier}' — found in buried notes, not competitor changes. "
+                f"Pre-GA language in notes = Disqualifier (competitor not viable) → STAY. "
+                f"Pre-GA language in competitor changes = Hold signal (competitor nearly ready) → HOLD. "
+                f"Hold signal: NONE. Disqualifier forces STAY."
             ),
-            # V2 — derive from positional reasoning
+            # V2 — derive from Disqualifier semantics
             (
-                f"The pre-GA signal ('{disqualifier}') is in buried notes, not in competitor changes. "
-                f"This positional difference is decisive: pre-GA in competitor changes means "
-                f"'wait for GA' (HOLD). Pre-GA in buried notes means the competitor itself is not "
-                f"viable — it cannot be the destination of a switch. "
-                f"Hold signal: NONE. Surface signals are overridden by buried evidence. STAY."
+                f"The Disqualifier field identifies: '{disqualifier}' in buried notes. "
+                f"Hold signal: NONE — no temporal gate is blocking the decision. "
+                f"A Disqualifier is not a hold condition: it means the competitor itself is not ready, "
+                f"not that we should wait for a named condition to clear. "
+                f"Surface signals are overridden by the Disqualifier. STAY."
             ),
         ]
         return templates[variant % len(templates)]

@@ -507,6 +507,9 @@ changes = competitor nearly ready → HOLD (wait for GA). Pre-GA language only i
 buried notes = competitor not viable → STAY (not HOLD). Trust the Hold signal \
 field: if NONE, there is no hold condition regardless of what notes contain.
 
+If a Disqualifier field is present: the competitor has an unresolved delivery gap — \
+verdict is STAY (not HOLD). A disqualifier is not a hold condition.
+
 ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration: max 15 hours.
 A feature improvement that resolves a HIGH push issue can justify SWITCH even \
 if direct ROI is negative, provided the operational gain is clearly articulated.

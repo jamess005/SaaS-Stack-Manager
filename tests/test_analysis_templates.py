@@ -84,3 +84,61 @@ def test_sys_prompt_contains_positional_rule():
     assert any(kw in SYS_VERDICT_LEAN.lower() for kw in ("buried notes", "buried signals")), (
         "SYS_VERDICT_LEAN missing 'buried notes'/'buried signals' in positional rule"
     )
+
+
+def test_detect_disqualifier_fires_on_preview_in_notes():
+    """Disqualifier is detected when 'preview' is in notes and hold signal is NONE."""
+    from agent.model_runner import _detect_disqualifier
+    notes = ["feature in preview — GA date TBD", "SSO on Enterprise only"]
+    assert _detect_disqualifier(notes, "NONE") == "feature in preview — GA date TBD"
+
+
+def test_detect_disqualifier_no_leak_when_hold_active():
+    """Disqualifier does not fire when a hold signal is already active."""
+    from agent.model_runner import _detect_disqualifier
+    notes = ["feature in preview — GA date TBD"]
+    assert _detect_disqualifier(notes, "contract renews in 60 days") == "NONE"
+
+
+def test_detect_disqualifier_no_leak_for_beta_in_notes():
+    """'beta' in notes is caught by hold signal detection, NOT disqualifier (disjoint keyword sets)."""
+    from agent.model_runner import _detect_disqualifier
+    notes = ["feature in beta — not shipped yet"]
+    # beta is in _HOLD_NOTE_KW so hold_signal would be non-NONE; disqualifier won't fire
+    assert _detect_disqualifier(notes, "feature in beta — not shipped yet") == "NONE"
+
+
+def test_build_lean_user_emits_disqualifier_field():
+    """_build_lean_user emits 'Disqualifier:' when preview is in notes and hold signal is NONE."""
+    import os
+    os.environ["AGENT_DRY_RUN"] = "true"
+    from agent.context_loader import load_context
+    from agent.model_runner import _build_lean_user
+    from agent.roi_calculator import calculate_roi, extract_pass1_vars
+    from pathlib import Path
+
+    _DATA_ROOT = Path("/home/james/ml-proj/saasmanager/data")
+    context = load_context("analytics", "metricflux", _DATA_ROOT)
+
+    signal = {
+        "competitor": "MetricFlux",
+        "competitor_changes": ["real-time dashboards"],
+        "current_tool_status": [],
+        "notes": ["feature in preview — GA date TBD"],
+        "compliance_changes": "",
+    }
+    roi = calculate_roi(extract_pass1_vars(context, signal))
+    user_msg = _build_lean_user(context, roi, signal)
+    assert "Disqualifier: feature in preview — GA date TBD" in user_msg
+    assert "Hold signal: NONE" in user_msg
+    del os.environ["AGENT_DRY_RUN"]
+
+
+def test_nsb_analysis_references_disqualifier_label():
+    """NSB ANALYSIS templates reference 'Disqualifier' by label name."""
+    from training.generate_cot_traces import _analysis
+    for v in range(3):
+        text = _analysis("negative_signal_buried", _NSB_SIGNAL, _NSB_CONTEXT, _NSB_ROI, variant=v)
+        assert "Disqualifier" in text, (
+            f"NSB variant {v} does not reference 'Disqualifier'.\nGot: {text}"
+        )

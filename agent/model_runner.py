@@ -70,12 +70,12 @@ def _load_fixture(category: str, competitor_slug: str) -> dict:
 # ── Model loading ──────────────────────────────────────────────────────────────
 
 
-_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-1.5b-instruct"
-_DEFAULT_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_grpo")
+_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-3b-instruct"
+_DEFAULT_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_sft_cot")
 
 
 def load_model(
-    model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
+    model_name: str = "Qwen/Qwen2.5-3B-Instruct",
     model_path: str | None = _DEFAULT_MODEL_PATH,
     adapter_path: str | None = _DEFAULT_ADAPTER_PATH,
     quantize_bits: int = 0,
@@ -86,12 +86,12 @@ def load_model(
     Args:
         model_name:    HuggingFace model ID. Ignored if model_path is provided.
         model_path:    Local filesystem path to a model snapshot directory.
-                       Defaults to the 1.5B model at /home/james/ml-proj/models/.
-        adapter_path:  Path to a LoRA adapter directory (output of grpo_train.py).
+                       Defaults to the 3B model at /home/james/ml-proj/models/.
+        adapter_path:  Path to a LoRA adapter directory (output of sft_cot_train.py).
                        If provided, the adapter is applied on top of the base model
                        using PEFT's PeftModel.from_pretrained().
         quantize_bits: 4 = NF4 4-bit (for large teacher models like Llama-8B).
-                       0 = bf16, no quantization (default, for 1.5B inference model).
+                       0 = bf16, no quantization (default, for 3B inference model).
 
     Returns:
         (tokenizer, model) — both None in dry-run mode.
@@ -983,7 +983,7 @@ def run_lean(
         {"role": "user", "content": user_content},
     ]
 
-    result = _generate(tokenizer, model, messages, max_new_tokens=400, temperature=0.0)
+    result = _generate(tokenizer, model, messages, max_new_tokens=700, temperature=0.0)
     logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
     return result.strip()
 
@@ -1015,6 +1015,27 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
     for change in (comp_changes or []):
         if any(kw in change.lower() for kw in _HOLD_COMP_KW):
             return change
+    return "NONE"
+
+
+_DISQUALIFIER_NOTE_KW = frozenset(["preview", "early access"])
+
+
+def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
+    """Return a disqualifier note if pre-GA language appears in notes and no hold is active.
+
+    A disqualifier means the competitor is not viable (STAY), distinct from a hold condition
+    (HOLD). Uses keywords disjoint from _HOLD_NOTE_KW to prevent double-labeling.
+    Only fires when hold_signal is 'NONE'.
+    """
+    if hold_signal != "NONE":
+        return "NONE"
+    for note in notes:
+        note_lower = note.lower()
+        if note_lower.startswith(_ADVISORY_PREFIXES):
+            continue
+        if any(kw in note_lower for kw in _DISQUALIFIER_NOTE_KW):
+            return note
     return "NONE"
 
 
@@ -1055,8 +1076,12 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> st
     if notes_text:
         user_content += f"\nBuried signals / notes:\n{notes_text}\n"
     hold_signal = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold_signal)
     user_content += f"\nROI: {roi_summary}"
+    user_content += "\nCompliance: PASSED"
     user_content += f"\nHold signal: {hold_signal}"
+    if disqualifier != "NONE":
+        user_content += f"\nDisqualifier: {disqualifier}"
     prev_verdict = signal.get("previous_verdict")
     if prev_verdict:
         user_content += f"\nPrevious verdict: {prev_verdict}"
