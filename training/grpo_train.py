@@ -35,7 +35,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-1.5b-instruct"
+from config import SMALL_MODEL_PATH as _cfg_small_model_path  # noqa: E402
+_DEFAULT_MODEL_PATH = str(_cfg_small_model_path)
 _DEFAULT_ADAPTER_OUT = str(_PROJECT_ROOT / "training" / "checkpoints_grpo")
 
 

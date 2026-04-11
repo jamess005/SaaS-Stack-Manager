@@ -31,7 +31,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-3b-instruct"
+from config import MODEL_PATH as _cfg_model_path  # noqa: E402
+_DEFAULT_MODEL_PATH = str(_cfg_model_path)
 _DEFAULT_DATA_PATH  = str(_PROJECT_ROOT / "training" / "sft_cot_traces.jsonl")
 _DEFAULT_ADAPTER_OUT = str(_PROJECT_ROOT / "training" / "checkpoints_sft_cot")
 

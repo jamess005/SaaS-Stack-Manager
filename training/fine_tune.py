@@ -21,19 +21,24 @@ Environment:
 import argparse
 import json
 import os
+import sys
 import warnings
 from collections import Counter
 from pathlib import Path
 
-from rich.console import Console
-from rich.table import Table
+_PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+from config import MODELS_DIR  # noqa: E402
+from rich.console import Console  # noqa: E402
+from rich.table import Table  # noqa: E402
 
 console = Console()
 
 # ── Model path registry ────────────────────────────────────────────────────────
 _MODEL_PATHS: dict[str, str] = {
-    "qwen2.5-3b": "/home/james/ml-proj/models/qwen2.5-3b-instruct",
-    "llama-3.2-3b": "/home/james/ml-proj/models/llama-3.2-3b-instruct",
+    "qwen2.5-3b": str(MODELS_DIR / "qwen2.5-3b-instruct"),
+    "llama-3.2-3b": str(MODELS_DIR / "llama-3.2-3b-instruct"),
 }
 
 

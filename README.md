@@ -11,14 +11,14 @@ This is not a one-time purchasing tool. It's an ongoing management loop: every t
 ## How It Works
 
 ```
-market_inbox/release_note.md  →  agent.py  →  outputs/verdict.md
+market_inbox/signal.json  →  agent.py  →  outputs/verdict.md
 ```
 
 1. Drop a competitor market signal (JSON) into `market_inbox/`
 2. The agent loads only the relevant category's business rules, current stack data, and competitor baseline
 3. Python extracts financial variables directly from structured context (no model call)
 4. ROI wrapper calculates migration cost and annualised net
-5. Model generates structured verdict memo with Quote-to-Claim citations
+5. Fine-tuned 3B model generates structured verdict memo with cited evidence
 6. Output written to `outputs/`, Hold register updated if applicable
 
 ## Verdict Classes
@@ -29,13 +29,19 @@ market_inbox/release_note.md  →  agent.py  →  outputs/verdict.md
 | `STAY` | Current tool is adequate, no competitor clears the bar |
 | `HOLD` | Switch may be warranted but conditions not right yet |
 
+## Results
+
+The fine-tuned model achieves **100% accuracy (30/30)** across 18 distinct scenario types in held-out evaluation, and **4/4** on unseen competitor fixtures not present in training.
+
+Scenario types tested include: compliance failures, shelfware detection, competitor hold conditions, roadmap signals, pilot-in-progress, contract renewal gates, and dual-signal ambiguous cases.
+
 ## Setup
 
 ### Requirements
 
 - Python 3.11+
-- ROCm 7.1 (Linux, AMD GPU)
-- Ollama (for inbox generation)
+- ROCm 7.x (Linux, AMD GPU) — or adapt `device_map` for CUDA
+- Model weights downloaded locally (Qwen2.5-3B-Instruct)
 
 ### Install
 
@@ -48,18 +54,53 @@ pip install -r requirements.txt
 ### ROCm PyTorch
 
 ```bash
-pip install torch==2.4.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.1
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm7.2
+```
+
+### Configuration
+
+Copy `.env.example` to `.env` and set `MODELS_DIR` to wherever your model weights live:
+
+```bash
+cp .env.example .env
+# edit .env — set MODELS_DIR=/path/to/your/models
+```
+
+AMD GPU users: set the following in your shell before running:
+
+```bash
+export HSA_OVERRIDE_GFX_VERSION=11.0.0   # RX 7800 XT (gfx1101)
+export HIP_VISIBLE_DEVICES=0
+export ROCR_VISIBLE_DEVICES=0
 ```
 
 ### Run
 
 ```bash
-python -m agent.agent market_inbox/your_trigger_file.md
+python -m agent.agent market_inbox/your_signal.json
+```
+
+### Evaluate
+
+```bash
+# Dry-run (no GPU required)
+python scripts/evaluate_model.py --dry-run
+
+# Full evaluation against held-out signals
+HSA_OVERRIDE_GFX_VERSION=11.0.0 python scripts/evaluate_model.py \
+    --adapter-path training/checkpoints_sft_cot/
 ```
 
 ## Project Structure
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for full directory layout and build phases.
+```
+agent/          # Inference pipeline (context loader, model runner, ROI calculator, validator)
+data/           # Synthetic ecosystem (company profile, stack, competitors, business rules)
+training/       # Signal generation, CoT trace generation, SFT fine-tuning scripts
+scripts/        # Evaluation and data utilities
+tests/          # 100 unit + integration tests for the production pipeline
+fixtures/       # Dry-run fixture responses
+```
 
 ## Hardware
 
@@ -67,8 +108,8 @@ Developed on: AMD RX 7800 XT (16GB VRAM), Ryzen 7 7800X3D, 32GB RAM, Linux, ROCm
 
 ## Status
 
-- [x] Synthetic ecosystem generated (company profile, stack, competitors, business rules)
-- [x] Inference pipeline (single-pass, Python ROI extraction, Quote-to-Claim citations)
-- [x] Signal generation (325 synthetic market signals across 13 scenario types)
-- [x] Reasoning traces (325 JSONL entries, 8B teacher model, 4-bit quantised)
-- [ ] Fine-tuning (QLoRA via Unsloth, target: Qwen2.5-3B or Llama-3.2-3B)
+- [x] Synthetic ecosystem (company profile, stack, competitors, business rules)
+- [x] Inference pipeline (single-pass, Python ROI extraction, structured citations)
+- [x] Signal generation (1,275 CoT training traces across 18 scenario types)
+- [x] SFT fine-tuning (QLoRA, Qwen2.5-3B-Instruct, positional reasoning fix)
+- [x] Evaluation: 30/30 (100%) on 18 clear-cut scenarios, 4/4 on unseen competitors

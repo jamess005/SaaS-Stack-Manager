@@ -8,15 +8,12 @@ Usage:
 
     # Full evaluation, 2 samples per scenario type (~11 min with GPU)
     HSA_OVERRIDE_GFX_VERSION=11.0.0 python scripts/evaluate_model.py \\
-        --model-path /home/james/ml-proj/models/qwen2.5-3b-instruct \\
-        --adapter-path training/checkpoints/ \\
-        --limit 2
+        --adapter-path training/checkpoints_sft_cot/
 
     # One scenario type only
     HSA_OVERRIDE_GFX_VERSION=11.0.0 python scripts/evaluate_model.py \\
-        --model-path /home/james/ml-proj/models/qwen2.5-3b-instruct \\
-        --adapter-path training/checkpoints/ \\
-        --scenario hard_compliance_failure --limit 5
+        --adapter-path training/checkpoints_sft_cot/ \\
+        --scenario hard_compliance_failure --per-scenario 5
 """
 
 import argparse
@@ -42,6 +39,7 @@ from agent.model_runner import load_model, run_lean  # noqa: E402
 from agent.output_validator import extract_verdict_class, validate_lean_output  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
 from agent.signal_interpreter import parse_signal_payload  # noqa: E402
+from config import MODEL_PATH  # noqa: E402
 from training.generate_signals import SCENARIO_TYPES  # noqa: E402
 
 console = Console()
@@ -284,7 +282,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--model-path",
-                        default="/home/james/ml-proj/models/qwen2.5-3b-instruct",
+                        default=str(MODEL_PATH),
                         help="Local path to base model directory.")
     parser.add_argument("--adapter-path",
                         default=str(_PROJECT_ROOT / "training" / "checkpoints_sft_cot"),

@@ -53,9 +53,11 @@ sys.path.insert(0, str(_PROJECT_ROOT))
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
 from agent.model_runner import load_model  # noqa: E402
 
+from config import SMALL_MODEL_PATH as _cfg_small_model_path  # noqa: E402
+
 # Use Qwen-1.5B at bf16 for signal generation — avoids ROCm bitsandbytes OOM
 # that occurs during Llama-8B 4-bit NF4 weight conversion.
-_SIGNAL_GEN_MODEL = "/home/james/ml-proj/models/qwen2.5-1.5b-instruct"
+_SIGNAL_GEN_MODEL = str(_cfg_small_model_path)
 
 logging.basicConfig(
     level=logging.INFO,

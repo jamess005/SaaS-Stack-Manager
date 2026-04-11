@@ -36,12 +36,12 @@ from agent.signal_interpreter import (
 logger = logging.getLogger(__name__)
 
 # ── Local model paths ──────────────────────────────────────────────────────────
+from config import MODEL_PATH as _MODEL_PATH, TEACHER_MODEL_PATH as _TEACHER_MODEL_PATH
+
 # Absolute path to the locally cached Llama 3.1 8B Instruct snapshot.
 # Used by generate_signals.py and generate_traces.py as the teacher model.
-LOCAL_LLAMA_8B = (
-    "/home/james/ml-proj/models/llama-3.1-8b-instruct"
-    "/snapshots/0e9e39f249a16976918f6564b8830bc894c89659"
-)
+# Set TEACHER_MODEL_PATH in .env if your snapshot is in a hash subdirectory.
+LOCAL_LLAMA_8B = str(_TEACHER_MODEL_PATH)
 
 # ── Dry-run fixture map ────────────────────────────────────────────────────────
 # Maps (category, competitor_slug) → path to expected_outputs fixture JSON.
@@ -70,7 +70,7 @@ def _load_fixture(category: str, competitor_slug: str) -> dict:
 # ── Model loading ──────────────────────────────────────────────────────────────
 
 
-_DEFAULT_MODEL_PATH = "/home/james/ml-proj/models/qwen2.5-3b-instruct"
+_DEFAULT_MODEL_PATH = str(_MODEL_PATH)
 _DEFAULT_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_sft_cot")
 
 
@@ -86,7 +86,7 @@ def load_model(
     Args:
         model_name:    HuggingFace model ID. Ignored if model_path is provided.
         model_path:    Local filesystem path to a model snapshot directory.
-                       Defaults to the 3B model at /home/james/ml-proj/models/.
+                       Defaults to MODEL_PATH from config (set MODELS_DIR in .env).
         adapter_path:  Path to a LoRA adapter directory (output of sft_cot_train.py).
                        If provided, the adapter is applied on top of the base model
                        using PEFT's PeftModel.from_pretrained().
