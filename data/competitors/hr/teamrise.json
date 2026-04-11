@@ -1,0 +1,58 @@
+{
+  "name": "TeamRise",
+  "based_on": "BambooHR / HiBob",
+  "category": "hr",
+  "monthly_cost_gbp": 360,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 2.40,
+  "pricing_tiers": [
+    {
+      "tier": "Essentials",
+      "cost_per_seat_gbp": 2.40,
+      "min_seats": 20
+    },
+    {
+      "tier": "Growth",
+      "cost_per_seat_gbp": 3.80,
+      "min_seats": 20,
+      "note": "includes LMS, compensation benchmarking"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_exportable": true,
+    "gdpr_erasure_automated": true
+  },
+  "features": [
+    "leave and absence management",
+    "employee self-service portal",
+    "document storage with version control",
+    "UK payroll: native PayAxis integration (no middleware)",
+    "GDPR right-to-erasure automation (one-click, fully audited)",
+    "onboarding workflow templates (setup < 15 minutes per new hire)",
+    "continuous performance feedback module",
+    "pulse surveys and eNPS built in",
+    "org chart with role and reporting structure",
+    "automated offboarding checklists"
+  ],
+  "known_limitations": [
+    "LMS / course builder on Growth tier only",
+    "Compensation benchmarking requires third-party data subscription",
+    "AI job description generator in early access — not GA"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "TeamSync",
+    "VaultLedger",
+    "Slack",
+    "Microsoft Teams",
+    "Zapier"
+  ],
+  "recent_trajectory": "compliance_and_automation_focus",
+  "last_updated": "2025-02-01"
+}

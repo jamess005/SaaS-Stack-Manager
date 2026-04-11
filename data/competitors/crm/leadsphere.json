@@ -1,0 +1,54 @@
+{
+  "name": "LeadSphere",
+  "based_on": "Salesforce Essentials / Freshsales",
+  "category": "crm",
+  "monthly_cost_gbp": 475,
+  "seat_count_assumed": 22,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 21.59,
+  "pricing_tiers": [
+    {
+      "tier": "Core",
+      "cost_per_seat_gbp": 21.59,
+      "min_seats": 5
+    },
+    {
+      "tier": "Pro",
+      "cost_per_seat_gbp": 31.0,
+      "min_seats": 5
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_exportable": true
+  },
+  "features": [
+    "contact and company management with activity timeline",
+    "deal pipeline with unlimited custom stages",
+    "email integration: Gmail and Outlook bidirectional sync",
+    "unlimited email sequence automation",
+    "meeting scheduler with calendar sync",
+    "AI-assisted lead scoring (generally available)",
+    "reporting: deal velocity, pipeline value, win/loss by rep",
+    "mobile app: iOS and Android, stable",
+    "API with high rate limits (20k req/hr)"
+  ],
+  "known_limitations": [
+    "LinkedIn enrichment module in beta — GA targeted Q3 2025",
+    "Conversation intelligence (call recording) on roadmap only",
+    "Custom object support limited on Core tier"
+  ],
+  "integration_compatibility": [
+    "VaultLedger",
+    "InsightDeck",
+    "TaskBridge",
+    "Zapier",
+    "Slack"
+  ],
+  "recent_trajectory": "ai_feature_buildout",
+  "last_updated": "2025-03-01"
+}

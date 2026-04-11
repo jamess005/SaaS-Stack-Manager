@@ -28,7 +28,6 @@ from datetime import datetime
 from pathlib import Path
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 _PROJECT_ROOT = Path(__file__).parent.parent
@@ -285,31 +284,47 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--model-path",
-                        default="/home/james/ml-proj/models/qwen2.5-1.5b-instruct",
+                        default="/home/james/ml-proj/models/qwen2.5-3b-instruct",
                         help="Local path to base model directory.")
     parser.add_argument("--adapter-path",
-                        default=str(_PROJECT_ROOT / "training" / "checkpoints_grpo"),
+                        default=str(_PROJECT_ROOT / "training" / "checkpoints_sft_cot"),
                         help="Path to fine-tuned LoRA adapter directory. Pass 'none' to run base model only.")
     parser.add_argument("--no-adapter", action="store_true",
                         help="Load base model with no LoRA adapter (diagnostic baseline).")
-    parser.add_argument("--limit", type=int, default=2,
-                        help="Number of samples per scenario type (default: 2).")
+    parser.add_argument("--per-scenario", type=int, default=2, dest="per_scenario",
+                        help="Signal files to test per scenario type (default: 2 → 36 total tests).")
     parser.add_argument("--scenario", default=None, choices=SCENARIO_TYPES,
                         help="Evaluate one scenario type only.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Use fixture responses — no GPU required.")
+    parser.add_argument("--files", nargs="+", metavar="FILE",
+                        help="Evaluate specific signal files only (paths relative to project root "
+                             "or absolute). Bypasses --scenario and --per-scenario sampling.")
     args = parser.parse_args()
 
     if args.dry_run:
         os.environ["AGENT_DRY_RUN"] = "true"
 
-    samples = _collect_samples(args.scenario, args.limit)
+    if args.files:
+        samples = [Path(f) if Path(f).is_absolute() else _PROJECT_ROOT / f for f in args.files]
+        missing = [p for p in samples if not p.exists()]
+        if missing:
+            for p in missing:
+                console.print(f"[red]File not found: {p}[/red]")
+            sys.exit(1)
+        mode_label = f"{len(samples)} explicit file(s)"
+    else:
+        samples = _collect_samples(args.scenario, args.per_scenario)
+        mode_label = f"{args.per_scenario} per scenario"
+
     if not samples:
         console.print("[red]No signal files found. Check training/generated/ exists.[/red]")
         sys.exit(1)
 
-    console.print(f"\n[bold]Evaluating {len(samples)} signal(s)[/bold] "
-                  f"({'dry-run' if args.dry_run else 'live model'})")
+    console.print(
+        f"\n[bold]Evaluating {len(samples)} signal(s)[/bold] "
+        f"({mode_label}, {'dry-run' if args.dry_run else 'live model'})"
+    )
 
     adapter = None if (args.no_adapter or args.adapter_path.lower() == "none") else args.adapter_path
     tokenizer, model = load_model(
@@ -318,26 +333,46 @@ def main() -> None:
     )
 
     results: list[dict] = []
+    correct = 0
+    total_scored = 0
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Running evaluations...", total=len(samples))
+    console.print()
+    for i, signal_path in enumerate(samples, 1):
+        parsed = _parse_generated_filename(signal_path.stem)
+        scenario = parsed[2] if parsed else "?"
+        cat_comp = f"{parsed[0]}/{parsed[1]}" if parsed else signal_path.stem
 
-        for signal_path in samples:
-            parsed = _parse_generated_filename(signal_path.stem)
-            desc = signal_path.stem if parsed is None else f"{parsed[2]} · {parsed[0]}/{parsed[1]}"
-            progress.update(task, description=f"[cyan]{desc}[/cyan]")
+        console.print(
+            f"[dim][{i:3d}/{len(samples)}][/dim] [cyan]{scenario:<28}[/cyan] {cat_comp:<30}",
+            end="",
+        )
 
-            result = _evaluate_one(signal_path, tokenizer, model)
-            result.setdefault("source_file", signal_path.name)
-            results.append(result)
-            progress.advance(task)
+        result = _evaluate_one(signal_path, tokenizer, model)
+        result.setdefault("source_file", signal_path.name)
+        results.append(result)
+
+        if result["status"] == "ok":
+            expected = result["expected"]
+            actual = result["actual"] or "?"
+            ambiguous = expected is None
+            if ambiguous:
+                console.print(f"→ [dim]{actual}[/dim]  [dim](ambiguous)[/dim]")
+            elif actual == expected:
+                correct += 1
+                total_scored += 1
+                console.print(
+                    f"→ [bold green]{actual}[/bold green] [green]✓[/green]"
+                    f"  [dim]{correct}/{total_scored} correct[/dim]"
+                )
+            else:
+                total_scored += 1
+                console.print(
+                    f"→ [bold red]{actual}[/bold red] [red]✗[/red]"
+                    f"  expected [yellow]{expected}[/yellow]"
+                    f"  [dim]{correct}/{total_scored} correct[/dim]"
+                )
+        else:
+            console.print(f"→ [yellow]SKIP: {result.get('reason', '')}[/yellow]")
 
     _print_results(results)
 

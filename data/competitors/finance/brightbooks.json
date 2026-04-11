@@ -1,0 +1,58 @@
+{
+  "name": "BrightBooks",
+  "based_on": "Xero / FreeAgent",
+  "category": "finance",
+  "monthly_cost_gbp": 395,
+  "seat_count_assumed": 8,
+  "pricing_model": "flat_rate",
+  "pricing_tiers": [
+    {
+      "tier": "Professional",
+      "cost_flat_gbp": 395,
+      "max_seats": 10
+    },
+    {
+      "tier": "Business",
+      "cost_flat_gbp": 580,
+      "max_seats": 30
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true,
+    "audit_log_pdf_signed": true,
+    "mtd_vat": true,
+    "ifrs15_compliant": true
+  },
+  "features": [
+    "multi-currency invoicing (60+ currencies including EUR native)",
+    "real-time bank feeds (Barclays, HSBC, Lloyds, Starling, Monzo, NatWest)",
+    "VAT / MTD filing — HMRC-recognised",
+    "IFRS 15 certified revenue recognition module",
+    "instant reconciliation engine (tested to 1M rows in under 30 seconds)",
+    "audit trail export: PDF with digital signature and tamper-evident hash",
+    "UK payroll sync (PayAxis native, no middleware)",
+    "project-based billing and profitability dashboards",
+    "cash flow forecasting with scenario modelling",
+    "multi-entity consolidation on Professional tier",
+    "24/7 support SLA with dedicated account manager"
+  ],
+  "known_limitations": [
+    "AI anomaly detection not yet available — roadmap Q4 2025",
+    "Some reviewers note UI less customisable than legacy tools",
+    "Migration from VaultLedger requires professional services engagement"
+  ],
+  "integration_compatibility": [
+    "PayAxis",
+    "NexusCRM",
+    "InsightDeck",
+    "TaskBridge",
+    "Zapier",
+    "Power BI"
+  ],
+  "recent_trajectory": "rapid_feature_expansion",
+  "last_updated": "2025-01-10"
+}

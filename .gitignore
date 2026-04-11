@@ -43,8 +43,7 @@ training/logs/
 wandb/
 
 # Internal design docs
-/ARCHITECTURE.md
-/BLUEPRINT.md
+/docs
 
 # Agent runtime outputs
 market_inbox/*.md

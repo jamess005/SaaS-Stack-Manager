@@ -1,0 +1,57 @@
+{
+  "name": "OpsCanvas",
+  "based_on": "ClickUp / Monday.com",
+  "category": "project_mgmt",
+  "monthly_cost_gbp": 310,
+  "seat_count_assumed": 150,
+  "pricing_model": "per_seat",
+  "cost_per_seat_gbp": 2.07,
+  "pricing_tiers": [
+    {
+      "tier": "Business",
+      "cost_per_seat_gbp": 2.07,
+      "min_seats": 10
+    },
+    {
+      "tier": "Enterprise",
+      "cost_per_seat_gbp": 3.50,
+      "min_seats": 50,
+      "note": "includes SSO, advanced audit log, dedicated CSM"
+    }
+  ],
+  "compliance": {
+    "soc2_type2": true,
+    "gdpr_eu_residency": true,
+    "uk_residency": true,
+    "sso_saml": true,
+    "audit_log": true
+  },
+  "features": [
+    "task and project management with board, list, and Gantt views",
+    "native time-tracking built in (eliminates need for separate tools)",
+    "client portal with commenting, file review, and deliverable approval",
+    "resource capacity planning and utilisation dashboards",
+    "Gantt timeline with auto-updating dependencies",
+    "native Slack and Microsoft Teams integration",
+    "template library for consulting, agency, and professional services projects",
+    "budget vs actuals tracking per project",
+    "automated weekly status digest to stakeholders",
+    "mobile app with offline mode"
+  ],
+  "known_limitations": [
+    "AI task estimation in beta — not yet generally available",
+    "Migration from TaskBridge requires data export mapping",
+    "Some advanced reporting requires Business tier"
+  ],
+  "integration_compatibility": [
+    "TeamSync",
+    "InsightDeck",
+    "VaultLedger",
+    "NexusCRM",
+    "Zapier",
+    "GitHub",
+    "GitLab"
+  ],
+  "recent_trajectory": "strong_feature_set_growing",
+  "last_updated": "2025-01-20"
+}
