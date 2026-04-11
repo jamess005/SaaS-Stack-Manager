@@ -1,8 +1,8 @@
-# tests/test_analysis_templates.py
+# training/tests/test_analysis_templates.py
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from training.generate_cot_traces import _analysis
 
@@ -117,7 +117,7 @@ def test_build_lean_user_emits_disqualifier_field():
     from agent.roi_calculator import calculate_roi, extract_pass1_vars
     from pathlib import Path
 
-    _DATA_ROOT = Path(__file__).parent.parent / "data"
+    _DATA_ROOT = Path(__file__).parent.parent.parent / "data"
     context = load_context("analytics", "metricflux", _DATA_ROOT)
 
     signal = {
