@@ -1,0 +1,27 @@
+services:
+  agent:
+    build: .
+    # AMD GPU passthrough — requires ROCm runtime on the host.
+    # Remove the devices/group_add blocks to run in dry-run mode only.
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    volumes:
+      # Model weights — read-only mount from host MODELS_DIR
+      - ${MODELS_DIR:-~/models}:/models:ro
+      # LoRA adapter — built by training/sft_train.py
+      - ./training/checkpoints_sft_cot:/app/training/checkpoints_sft_cot:ro
+      # Signal inbox and verdict output
+      - ./market_inbox:/app/market_inbox
+      - ./outputs:/app/outputs
+    environment:
+      # Override so config.py resolves paths inside the container
+      - MODELS_DIR=/models
+      # AMD GPU — required for RX 7800 XT (gfx1101)
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0
+      - HIP_VISIBLE_DEVICES=0
+      - ROCR_VISIBLE_DEVICES=0
+    # Pass a signal file as the command argument:
+    #   docker compose run agent market_inbox/finance_ledgerflow.md

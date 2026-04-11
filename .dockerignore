@@ -1,0 +1,65 @@
+# Version control
+.git/
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# Test and coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Model weights — always mount as a volume, never bake into image
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+*.ckpt
+
+# Training outputs — not needed for inference
+training/checkpoints*/
+training/checkpoints_grpo/
+training/checkpoints_sft_cot/
+training/generated/
+training/traces/
+training/traces_fresh/
+training/runs/
+training/logs/
+training/sft_cot_traces.jsonl
+
+# Eval outputs
+outputs/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docs / internal
+docs/
+*.ipynb
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+wandb/
