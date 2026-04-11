@@ -117,7 +117,7 @@ def test_build_lean_user_emits_disqualifier_field():
     from agent.roi_calculator import calculate_roi, extract_pass1_vars
     from pathlib import Path
 
-    _DATA_ROOT = Path("/home/james/ml-proj/saasmanager/data")
+    _DATA_ROOT = Path(__file__).parent.parent / "data"
     context = load_context("analytics", "metricflux", _DATA_ROOT)
 
     signal = {
@@ -132,6 +132,13 @@ def test_build_lean_user_emits_disqualifier_field():
     assert "Disqualifier: feature in preview — GA date TBD" in user_msg
     assert "Hold signal: NONE" in user_msg
     del os.environ["AGENT_DRY_RUN"]
+
+
+def test_detect_disqualifier_fires_on_early_access_in_notes():
+    """Disqualifier is detected when 'early access' is in notes and hold signal is NONE."""
+    from agent.model_runner import _detect_disqualifier
+    notes = ["AI features in early access — not GA"]
+    assert _detect_disqualifier(notes, "NONE") == "AI features in early access — not GA"
 
 
 def test_nsb_analysis_references_disqualifier_label():
