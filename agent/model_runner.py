@@ -293,53 +293,91 @@ def _extract_verdict_confidence(tokenizer, scores, generated_ids) -> dict | None
     """
     Extract the probability distribution over SWITCH/STAY/HOLD at the verdict token position.
 
-    Walks the generated token sequence until it finds a verdict word that follows
-    "VERDICT:" in the accumulated text, then reads the softmax distribution over
-    the three verdict token IDs from that position's logit scores.
+    Strategy:
+      1. Scan token-by-token, accumulating decoded text.
+      2. When accumulated text first matches VERDICT:\\s*(SWITCH|STAY|HOLD), walk back
+         in generated_ids to find where the first subtoken of the verdict word was emitted.
+      3. Read scores[first_token_pos] — the logit distribution at the moment the model
+         committed to one of the three verdict words.
+      4. Compare like-for-like: use bare or spaced first-tokens consistently, depending
+         on which variant the model actually generated.
+
+    Handles multi-token verdict words (Qwen2.5: "STAY"→["ST","AY"], "SWITCH"→["SW","ITCH"],
+    "HOLD"→["H","OLD"]) and space-prefixed variants (" HOLD"→[" HOLD"], etc.).
 
     Returns None if the verdict token cannot be located (e.g. malformed output).
     """
     import math
+    import re
 
     import torch
 
-    # Encode each verdict word to its primary token ID.
-    # For Qwen2.5 these are single tokens; the first sub-token is used if not.
-    verdict_tids: dict[str, int] = {}
-    for word in _VERDICT_WORDS:
-        tids = tokenizer.encode(word, add_special_tokens=False)
-        if tids:
-            verdict_tids[word] = tids[0]
+    # Encode each verdict word in bare and space-prefixed variants.
+    bare_seqs: dict[str, list[int]] = {
+        w: tokenizer.encode(w, add_special_tokens=False) for w in _VERDICT_WORDS
+    }
+    spaced_seqs: dict[str, list[int]] = {
+        w: tokenizer.encode(" " + w, add_special_tokens=False) for w in _VERDICT_WORDS
+    }
 
-    if not verdict_tids:
-        return None
+    # All possible last-subtoken IDs (triggers the check).
+    last_tid_set: set[int] = set()
+    for w in _VERDICT_WORDS:
+        if bare_seqs[w]:
+            last_tid_set.add(bare_seqs[w][-1])
+        if spaced_seqs[w]:
+            last_tid_set.add(spaced_seqs[w][-1])
 
-    tid_to_word = {v: k for k, v in verdict_tids.items()}
+    _VERDICT_RE = re.compile(r"VERDICT:\s*(SWITCH|STAY|HOLD)", re.IGNORECASE)
+
+    token_ids = generated_ids.tolist()
     accumulated = ""
 
-    for pos, token_id in enumerate(generated_ids.tolist()):
+    for pos, token_id in enumerate(token_ids):
         if pos >= len(scores):
             break
         accumulated += tokenizer.decode([token_id], skip_special_tokens=True)
 
-        if token_id not in tid_to_word:
+        if token_id not in last_tid_set:
             continue
 
-        word = tid_to_word[token_id]
-        acc_upper = accumulated.upper()
-        label_pos = acc_upper.rfind("VERDICT:")
-        word_pos = acc_upper.rfind(word)
-        if label_pos == -1 or word_pos <= label_pos:
+        m = _VERDICT_RE.search(accumulated)
+        if not m:
             continue
 
-        # Found verdict token — extract probability distribution
-        probs = torch.softmax(scores[pos].float(), dim=-1)
-        vprobs = {
+        word = m.group(1).upper()
+
+        # Find which variant (bare or spaced) was actually generated, and at what pos.
+        first_token_pos: int | None = None
+        matched_variant: str = "bare"  # "bare" or "spaced"
+        for variant, seq in (("bare", bare_seqs[word]), ("spaced", spaced_seqs[word])):
+            n = len(seq)
+            if n == 0 or pos + 1 < n:
+                continue
+            if token_ids[pos + 1 - n : pos + 1] == seq:
+                first_token_pos = pos + 1 - n
+                matched_variant = variant
+                break
+
+        if first_token_pos is None or first_token_pos >= len(scores):
+            return None
+
+        # Build the comparison first-token IDs using the SAME variant for all words.
+        # This ensures we compare like-for-like at the branching position.
+        if matched_variant == "spaced":
+            cmp_tids = {w: spaced_seqs[w][0] for w in _VERDICT_WORDS if spaced_seqs[w]}
+        else:
+            cmp_tids = {w: bare_seqs[w][0] for w in _VERDICT_WORDS if bare_seqs[w]}
+
+        # outputs.scores[i] has shape (batch_size, vocab_size); squeeze batch dim.
+        probs = torch.softmax(scores[first_token_pos][0].float(), dim=-1)
+        vprobs: dict[str, float] = {
             w: float(probs[tid].item())
-            for w, tid in verdict_tids.items()
+            for w, tid in cmp_tids.items()
             if tid < probs.shape[0]
         }
-        if word not in vprobs:
+
+        if word not in vprobs or not vprobs:
             return None
 
         total = sum(vprobs.values())

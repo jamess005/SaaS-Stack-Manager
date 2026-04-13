@@ -179,6 +179,7 @@ def run_agent(
     register_path: Path | None = None,
     model_path: str | None = None,
     adapter_path: str | None = None,
+    log_path: Path | None = None,
 ) -> dict:
     """
     Run the full pipeline for one inbox file.
@@ -191,6 +192,7 @@ def run_agent(
         model_path: Local path to the base model directory. If omitted, falls back
                     to the default HuggingFace model ID in load_model().
         adapter_path: Path to a fine-tuned LoRA adapter directory. Optional.
+        log_path: Override drift log path (used in tests for isolation).
 
     Returns:
         {
@@ -291,8 +293,9 @@ def run_agent(
         hold_registered = True
 
     # ── Step 11: Drift tracking ────────────────────────────────────────────────
-    log_live_run(category, competitor_slug, verdict, is_valid, validation_attempts, confidence)
-    if check_accuracy_due():
+    log_live_run(category, competitor_slug, verdict, is_valid, validation_attempts, confidence,
+                 log_path=log_path)
+    if check_accuracy_due(log_path=log_path):
         logger.info(
             "Drift advisory: 10+ live runs since last accuracy check — "
             "run: python scripts/drift_check.py"
