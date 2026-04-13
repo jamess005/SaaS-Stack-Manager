@@ -60,5 +60,5 @@
   "recent_trajectory": "strong_professional_services_focus",
   "last_updated": "2024-10-15",
   "notes": "At 150 seats, Professional = £330/mo vs TaskBridge £290/mo. TaskBridge also pays ChronoLog £95/mo for time tracking. Net comparison: ProjectAxis £330 vs TaskBridge+ChronoLog £385 = £55/mo saving (£660/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net direct saving = £468/yr — below £1,200 threshold. Operational gains: built-in time tracking (eliminates ChronoLog), client portal with approval (reduces billing disputes), native Slack (eliminates Zapier workaround), capacity planning (eliminates spreadsheet tracking), auto-updating Gantt. All 5 TaskBridge known issues directly addressed. Strong operational case for SWITCH — qualitative value of billing accuracy and client approval workflows is significant for a consulting firm.",
-  "scraper_url": ""
+  "scraper_url": "https://projectaxis.com/releases"
 }

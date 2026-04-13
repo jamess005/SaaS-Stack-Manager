@@ -58,5 +58,5 @@
   "recent_trajectory": "stable_niche_player",
   "last_updated": "2024-08-15",
   "notes": "At 150 seats, Standard tier = £330/mo vs PeoplePulse £385/mo = £55/mo saving (£660/yr). Migration at 10hrs × £48 = £480, amortised £160/yr. Net = £500/yr — below £1,200 threshold. Critically: does not resolve any of PeoplePulse's known issues. GDPR erasure remains manual, PayAxis integration absent, no performance or onboarding tooling. Designed for shift-based workforces — consultancy use case is a poor fit. STAY verdict — cheap but provides no operational benefit, and audit log not exportable (hard block for HR category).",
-  "scraper_url": ""
+  "scraper_url": "https://shiftcore.io/releases"
 }

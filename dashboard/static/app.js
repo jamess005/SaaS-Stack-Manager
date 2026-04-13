@@ -17,6 +17,8 @@ function verdictBadge(v) {
   return `<span class="verdict-badge ${cls}">${label}</span>`;
 }
 
+function fmtDate(ts) { return ts ? ts.slice(0, 10) : '—'; }
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function showView(name, btn) {
@@ -30,7 +32,7 @@ function showView(name, btn) {
   if (name === 'health') loadHealth();
 }
 
-// ── Status polling ────────────────────────────────────────────────────────────
+// ── Status polling (model lock) ───────────────────────────────────────────────
 
 let _statusTimer = null;
 
@@ -45,23 +47,19 @@ function stopStatusPoll() {
 }
 
 async function pollStatus() {
-  const r = await fetch('/api/status');
-  const d = await r.json();
-  const bar = $('status-bar');
-  if (d.busy) {
-    bar.classList.add('visible');
-    $('status-text').textContent = `Model running: ${d.task}…`;
-    $('btn-eval').disabled = true;
-    $('btn-summarise').disabled = true;
-  } else {
-    if (bar.classList.contains('visible')) {
-      bar.classList.remove('visible');
-      $('btn-eval').disabled = false;
-      $('btn-summarise').disabled = false;
-      loadDashboard();
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const chip = $('status-chip');
+    if (d.busy) {
+      chip.style.display = 'inline-flex';
+      $('status-text').textContent = `${d.task || 'model'} running…`;
+    } else {
+      if (chip.style.display !== 'none') loadDashboard();
+      chip.style.display = 'none';
+      stopStatusPoll();
     }
-    stopStatusPoll();
-  }
+  } catch (_) {}
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -72,23 +70,22 @@ async function loadDashboard() {
     fetch('/api/verdicts?n=10'),
     fetch('/api/health'),
   ]);
-  const stats = await statsR.json();
+  const stats    = await statsR.json();
   const verdicts = await verdictsR.json();
-  const health = await healthR.json();
+  const health   = await healthR.json();
 
   renderStats(stats);
   renderDonut(stats);
   renderVerdictGrid(verdicts);
   renderConfBars(verdicts);
   renderMonitor(verdicts);
-  renderFeedbackHistory(health);
-  renderRegressionTests(health);
+  renderFeedbackSidebar(health);
 }
 
 function renderStats(s) {
-  $('stat-sw').textContent = s.switch;
-  $('stat-ho').textContent = s.hold;
-  $('stat-st').textContent = s.stay;
+  $('stat-sw').textContent    = s.switch;
+  $('stat-ho').textContent    = s.hold;
+  $('stat-st').textContent    = s.stay;
   $('stat-total').textContent = s.total_tracked;
   $('stat-eval-sub').textContent = `${s.total_evaluated} evaluated`;
 }
@@ -96,12 +93,12 @@ function renderStats(s) {
 function renderDonut(s) {
   const total = s.switch + s.hold + s.stay || 1;
   const swDeg = (s.switch / total) * 360;
-  const hoDeg = (s.hold / total) * 360;
+  const hoDeg = (s.hold   / total) * 360;
   const swPct = Math.round((s.switch / total) * 100);
-  const hoPct = Math.round((s.hold / total) * 100);
+  const hoPct = Math.round((s.hold   / total) * 100);
   const stPct = 100 - swPct - hoPct;
   $('donut').style.background =
-    `conic-gradient(#22c55e 0deg ${swDeg}deg, #f97316 ${swDeg}deg ${swDeg + hoDeg}deg, #3b82f6 ${swDeg + hoDeg}deg 360deg)`;
+    `conic-gradient(#22c55e 0deg ${swDeg}deg, #f97316 ${swDeg}deg ${swDeg+hoDeg}deg, #3b82f6 ${swDeg+hoDeg}deg 360deg)`;
   $('donut').innerHTML = `<div class="donut-hole">${total}<br>evals</div>`;
   $('donut-legend').innerHTML = `
     <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>Switch ${swPct}%</div>
@@ -112,51 +109,47 @@ function renderDonut(s) {
 function renderVerdictGrid(verdicts) {
   const grid = $('verdict-grid');
   if (!verdicts.length) {
-    grid.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;padding:12px">No verdicts logged yet. Run the agent first.</div>';
+    grid.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;padding:12px;grid-column:1/-1">No verdicts logged yet.</div>';
     return;
   }
 
-  // Sort: SWITCH first (ranked by confidence), then HOLD, then STAY
+  // SWITCH first (ranked by confidence), then HOLD, then STAY (faded)
   const order = {SWITCH: 0, HOLD: 1, STAY: 2};
   const sorted = [...verdicts].sort((a, b) => {
-    const oa = order[a.verdict] ?? 3;
-    const ob = order[b.verdict] ?? 3;
+    const oa = order[a.verdict] ?? 3, ob = order[b.verdict] ?? 3;
     if (oa !== ob) return oa - ob;
-    // within same verdict, higher confidence first
     return (b.verdict_token_prob ?? 0) - (a.verdict_token_prob ?? 0);
   });
 
   grid.innerHTML = sorted.map(v => {
     const isStay = v.verdict === 'STAY';
-    const prob = v.verdict_token_prob;
+    const prob   = v.verdict_token_prob;
     const probTag = prob != null
-      ? `<span style="font-size:.65rem;color:${confColor(prob)};font-family:monospace">P=${prob.toFixed(2)}</span>`
+      ? `<span style="font-size:.65rem;color:${confColor(prob)};font-family:monospace;margin-left:auto">P=${prob.toFixed(2)}</span>`
       : '';
 
-    const accBody = v.summary
-      ? `<button class="acc-toggle" onclick="toggleAcc(this)"><span class="acc-arrow">▶</span> Why ${v.verdict.toLowerCase()}?</button>
+    const whySection = v.summary
+      ? `<button class="acc-toggle" onclick="toggleAcc(this)">
+           <span class="acc-arrow">▶</span> Why ${v.verdict.toLowerCase()}?
+         </button>
          <div class="acc-body">
-           <div class="acc-meta">Qwen2.5-3B · ${v.ts?.slice(0,10) || ''}</div>
+           <div class="acc-meta">AI summary · ${fmtDate(v.ts)}</div>
            ${v.summary}
          </div>`
-      : (isStay ? '' : `<div class="acc-pending">▸ Run <strong style="color:#16a34a;margin:0 3px">Generate Summaries</strong> for context</div>`);
-
-    const route = v.memo_excerpt
-      ? `<div class="vcard-route">${v.memo_excerpt.slice(0, 60)}…</div>`
-      : '';
+      : (isStay
+          ? ''
+          : `<div class="acc-pending">▸ Summary generates automatically on next eval run</div>`);
 
     return `
       <div class="vcard ${isStay ? 'stay' : ''}">
         <div class="vcard-top">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            ${verdictBadge(v.verdict)}
-            ${probTag}
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:7px">
+            ${verdictBadge(v.verdict)}${probTag}
           </div>
           <div class="vcard-name">${v.competitor}</div>
-          ${route}
-          <div class="vcard-meta">${v.category} · ${v.ts?.slice(0,10) || '—'}</div>
+          <div class="vcard-meta">${v.category} · ${fmtDate(v.ts)}</div>
         </div>
-        ${accBody}
+        ${whySection}
         ${feedbackRow(v.memo_filename, v.verdict)}
       </div>`;
   }).join('');
@@ -169,7 +162,7 @@ function feedbackRow(filename, verdict) {
       <span class="fb-label">Correct?</span>
       <div class="fb-btns">
         <button class="fb-btn" id="yes-${id}" onclick="voteFb('${filename}','${verdict}',true,'${id}')">👍</button>
-        <button class="fb-btn" id="no-${id}" onclick="openFbNote('${filename}','${verdict}','${id}')">👎</button>
+        <button class="fb-btn" id="no-${id}"  onclick="openFbNote('${filename}','${verdict}','${id}')">👎</button>
       </div>
     </div>
     <div class="fb-note" id="note-${id}">
@@ -201,9 +194,9 @@ async function voteFb(filename, verdict, correct, id) {
 }
 
 async function submitFbNote(filename, verdict, id) {
-  const note = $(`note-text-${id}`)?.value || '';
+  const note        = $(`note-text-${id}`)?.value || '';
   const actualInput = prompt('What should the verdict have been? (SWITCH / STAY / HOLD)', verdict);
-  const actual = ['SWITCH','STAY','HOLD'].includes(actualInput) ? actualInput : verdict;
+  const actual      = ['SWITCH','STAY','HOLD'].includes(actualInput) ? actualInput : verdict;
   await submitFeedback(filename, verdict, false, actual, note);
   disableFbRow(id);
 }
@@ -219,8 +212,7 @@ async function submitFeedback(filename, stated, correct, actual, note) {
 function disableFbRow(id) {
   const row = $(`fb-${id}`);
   if (row) row.innerHTML = '<span class="fb-done">✓ Feedback saved</span>';
-  const note = $(`note-${id}`);
-  if (note) note.remove();
+  $(`note-${id}`)?.remove();
 }
 
 function renderConfBars(verdicts) {
@@ -230,7 +222,7 @@ function renderConfBars(verdicts) {
     return;
   }
   $('conf-bars').innerHTML = withConf.slice(0, 6).map(v => {
-    const p = v.verdict_token_prob;
+    const p   = v.verdict_token_prob;
     const pct = Math.round(p * 100);
     const col = confColor(p);
     return `<div class="conf-item">
@@ -250,32 +242,25 @@ function renderMonitor(verdicts) {
   $('monitor-list').innerHTML = holds.map(v => `
     <div class="mon-item">
       <div class="mon-name">${v.competitor}</div>
-      <div class="mon-cond">${v.category} · review due ${v.ts?.slice(0,10) || '—'}</div>
+      <div class="mon-cond">${v.category} · ${fmtDate(v.ts)}</div>
     </div>`).join('');
 }
 
-function renderFeedbackHistory(health) {
-  $('fb-history').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">Feedback appears here after you vote on cards above</span>';
-}
-
-function renderRegressionTests(health) {
-  const last = health.last_accuracy;
-  if (!last) {
-    $('reg-score').textContent = '—';
-    $('reg-list').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No regression tests run yet. Run: python scripts/drift_check.py</span>';
+function renderFeedbackSidebar(health) {
+  const fb  = (health.feedback_log || []).slice(0, 5);
+  const el  = $('fb-history-side');
+  if (!fb.length) {
+    el.innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No feedback yet — use 👍/👎 on cards</span>';
     return;
   }
-  $('reg-score').textContent = `${last.correct}/${last.total}`;
-  const results = (last.results || []).filter(r => r.status === 'ok');
-  if (results.length) {
-    $('reg-list').innerHTML = results.map(r => `
-      <div class="reg-item">
-        <div><div class="reg-name">${r.file.replace('.json','')}</div><div class="reg-exp">Expected ${r.expected}</div></div>
-        <div class="${r.correct ? 'pass' : 'fail'}">${r.actual} ${r.correct ? '✓' : '✗'}</div>
-      </div>`).join('');
-  } else {
-    $('reg-list').innerHTML = `<div style="color:#94a3b8;font-size:.75rem">${last.correct}/${last.total} canaries passed</div>`;
-  }
+  el.innerHTML = fb.map(f => {
+    const icon = f.correct ? '👍' : '👎';
+    const col  = f.correct ? 'var(--sw)' : 'var(--conf-lo)';
+    return `<div class="fb-history-item">
+      <span class="fb-filename">${f.memo_filename?.replace(/^\d{4}-\d{2}-\d{2}-/,'') || '—'}</span>
+      <span style="color:${col}">${icon}</span>
+    </div>`;
+  }).join('');
 }
 
 // ── Competitors view ──────────────────────────────────────────────────────────
@@ -285,14 +270,13 @@ async function loadCompetitors() {
     fetch('/api/competitors'),
     fetch('/api/verdicts?n=100'),
   ]);
-  const comps = await compR.json();
+  const comps    = await compR.json();
   const verdicts = await vR.json();
 
   const lastVerdict = {};
-  for (const v of verdicts) { lastVerdict[v.competitor] = {verdict: v.verdict, ts: v.ts?.slice(0,10)}; }
+  for (const v of verdicts) lastVerdict[v.competitor] = {verdict: v.verdict, ts: fmtDate(v.ts)};
 
-  const tbody = $('comp-tbody');
-  tbody.innerHTML = comps.map(c => {
+  $('comp-tbody').innerHTML = comps.map(c => {
     const lv = lastVerdict[c.slug];
     return `<tr>
       <td>${c.category}</td>
@@ -301,14 +285,9 @@ async function loadCompetitors() {
       <td>${lv ? verdictBadge(lv.verdict) : '<span style="color:#94a3b8">not run</span>'}</td>
       <td style="color:#94a3b8;font-size:.75rem">${lv?.ts || '—'}</td>
       <td><input class="url-input" value="${c.scraper_url || ''}" placeholder="https://…"
-           data-slug="${c.slug}" onblur="saveUrl(this)"></td>
+           data-slug="${c.slug}"></td>
     </tr>`;
   }).join('');
-}
-
-async function saveUrl(input) {
-  // Scraper URL persistence is read-only for now — field is editable in the UI
-  // but a PATCH /api/competitors/:slug endpoint would be needed to persist
 }
 
 function toggleAddForm() { $('add-form').classList.toggle('open'); }
@@ -327,9 +306,7 @@ async function submitAddCompetitor() {
   };
   if (!body.name || !body.slug) { alert('Name and slug are required'); return; }
   const r = await fetch('/api/competitors', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body),
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
   });
   if (r.ok) { toggleAddForm(); loadCompetitors(); }
   else { alert('Failed to add competitor'); }
@@ -338,59 +315,121 @@ async function submitAddCompetitor() {
 // ── Model Health view ─────────────────────────────────────────────────────────
 
 async function loadHealth() {
-  const r = await fetch('/api/health');
-  const h = await r.json();
+  const [healthR, statsR, verdictsR] = await Promise.all([
+    fetch('/api/health'),
+    fetch('/api/stats'),
+    fetch('/api/verdicts?n=100'),
+  ]);
+  const h       = await healthR.json();
+  const stats   = await statsR.json();
+  const allV    = await verdictsR.json();
 
+  // Stat tiles
+  $('h-total-runs').textContent = stats.total_evaluated;
+
+  const withConf = allV.filter(v => v.verdict_token_prob != null);
+  if (withConf.length) {
+    const avg = withConf.reduce((s, v) => s + v.verdict_token_prob, 0) / withConf.length;
+    const low = withConf.filter(v => v.verdict_token_prob < 0.60).length;
+    $('h-avg-conf').textContent = avg.toFixed(2);
+    $('h-low-conf').textContent = low;
+  } else {
+    $('h-avg-conf').textContent = 'N/A';
+    $('h-low-conf').textContent = 'N/A';
+  }
+
+  const last = h.last_accuracy;
+  $('h-regression').textContent = last ? `${last.correct}/${last.total}` : '—';
+  $('health-reg-score').textContent = last ? `${last.correct}/${last.total}` : '—';
+
+  // Confidence trend
   const trend = h.confidence_trend || [];
   if (!trend.length) {
     $('health-conf').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No live model confidence data. Run the agent without --dry-run.</span>';
   } else {
     $('health-conf').innerHTML = trend.map(t => {
-      const p = t.prob;
-      const col = confColor(p);
+      const col = confColor(t.prob);
+      const pct = t.prob != null ? Math.round(t.prob * 100) : 0;
       return `<div class="conf-item">
-        <div class="conf-name" style="width:90px">${t.ts} ${t.competitor}</div>
-        <div class="conf-track"><div class="conf-fill" style="width:${Math.round(p*100)}%;background:${col}"></div></div>
-        <div class="conf-val" style="color:${col}">${p?.toFixed(3) ?? '—'}</div>
+        <div class="conf-name" style="width:110px">${t.ts} ${t.competitor}</div>
+        <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="conf-val" style="color:${col}">${t.prob?.toFixed(3) ?? '—'}</div>
       </div>`;
     }).join('');
   }
 
+  // Regression history
   const history = h.accuracy_history || [];
   if (!history.length) {
-    $('health-reg-score').textContent = '—';
-    $('health-reg-list').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No accuracy checks. Run: python scripts/drift_check.py</span>';
+    $('health-reg-list').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No checks recorded. Run: python scripts/drift_check.py</span>';
   } else {
-    const last = history[history.length - 1];
-    $('health-reg-score').textContent = `${last.correct}/${last.total}`;
     $('health-reg-list').innerHTML = [...history].reverse().map(entry => {
       const col = entry.accuracy >= 0.9 ? '#16a34a' : entry.accuracy >= 0.75 ? '#d97706' : '#dc2626';
-      return `<div class="reg-item">
-        <div><div class="reg-name">${entry.ts.slice(0,10)}</div><div class="reg-exp">${entry.correct}/${entry.total} correct</div></div>
-        <div style="color:${col};font-weight:700;font-size:.78rem">${Math.round(entry.accuracy*100)}%</div>
+      const detail = (entry.results || []).map(r =>
+        `<span style="font-size:.65rem;color:${r.correct?'var(--sw)':'var(--conf-lo)'}">${r.file.replace('.json','')}: ${r.actual} ${r.correct?'✓':'✗'}</span>`
+      ).join('  ');
+      return `<div class="reg-item" style="flex-direction:column;align-items:flex-start;gap:4px;padding:10px 0">
+        <div style="display:flex;justify-content:space-between;width:100%">
+          <div><div class="reg-name">${entry.ts.slice(0,10)}</div><div class="reg-exp">${entry.correct}/${entry.total} canaries correct</div></div>
+          <div style="color:${col};font-weight:800;font-size:1rem">${Math.round(entry.accuracy*100)}%</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${detail}</div>
       </div>`;
     }).join('');
   }
-}
 
-// ── Run actions ───────────────────────────────────────────────────────────────
+  // Validation attempts
+  const attempts = allV.filter(v => v.validation_attempts != null);
+  if (!attempts.length) {
+    $('health-validation').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No validation data yet.</span>';
+  } else {
+    const onePass = attempts.filter(v => v.validation_attempts === 1).length;
+    const twoPass = attempts.filter(v => v.validation_attempts === 2).length;
+    const total   = attempts.length;
+    $('health-validation').innerHTML = `
+      <div style="display:flex;gap:20px;align-items:center">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px">
+            <span>Pass on first attempt</span><span style="color:var(--sw);font-weight:700">${onePass}/${total}</span>
+          </div>
+          <div class="conf-track" style="height:8px">
+            <div class="conf-fill" style="width:${Math.round(onePass/total*100)}%;background:var(--sw)"></div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px">
+            <span>Needed retry</span><span style="color:${twoPass>0?'var(--ho)':'var(--subtle)'};font-weight:700">${twoPass}/${total}</span>
+          </div>
+          <div class="conf-track" style="height:8px">
+            <div class="conf-fill" style="width:${Math.round(twoPass/total*100)}%;background:var(--ho)"></div>
+          </div>
+        </div>
+      </div>`;
+  }
 
-async function runEval() {
-  const inbox = prompt('Inbox file path (leave blank for dry-run):');
-  const dry = !inbox;
-  const r = await fetch('/api/run-eval', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({inbox_file: inbox || '', dry_run: dry}),
-  });
-  if (r.status === 409) { alert('Model is already running'); return; }
-  if (r.ok) startStatusPoll();
-}
-
-async function runSummarise() {
-  const r = await fetch('/api/run-summaries', {method: 'POST'});
-  if (r.status === 409) { alert('Model is already running'); return; }
-  if (r.ok) startStatusPoll();
+  // Human feedback log
+  const fb = h.feedback_log || [];
+  if (!fb.length) {
+    $('health-feedback').innerHTML = '<span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use 👍/👎 on verdict cards.</span>';
+  } else {
+    $('health-feedback').innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="font-size:.68rem;color:var(--subtle);text-transform:uppercase">
+          <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">Memo</th>
+          <th style="padding:4px 8px;border-bottom:1px solid var(--border)">Stated</th>
+          <th style="padding:4px 8px;border-bottom:1px solid var(--border)">Actual</th>
+          <th style="padding:4px 8px;border-bottom:1px solid var(--border)">Result</th>
+          <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">Note</th>
+        </tr></thead>
+        <tbody>${fb.map(f => `<tr style="font-size:.78rem">
+          <td style="padding:6px 8px;font-family:monospace;font-size:.7rem;color:var(--muted)">${f.memo_filename?.replace(/^\d{4}-\d{2}-\d{2}-/,'') || '—'}</td>
+          <td style="text-align:center;padding:6px 8px">${verdictBadge(f.stated_verdict)}</td>
+          <td style="text-align:center;padding:6px 8px">${verdictBadge(f.actual_verdict)}</td>
+          <td style="text-align:center;padding:6px 8px">${f.correct ? '<span style="color:var(--sw);font-weight:700">👍</span>' : '<span style="color:var(--conf-lo);font-weight:700">👎</span>'}</td>
+          <td style="padding:6px 8px;color:var(--muted)">${f.note || '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

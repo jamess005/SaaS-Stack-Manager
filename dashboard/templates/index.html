@@ -19,16 +19,13 @@
     <button class="nav-btn" onclick="showView('health', this)">Model Health</button>
   </nav>
   <div class="hdr-right">
-    <button class="btn btn-green" id="btn-summarise" onclick="runSummarise()">✦ Generate Summaries</button>
-    <button class="btn btn-primary" id="btn-eval" onclick="runEval()">▶ Run Eval</button>
+    <div class="status-chip" id="status-chip" style="display:none">
+      <span class="spin">⟳</span> <span id="status-text">Running…</span>
+    </div>
   </div>
 </header>
 
 <div class="page">
-  <div class="status-bar" id="status-bar">
-    <span class="spin">⟳</span>
-    <span id="status-text">Model running…</span>
-  </div>
 
   <!-- Dashboard view -->
   <div class="view active" id="view-dashboard">
@@ -51,7 +48,7 @@
       <div class="stat-tile tile-total">
         <div class="t-label">Tracked</div>
         <div class="t-num" id="stat-total">—</div>
-        <div class="t-sub" id="stat-eval-sub">—</div>
+        <div class="t-sub" id="stat-eval-sub">— evaluated</div>
       </div>
       <div class="donut-widget">
         <div class="w-label">Verdict split</div>
@@ -64,7 +61,7 @@
 
     <div class="main-row">
       <div>
-        <div class="section-label">Recent verdicts (last 10)</div>
+        <div class="section-label">Most recent evaluations (last 10)</div>
         <div class="verdict-grid" id="verdict-grid">
           <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
         </div>
@@ -76,23 +73,13 @@
           <div id="conf-bars"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
         </div>
         <div class="widget">
-          <div class="w-label">Competitor Monitor</div>
+          <div class="w-label">Active HOLDs</div>
           <div id="monitor-list"><span style="color:#94a3b8;font-size:.75rem">No active HOLDs</span></div>
         </div>
-      </div>
-    </div>
-
-    <div class="bottom-row">
-      <div class="widget">
-        <div class="w-label" style="margin-bottom:10px">Verdict Feedback History</div>
-        <div id="fb-history"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet</span></div>
-      </div>
-      <div class="widget">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div class="w-label">Regression Tests</div>
-          <div class="reg-score" id="reg-score">—</div>
+        <div class="widget">
+          <div class="w-label" style="margin-bottom:8px">Recent Feedback</div>
+          <div id="fb-history-side"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet</span></div>
         </div>
-        <div id="reg-list"><span style="color:#94a3b8;font-size:.75rem">No regression tests run yet. Run: python scripts/drift_check.py</span></div>
       </div>
     </div>
   </div>
@@ -151,20 +138,56 @@
 
   <!-- Model Health view -->
   <div class="view" id="view-health">
+
+    <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-tile" id="ht-total-runs" style="border-color:#c7d2fe;background:linear-gradient(135deg,#eef2ff,#fff)">
+        <div class="t-label" style="color:#6366f1">Total Runs</div>
+        <div class="t-num" style="color:#6366f1" id="h-total-runs">—</div>
+        <div class="t-sub">all-time evaluations</div>
+      </div>
+      <div class="stat-tile tile-sw">
+        <div class="t-label">Avg Confidence</div>
+        <div class="t-num" id="h-avg-conf">—</div>
+        <div class="t-sub">P(verdict) live runs</div>
+      </div>
+      <div class="stat-tile tile-ho">
+        <div class="t-label">Low Confidence</div>
+        <div class="t-num" id="h-low-conf">—</div>
+        <div class="t-sub">runs below 0.60</div>
+      </div>
+      <div class="stat-tile tile-st">
+        <div class="t-label">Regression</div>
+        <div class="t-num" id="h-regression">—</div>
+        <div class="t-sub">last canary check</div>
+      </div>
+    </div>
+
     <div class="bottom-row">
       <div class="widget">
         <div class="w-label" style="margin-bottom:12px">Confidence Trend (last 20 live runs)</div>
-        <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
+        <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model confidence data. Run the agent without --dry-run to get real scores.</span></div>
       </div>
       <div class="widget">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div class="w-label">Accuracy Check History</div>
+          <div class="w-label">Canary / Regression History</div>
           <div class="reg-score" id="health-reg-score">—</div>
         </div>
-        <div id="health-reg-list"><span style="color:#94a3b8;font-size:.75rem">No checks run yet</span></div>
+        <div id="health-reg-list"><span style="color:#94a3b8;font-size:.75rem">No checks recorded. Run: python scripts/drift_check.py</span></div>
       </div>
     </div>
+
+    <div class="widget">
+      <div class="w-label" style="margin-bottom:12px">Validation Attempts per Run</div>
+      <div id="health-validation"><span style="color:#94a3b8;font-size:.75rem">Loading…</span></div>
+    </div>
+
+    <div class="widget">
+      <div class="w-label" style="margin-bottom:12px">Human Feedback Log</div>
+      <div id="health-feedback"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use the 👍/👎 buttons on verdict cards.</span></div>
+    </div>
+
   </div>
+
 </div>
 
 <script src="/static/app.js"></script>

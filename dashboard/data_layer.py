@@ -191,6 +191,7 @@ def get_health(log_path: Path | None = None) -> dict:
     records = _load_drift_records(log_path)
     live_runs = [r for r in records if r.get("type") == "live_run"]
     accuracy_checks = [r for r in records if r.get("type") == "accuracy_check"]
+    feedback = [r for r in records if r.get("type") == "human_feedback"]
 
     # Confidence trend: last 20 live runs that have confidence scores
     conf_runs = [
@@ -207,6 +208,7 @@ def get_health(log_path: Path | None = None) -> dict:
         "confidence_trend": conf_runs,
         "last_accuracy": last_accuracy,
         "accuracy_history": accuracy_checks[-10:],
+        "feedback_log": list(reversed(feedback[-20:])),
     }
 
 

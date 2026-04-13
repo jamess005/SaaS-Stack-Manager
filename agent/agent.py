@@ -18,6 +18,7 @@ The agent runs the full pipeline:
   7. Validate output, retry once on failure
   8. Write memo to outputs/
   9. Append to hold_register.json if HOLD verdict
+ 10. Auto-generate plain-English summary using loaded model → outputs/summaries.json
 """
 
 import argparse
@@ -44,6 +45,69 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+_SUMMARIES_PATH = _PROJECT_ROOT / "outputs" / "summaries.json"
+
+_SUMMARY_SYSTEM_PROMPT = (
+    "You are helping a business team understand a software recommendation. "
+    "Read the analyst memo and write 2-3 warm, plain-English sentences explaining "
+    "why the recommendation makes sense for them. Focus on what the new tool does "
+    "better — not technical details, compliance codes, or business rules. "
+    "Be conversational and direct. No bullet points."
+)
+
+
+def _auto_summarise(
+    memo_text: str,
+    memo_filename: str,
+    tokenizer,
+    model,
+    summaries_path: Path = _SUMMARIES_PATH,
+) -> None:
+    """Generate a plain-English summary for memo_text using the already-loaded model."""
+    if tokenizer is None or model is None:
+        return  # dry-run — no model available
+
+    summaries_path.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict = {}
+    if summaries_path.exists():
+        try:
+            existing = json.loads(summaries_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if memo_filename in existing:
+        return  # already summarised
+
+    messages = [
+        {"role": "system", "content": _SUMMARY_SYSTEM_PROMPT},
+        {"role": "user", "content": memo_text[:2000]},
+    ]
+    try:
+        import torch
+        encoded = tokenizer.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        )
+        input_ids = encoded["input_ids"] if hasattr(encoded, "keys") else encoded
+        input_ids = input_ids.to(model.device)
+        attention_mask = torch.ones_like(input_ids)
+        with torch.no_grad():
+            output_ids = model.generate(
+                input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=180,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.1,
+            )
+        new_tokens = output_ids[0][input_ids.shape[-1]:]
+        summary = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+        existing[memo_filename] = summary
+        summaries_path.write_text(json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.info("Summary written for: %s", memo_filename)
+    except Exception as exc:
+        logger.warning("Summary generation skipped: %s", exc)
 
 
 def _resolve_data_root() -> Path:
@@ -210,7 +274,10 @@ def run_agent(
     # ── Step 8: Write output ───────────────────────────────────────────────────
     output_path = _write_output(memo_text, category, competitor_slug, outputs_dir)
 
-    # ── Step 9: Verdict + hold register ───────────────────────────────────────
+    # ── Step 9: Auto-generate plain-English summary ────────────────────────────
+    _auto_summarise(memo_text, output_path.name, tokenizer, model)
+
+    # ── Step 10: Verdict + hold register ──────────────────────────────────────
     verdict = extract_verdict_class(memo_text) or "UNKNOWN"
     logger.info("Verdict: %s", verdict)
 
@@ -223,7 +290,7 @@ def run_agent(
         _append_hold_register(hold_data, register_path)
         hold_registered = True
 
-    # ── Step 10: Drift tracking ────────────────────────────────────────────────
+    # ── Step 11: Drift tracking ────────────────────────────────────────────────
     log_live_run(category, competitor_slug, verdict, is_valid, validation_attempts, confidence)
     if check_accuracy_due():
         logger.info(
