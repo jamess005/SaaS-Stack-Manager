@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 from agent.context_loader import load_context, parse_inbox_filename
-from agent.drift_tracker import check_accuracy_due, extract_quality_signals, log_live_run
+from agent.drift_tracker import check_accuracy_due, log_live_run
 from agent.model_runner import load_model, run_voting
 from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_verdict
 from agent.roi_calculator import calculate_roi, extract_pass1_vars
@@ -178,7 +178,7 @@ def run_agent(
 
     # ── Step 6: Voting pipeline — independent micro-decisions ────────────────
     logger.info("Running independent voting pipeline...")
-    memo_text = run_voting(inbox_text, context, roi_result, tokenizer, model)
+    memo_text, confidence = run_voting(inbox_text, context, roi_result, tokenizer, model)
 
     # ── Step 7: Validate; retry once on failure ────────────────────────────────
     validation_attempts = 1
@@ -187,7 +187,7 @@ def run_agent(
         logger.warning("Validation failed (%d errors). Retrying...", len(errors))
         for err in errors:
             logger.warning("  - %s", err)
-        memo_text = run_voting(
+        memo_text, confidence = run_voting(
             inbox_text,
             context,
             roi_result,
@@ -224,8 +224,7 @@ def run_agent(
         hold_registered = True
 
     # ── Step 10: Drift tracking ────────────────────────────────────────────────
-    quality = extract_quality_signals(memo_text, roi_result, is_valid, validation_attempts)
-    log_live_run(category, competitor_slug, verdict, quality)
+    log_live_run(category, competitor_slug, verdict, is_valid, validation_attempts, confidence)
     if check_accuracy_due():
         logger.info(
             "Drift advisory: 10+ live runs since last accuracy check — "

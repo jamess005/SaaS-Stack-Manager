@@ -39,9 +39,9 @@
     "UK payroll integration (PayAxis native)"
   ],
   "known_limitations": [
-    "GDPR erasure still manual \u2014 no automation",
+    "GDPR erasure still manual — no automation",
     "Priced above current PeoplePulse for comparable feature set",
-    "AI features in roadmap \u2014 not yet shipped"
+    "AI features in roadmap — not yet shipped"
   ],
   "integration_compatibility": [
     "PayAxis",
@@ -50,5 +50,6 @@
     "Slack"
   ],
   "recent_trajectory": "stable",
-  "last_updated": "2024-10-15"
+  "last_updated": "2024-10-15",
+  "scraper_url": ""
 }

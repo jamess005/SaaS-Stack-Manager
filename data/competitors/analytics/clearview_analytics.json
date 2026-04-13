@@ -32,16 +32,16 @@
     "embedded reporting (white-label, Enterprise only)",
     "mobile-responsive dashboards",
     "data lineage tracking",
-    "AI anomaly detection (roadmap \u2014 Q1 2025)",
+    "AI anomaly detection (roadmap — Q1 2025)",
     "dashboard builder",
     "row-level security"
   ],
   "known_limitations": [
-    "White-label embedded reporting requires Enterprise tier (+\u00a317.50/seat)",
+    "White-label embedded reporting requires Enterprise tier (+£17.50/seat)",
     "AI anomaly detection not yet shipped",
     "No ISO27001",
     "Natural language query not on roadmap",
-    "NexusCRM connector has same rate-limit issue as InsightDeck \u2014 under investigation"
+    "NexusCRM connector has same rate-limit issue as InsightDeck — under investigation"
   ],
   "integration_compatibility": [
     "NexusCRM",
@@ -51,5 +51,6 @@
     "Zapier"
   ],
   "recent_trajectory": "moderate_improvement",
-  "last_updated": "2024-10-15"
+  "last_updated": "2024-10-15",
+  "scraper_url": ""
 }

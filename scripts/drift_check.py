@@ -53,21 +53,13 @@ _EXPECTED: dict[str, str] = {
 
 
 def _run_canary(signal_path: Path, tokenizer, model) -> dict:
-    parts = signal_path.stem.split("_", 1)
-    # Parse category using known multi-word prefixes
-    for cat in ("project_mgmt", "crm", "hr", "finance", "analytics"):
-        if signal_path.stem.startswith(cat + "_"):
-            category = cat
-            competitor_slug = signal_path.stem[len(cat) + 1:].rsplit("_", len(signal_path.stem.split("_")) - 2)[0]
-            break
-    else:
-        return {"status": "skip", "file": signal_path.name, "reason": "unrecognised filename"}
-
-    # Re-parse cleanly using longest-prefix match
+    # Re-parse using longest-prefix match
     from agent.context_loader import VALID_CATEGORIES
     from training.generate_signals import SCENARIO_TYPES
+
     competitor_slug = None
     scenario = None
+    category = None
     for cat in sorted(VALID_CATEGORIES, key=len, reverse=True):
         if signal_path.stem.startswith(cat + "_"):
             remainder = signal_path.stem[len(cat) + 1:]
@@ -94,16 +86,16 @@ def _run_canary(signal_path: Path, tokenizer, model) -> dict:
 
     pass1 = extract_pass1_vars(context, parse_signal_payload(inbox_text))
     roi = calculate_roi(pass1)
-    memo = run_lean(inbox_text, context, roi, tokenizer, model)
+    memo, confidence = run_lean(inbox_text, context, roi, tokenizer, model)
     is_valid, _ = validate_lean_output(memo)
     if not is_valid:
-        memo = run_lean(inbox_text, context, roi, tokenizer, model)
+        memo, confidence = run_lean(inbox_text, context, roi, tokenizer, model)
         is_valid, _ = validate_lean_output(memo)
 
     actual = extract_verdict_class(memo)
     expected = _EXPECTED.get(signal_path.stem)
 
-    return {
+    result = {
         "status": "ok",
         "file": signal_path.name,
         "expected": expected,
@@ -111,6 +103,9 @@ def _run_canary(signal_path: Path, tokenizer, model) -> dict:
         "correct": actual == expected,
         "format_valid": is_valid,
     }
+    if confidence:
+        result["confidence"] = confidence
+    return result
 
 
 def main() -> None:
@@ -145,7 +140,11 @@ def main() -> None:
         results.append(r)
         if r["status"] == "ok":
             mark = "[green]✓[/green]" if r["correct"] else "[red]✗[/red]"
-            console.print(f"{r['actual']} {mark}  (expected {r['expected']})")
+            conf_info = ""
+            if "confidence" in r:
+                c = r["confidence"]
+                conf_info = f"  prob={c.get('verdict_token_prob', '?'):.3f} margin={c.get('verdict_margin', '?'):.3f}"
+            console.print(f"{r['actual']} {mark}  (expected {r['expected']}){conf_info}")
         else:
             console.print(f"[yellow]SKIP: {r.get('reason', '')}[/yellow]")
 

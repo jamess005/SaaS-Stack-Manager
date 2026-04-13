@@ -35,7 +35,7 @@
     "real-time event tracking"
   ],
   "known_limitations": [
-    "Designed for product analytics \u2014 not business intelligence",
+    "Designed for product analytics — not business intelligence",
     "No white-label embedded reporting",
     "No data lineage",
     "No ISO27001",
@@ -48,5 +48,6 @@
     "limited BI connectors"
   ],
   "recent_trajectory": "product_analytics_focus",
-  "last_updated": "2024-09-01"
+  "last_updated": "2024-09-01",
+  "scraper_url": ""
 }

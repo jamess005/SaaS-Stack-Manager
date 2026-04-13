@@ -4,6 +4,9 @@
 # Configuration
 python-dotenv>=1.0.0
 
+# Web dashboard
+flask>=3.0.0
+
 # ML / inference
 transformers>=4.45.0
 peft>=0.13.0

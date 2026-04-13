@@ -41,7 +41,7 @@
   ],
   "known_limitations": [
     "Higher per-seat cost than InsightDeck",
-    "NexusCRM connector requires custom API config \u2014 estimated 4hrs setup",
+    "NexusCRM connector requires custom API config — estimated 4hrs setup",
     "Natural language query in English only"
   ],
   "integration_compatibility": [
@@ -52,5 +52,6 @@
     "50+ connectors"
   ],
   "recent_trajectory": "strong_improvement",
-  "last_updated": "2024-11-01"
+  "last_updated": "2024-11-01",
+  "scraper_url": ""
 }

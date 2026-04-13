@@ -144,12 +144,12 @@ def _evaluate_one(
     pass1_payload = extract_pass1_vars(context, parse_signal_payload(inbox_text))
     roi_result = calculate_roi(pass1_payload)
 
-    memo = run_lean(inbox_text, context, roi_result, tokenizer, model)
+    memo, _ = run_lean(inbox_text, context, roi_result, tokenizer, model)
 
     # Retry once on validation failure
     is_valid, _errors = validate_lean_output(memo)
     if not is_valid:
-        memo = run_lean(inbox_text, context, roi_result, tokenizer, model)
+        memo, _ = run_lean(inbox_text, context, roi_result, tokenizer, model)
         is_valid, _ = validate_lean_output(memo)
 
     verdict = extract_verdict_class(memo)

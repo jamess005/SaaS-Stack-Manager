@@ -44,9 +44,9 @@
     "high-volume API"
   ],
   "known_limitations": [
-    "LinkedIn enrichment requires paid add-on (+\u00a3120/mo)",
+    "LinkedIn enrichment requires paid add-on (+£120/mo)",
     "Price jump between Professional and Enterprise is steep",
-    "Complex setup \u2014 typical onboarding 20-30 hours"
+    "Complex setup — typical onboarding 20-30 hours"
   ],
   "integration_compatibility": [
     "InsightDeck",
@@ -56,5 +56,6 @@
     "Slack"
   ],
   "recent_trajectory": "stable_premium",
-  "last_updated": "2024-09-15"
+  "last_updated": "2024-09-15",
+  "scraper_url": ""
 }

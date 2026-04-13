@@ -5,17 +5,17 @@
   "monthly_cost_gbp": 360,
   "seat_count_assumed": 150,
   "pricing_model": "per_seat",
-  "cost_per_seat_gbp": 2.40,
+  "cost_per_seat_gbp": 2.4,
   "pricing_tiers": [
     {
       "tier": "Core",
-      "cost_per_seat_gbp": 2.40,
+      "cost_per_seat_gbp": 2.4,
       "min_seats": 50,
       "notes": "Full HRIS, GDPR automation, SSO included"
     },
     {
       "tier": "Workforce",
-      "cost_per_seat_gbp": 3.60,
+      "cost_per_seat_gbp": 3.6,
       "min_seats": 50,
       "notes": "Adds capacity planning, skills matrix, succession planning"
     }
@@ -58,5 +58,6 @@
   ],
   "recent_trajectory": "growing_uk_market_share",
   "last_updated": "2024-11-01",
-  "notes": "At 150 seats, Core tier = £360/mo vs PeoplePulse £385/mo = £25/mo saving (£300/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net = £108/yr — well below £1,200 threshold on direct saving alone. Operational gains: GDPR automation removes HIGH compliance risk, continuous feedback resolves PeoplePulse's most-flagged issue, eNPS and LMS fill current gaps. PayAxis connector risk is a concern — not native. PeoplePulse contract ends Nov 2025. Strong HOLD candidate — switch case is compelling operationally but economics and contract timing argue for reassessing at renewal."
+  "notes": "At 150 seats, Core tier = £360/mo vs PeoplePulse £385/mo = £25/mo saving (£300/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net = £108/yr — well below £1,200 threshold on direct saving alone. Operational gains: GDPR automation removes HIGH compliance risk, continuous feedback resolves PeoplePulse's most-flagged issue, eNPS and LMS fill current gaps. PayAxis connector risk is a concern — not native. PeoplePulse contract ends Nov 2025. Strong HOLD candidate — switch case is compelling operationally but economics and contract timing argue for reassessing at renewal.",
+  "scraper_url": ""
 }

@@ -35,16 +35,17 @@
     "basic reporting"
   ],
   "known_limitations": [
-    "No SOC2 Type II \u2014 hard block",
+    "No SOC2 Type II — hard block",
     "No SSO on either tier",
     "No real-time bank feeds",
     "No IFRS 15",
-    "No payroll integration \u2014 CSV export only",
-    "Support: business hours only \u2014 no 24/7"
+    "No payroll integration — CSV export only",
+    "Support: business hours only — no 24/7"
   ],
   "integration_compatibility": [
     "Zapier (limited)"
   ],
   "recent_trajectory": "declining_investment",
-  "last_updated": "2024-05-01"
+  "last_updated": "2024-05-01",
+  "scraper_url": ""
 }

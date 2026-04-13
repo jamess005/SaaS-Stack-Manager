@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SaaS Stack Manager</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-dot">S</div>
+    <div class="brand-name">SaaS Stack Manager</div>
+  </div>
+  <nav>
+    <button class="nav-btn active" onclick="showView('dashboard', this)">Dashboard</button>
+    <button class="nav-btn" onclick="showView('competitors', this)">Competitors</button>
+    <button class="nav-btn" onclick="showView('health', this)">Model Health</button>
+  </nav>
+  <div class="hdr-right">
+    <button class="btn btn-green" id="btn-summarise" onclick="runSummarise()">✦ Generate Summaries</button>
+    <button class="btn btn-primary" id="btn-eval" onclick="runEval()">▶ Run Eval</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="status-bar" id="status-bar">
+    <span class="spin">⟳</span>
+    <span id="status-text">Model running…</span>
+  </div>
+
+  <!-- Dashboard view -->
+  <div class="view active" id="view-dashboard">
+    <div class="stat-row">
+      <div class="stat-tile tile-sw">
+        <div class="t-label">Switch</div>
+        <div class="t-num" id="stat-sw">—</div>
+        <div class="t-sub">Action recommended</div>
+      </div>
+      <div class="stat-tile tile-ho">
+        <div class="t-label">Hold</div>
+        <div class="t-num" id="stat-ho">—</div>
+        <div class="t-sub">Watching conditions</div>
+      </div>
+      <div class="stat-tile tile-st">
+        <div class="t-label">Stay</div>
+        <div class="t-num" id="stat-st">—</div>
+        <div class="t-sub">No action needed</div>
+      </div>
+      <div class="stat-tile tile-total">
+        <div class="t-label">Tracked</div>
+        <div class="t-num" id="stat-total">—</div>
+        <div class="t-sub" id="stat-eval-sub">—</div>
+      </div>
+      <div class="donut-widget">
+        <div class="w-label">Verdict split</div>
+        <div class="donut-row">
+          <div class="donut-chart" id="donut"></div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-row">
+      <div>
+        <div class="section-label">Recent verdicts (last 10)</div>
+        <div class="verdict-grid" id="verdict-grid">
+          <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
+        </div>
+      </div>
+      <div class="sidebar">
+        <div class="widget">
+          <div class="w-label">Model Confidence</div>
+          <div style="font-size:.68rem;color:#94a3b8;margin-bottom:8px">P(verdict) from logits · live runs only</div>
+          <div id="conf-bars"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
+        </div>
+        <div class="widget">
+          <div class="w-label">Competitor Monitor</div>
+          <div id="monitor-list"><span style="color:#94a3b8;font-size:.75rem">No active HOLDs</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="widget">
+        <div class="w-label" style="margin-bottom:10px">Verdict Feedback History</div>
+        <div id="fb-history"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet</span></div>
+      </div>
+      <div class="widget">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="w-label">Regression Tests</div>
+          <div class="reg-score" id="reg-score">—</div>
+        </div>
+        <div id="reg-list"><span style="color:#94a3b8;font-size:.75rem">No regression tests run yet. Run: python scripts/drift_check.py</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Competitors view -->
+  <div class="view" id="view-competitors">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="section-label">Competitor Registry</div>
+      <button class="btn btn-ghost" onclick="toggleAddForm()">+ Add Competitor</button>
+    </div>
+    <div class="add-form" id="add-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="fc-category">
+            <option>crm</option><option>finance</option>
+            <option>hr</option><option>project_mgmt</option><option>analytics</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Display name</label>
+          <input id="fc-name" type="text" placeholder="e.g. NovaCRM" oninput="autoSlug()">
+        </div>
+        <div class="form-group">
+          <label>Slug</label>
+          <input id="fc-slug" type="text" placeholder="e.g. novacrm">
+        </div>
+        <div class="form-group">
+          <label>Monthly cost (£)</label>
+          <input id="fc-cost" type="number" placeholder="250">
+        </div>
+        <div class="form-group">
+          <label>Scraper URL</label>
+          <input id="fc-url" type="text" placeholder="https://...">
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="toggleAddForm()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddCompetitor()">Save Competitor</button>
+      </div>
+    </div>
+    <div class="widget" style="padding:0;overflow:hidden">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Category</th><th>Name</th><th>Cost/mo</th>
+            <th>Last Verdict</th><th>Last Run</th><th>Scraper URL</th>
+          </tr>
+        </thead>
+        <tbody id="comp-tbody">
+          <tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Model Health view -->
+  <div class="view" id="view-health">
+    <div class="bottom-row">
+      <div class="widget">
+        <div class="w-label" style="margin-bottom:12px">Confidence Trend (last 20 live runs)</div>
+        <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
+      </div>
+      <div class="widget">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="w-label">Accuracy Check History</div>
+          <div class="reg-score" id="health-reg-score">—</div>
+        </div>
+        <div id="health-reg-list"><span style="color:#94a3b8;font-size:.75rem">No checks run yet</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

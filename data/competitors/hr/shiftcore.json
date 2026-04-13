@@ -5,17 +5,17 @@
   "monthly_cost_gbp": 330,
   "seat_count_assumed": 150,
   "pricing_model": "per_seat",
-  "cost_per_seat_gbp": 2.20,
+  "cost_per_seat_gbp": 2.2,
   "pricing_tiers": [
     {
       "tier": "Standard",
-      "cost_per_seat_gbp": 2.20,
+      "cost_per_seat_gbp": 2.2,
       "min_seats": 25,
       "notes": "Shift scheduling, leave management, basic self-service"
     },
     {
       "tier": "Plus",
-      "cost_per_seat_gbp": 3.40,
+      "cost_per_seat_gbp": 3.4,
       "min_seats": 25,
       "notes": "Adds payroll export, compliance reporting, API access"
     }
@@ -57,5 +57,6 @@
   ],
   "recent_trajectory": "stable_niche_player",
   "last_updated": "2024-08-15",
-  "notes": "At 150 seats, Standard tier = £330/mo vs PeoplePulse £385/mo = £55/mo saving (£660/yr). Migration at 10hrs × £48 = £480, amortised £160/yr. Net = £500/yr — below £1,200 threshold. Critically: does not resolve any of PeoplePulse's known issues. GDPR erasure remains manual, PayAxis integration absent, no performance or onboarding tooling. Designed for shift-based workforces — consultancy use case is a poor fit. STAY verdict — cheap but provides no operational benefit, and audit log not exportable (hard block for HR category)."
+  "notes": "At 150 seats, Standard tier = £330/mo vs PeoplePulse £385/mo = £55/mo saving (£660/yr). Migration at 10hrs × £48 = £480, amortised £160/yr. Net = £500/yr — below £1,200 threshold. Critically: does not resolve any of PeoplePulse's known issues. GDPR erasure remains manual, PayAxis integration absent, no performance or onboarding tooling. Designed for shift-based workforces — consultancy use case is a poor fit. STAY verdict — cheap but provides no operational benefit, and audit log not exportable (hard block for HR category).",
+  "scraper_url": ""
 }

@@ -33,10 +33,10 @@
     "basic onboarding checklist"
   ],
   "known_limitations": [
-    "No SOC2 Type II \u2014 hard block for Meridian",
+    "No SOC2 Type II — hard block for Meridian",
     "No SSO on either tier",
     "No audit log",
-    "No payroll integration native \u2014 CSV export only",
+    "No payroll integration native — CSV export only",
     "No performance, LMS, or surveys on Standard tier",
     "Flat rate attractive but feature set too thin"
   ],
@@ -44,5 +44,6 @@
     "Zapier only"
   ],
   "recent_trajectory": "stagnant",
-  "last_updated": "2024-06-01"
+  "last_updated": "2024-06-01",
+  "scraper_url": ""
 }

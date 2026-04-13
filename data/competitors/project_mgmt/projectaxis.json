@@ -5,17 +5,17 @@
   "monthly_cost_gbp": 330,
   "seat_count_assumed": 150,
   "pricing_model": "per_seat",
-  "cost_per_seat_gbp": 2.20,
+  "cost_per_seat_gbp": 2.2,
   "pricing_tiers": [
     {
       "tier": "Professional",
-      "cost_per_seat_gbp": 2.20,
+      "cost_per_seat_gbp": 2.2,
       "min_seats": 10,
       "notes": "Full feature set including time tracking, client portal, billing integration"
     },
     {
       "tier": "Enterprise",
-      "cost_per_seat_gbp": 3.40,
+      "cost_per_seat_gbp": 3.4,
       "min_seats": 50,
       "notes": "Adds advanced resource management, custom onboarding, dedicated CSM"
     }
@@ -59,5 +59,6 @@
   ],
   "recent_trajectory": "strong_professional_services_focus",
   "last_updated": "2024-10-15",
-  "notes": "At 150 seats, Professional = £330/mo vs TaskBridge £290/mo. TaskBridge also pays ChronoLog £95/mo for time tracking. Net comparison: ProjectAxis £330 vs TaskBridge+ChronoLog £385 = £55/mo saving (£660/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net direct saving = £468/yr — below £1,200 threshold. Operational gains: built-in time tracking (eliminates ChronoLog), client portal with approval (reduces billing disputes), native Slack (eliminates Zapier workaround), capacity planning (eliminates spreadsheet tracking), auto-updating Gantt. All 5 TaskBridge known issues directly addressed. Strong operational case for SWITCH — qualitative value of billing accuracy and client approval workflows is significant for a consulting firm."
+  "notes": "At 150 seats, Professional = £330/mo vs TaskBridge £290/mo. TaskBridge also pays ChronoLog £95/mo for time tracking. Net comparison: ProjectAxis £330 vs TaskBridge+ChronoLog £385 = £55/mo saving (£660/yr). Migration at 12hrs × £48 = £576, amortised £192/yr. Net direct saving = £468/yr — below £1,200 threshold. Operational gains: built-in time tracking (eliminates ChronoLog), client portal with approval (reduces billing disputes), native Slack (eliminates Zapier workaround), capacity planning (eliminates spreadsheet tracking), auto-updating Gantt. All 5 TaskBridge known issues directly addressed. Strong operational case for SWITCH — qualitative value of billing accuracy and client approval workflows is significant for a consulting firm.",
+  "scraper_url": ""
 }

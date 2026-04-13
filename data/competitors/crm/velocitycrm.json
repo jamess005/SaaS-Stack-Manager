@@ -33,17 +33,18 @@
     "mobile app (iOS only, Android in beta)"
   ],
   "known_limitations": [
-    "No SSO on Core tier \u2014 Advanced required",
+    "No SSO on Core tier — Advanced required",
     "No audit log on either tier",
-    "UK data residency not available \u2014 EU (Ireland) only",
+    "UK data residency not available — EU (Ireland) only",
     "No LinkedIn enrichment",
     "Outlook integration via third-party plugin only",
-    "Android app in beta \u2014 unstable"
+    "Android app in beta — unstable"
   ],
   "integration_compatibility": [
     "Zapier",
     "InsightDeck (limited)"
   ],
   "recent_trajectory": "slow_development",
-  "last_updated": "2024-07-01"
+  "last_updated": "2024-07-01",
+  "scraper_url": ""
 }

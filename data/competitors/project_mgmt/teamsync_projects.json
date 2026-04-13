@@ -30,8 +30,8 @@
     "No native time-tracking",
     "No client portal",
     "No resource capacity planning",
-    "Gantt view basic \u2014 no dependency auto-update",
-    "Project management is secondary feature \u2014 not purpose-built",
+    "Gantt view basic — no dependency auto-update",
+    "Project management is secondary feature — not purpose-built",
     "Migration from TaskBridge would mean losing dedicated PM depth"
   ],
   "integration_compatibility": [
@@ -40,5 +40,6 @@
     "Zapier"
   ],
   "recent_trajectory": "bundling_strategy",
-  "last_updated": "2024-10-01"
+  "last_updated": "2024-10-01",
+  "scraper_url": ""
 }

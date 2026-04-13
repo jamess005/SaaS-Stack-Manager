@@ -14,7 +14,7 @@
     },
     {
       "tier": "Enterprise",
-      "cost_per_seat_gbp": 3.50,
+      "cost_per_seat_gbp": 3.5,
       "min_seats": 50,
       "note": "includes SSO, advanced audit log, dedicated CSM"
     }
@@ -53,5 +53,6 @@
     "GitLab"
   ],
   "recent_trajectory": "strong_feature_set_growing",
-  "last_updated": "2025-01-20"
+  "last_updated": "2025-01-20",
+  "scraper_url": ""
 }

@@ -58,5 +58,6 @@
   ],
   "recent_trajectory": "strong_feature_set_fast_iteration",
   "last_updated": "2024-10-20",
-  "notes": "At 22 seats, Growth tier = £462/mo vs NexusCRM £510/mo = £48/mo saving (£576/yr). Migration at 8hrs × £48 = £384 one-time, amortised £128/yr. Net = £448/yr. Direct saving below threshold — operational gains needed. Resolves: email sequence limit, mobile instability, Outlook sync, API rate limits (InsightDeck sync issue). LinkedIn enrichment gap remains but can be addressed with Lusha. Strong operational case for SWITCH at NexusCRM contract renewal (Aug 2025)."
+  "notes": "At 22 seats, Growth tier = £462/mo vs NexusCRM £510/mo = £48/mo saving (£576/yr). Migration at 8hrs × £48 = £384 one-time, amortised £128/yr. Net = £448/yr. Direct saving below threshold — operational gains needed. Resolves: email sequence limit, mobile instability, Outlook sync, API rate limits (InsightDeck sync issue). LinkedIn enrichment gap remains but can be addressed with Lusha. Strong operational case for SWITCH at NexusCRM contract renewal (Aug 2025).",
+  "scraper_url": ""
 }

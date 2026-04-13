@@ -46,7 +46,7 @@
     "audit log for all HR data access"
   ],
   "known_limitations": [
-    "LMS limited to uploading materials \u2014 no course builder",
+    "LMS limited to uploading materials — no course builder",
     "Compensation benchmarking requires Enterprise tier",
     "Reporting suite less flexible than PeoplePulse"
   ],
@@ -58,5 +58,6 @@
     "Slack"
   ],
   "recent_trajectory": "strong_improvement",
-  "last_updated": "2024-11-01"
+  "last_updated": "2024-11-01",
+  "scraper_url": ""
 }

@@ -36,9 +36,9 @@
   "known_limitations": [
     "Time-tracking requires Premium tier",
     "Client portal not available on any tier",
-    "UI complex \u2014 higher training burden for non-technical staff",
-    "Gantt view not auto-updating \u2014 same issue as TaskBridge",
-    "Primarily designed for software teams \u2014 less suited to consulting workflows"
+    "UI complex — higher training burden for non-technical staff",
+    "Gantt view not auto-updating — same issue as TaskBridge",
+    "Primarily designed for software teams — less suited to consulting workflows"
   ],
   "integration_compatibility": [
     "TeamSync",
@@ -47,5 +47,6 @@
     "Zapier"
   ],
   "recent_trajectory": "stable_engineering_focus",
-  "last_updated": "2024-09-01"
+  "last_updated": "2024-09-01",
+  "scraper_url": ""
 }

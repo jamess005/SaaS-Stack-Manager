@@ -43,7 +43,7 @@
   ],
   "known_limitations": [
     "No conversation intelligence / call recording",
-    "AI lead scoring in beta \u2014 enterprise tier only",
+    "AI lead scoring in beta — enterprise tier only",
     "Limited custom object support"
   ],
   "integration_compatibility": [
@@ -53,5 +53,6 @@
     "Zapier"
   ],
   "recent_trajectory": "steady_improvement",
-  "last_updated": "2024-10-01"
+  "last_updated": "2024-10-01",
+  "scraper_url": ""
 }

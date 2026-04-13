@@ -21,7 +21,10 @@
     "soc2_type2": true,
     "gdpr_eu_residency": false,
     "uk_residency": false,
-    "data_residency_regions": ["US-East", "US-West"],
+    "data_residency_regions": [
+      "US-East",
+      "US-West"
+    ],
     "gdpr_dpa_available": true,
     "sso_saml": true,
     "audit_log": true,
@@ -55,5 +58,6 @@
   ],
   "recent_trajectory": "strong_us_market_leader_limited_eu_presence",
   "last_updated": "2024-09-15",
-  "notes": "Feature set is excellent — resolves all VaultLedger known issues including IFRS 15 and multi-currency. However: US-only data residency is a HARD BLOCK. Meridian's EU client engagements (DACH, Benelux) require EU/UK data residency under UK GDPR Article 46. A GDPR DPA alone does not satisfy the residency requirement when data is processed and stored exclusively in the US. Verdict: STAY regardless of feature merit or ROI calculation."
+  "notes": "Feature set is excellent — resolves all VaultLedger known issues including IFRS 15 and multi-currency. However: US-only data residency is a HARD BLOCK. Meridian's EU client engagements (DACH, Benelux) require EU/UK data residency under UK GDPR Article 46. A GDPR DPA alone does not satisfy the residency requirement when data is processed and stored exclusively in the US. Verdict: STAY regardless of feature merit or ROI calculation.",
+  "scraper_url": ""
 }

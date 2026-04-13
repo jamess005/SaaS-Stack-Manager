@@ -58,5 +58,6 @@
   ],
   "recent_trajectory": "strong_growth_uk_focused",
   "last_updated": "2024-10-01",
-  "notes": "At Business tier: £365/mo vs VaultLedger £420/mo = £55/mo saving (£660/yr). Migration at 15hrs × £48 = £720, amortised £240/yr. Net = £420/yr — below £1,200 threshold on direct saving. Resolves: multi-currency (EUR), real-time Barclays feed, audit trail PDF, PayAxis native sync. Does NOT resolve IFRS 15 — roadmap Q3 2025, not GA. If IFRS 15 is the blocking issue, this is a HOLD until Q3 2025 confirmation. Strong candidate once IFRS 15 ships."
+  "notes": "At Business tier: £365/mo vs VaultLedger £420/mo = £55/mo saving (£660/yr). Migration at 15hrs × £48 = £720, amortised £240/yr. Net = £420/yr — below £1,200 threshold on direct saving. Resolves: multi-currency (EUR), real-time Barclays feed, audit trail PDF, PayAxis native sync. Does NOT resolve IFRS 15 — roadmap Q3 2025, not GA. If IFRS 15 is the blocking issue, this is a HOLD until Q3 2025 confirmation. Strong candidate once IFRS 15 ships.",
+  "scraper_url": ""
 }

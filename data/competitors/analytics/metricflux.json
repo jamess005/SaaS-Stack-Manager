@@ -57,5 +57,6 @@
   ],
   "recent_trajectory": "fast_moving_real_time_focus",
   "last_updated": "2024-11-01",
-  "notes": "At Business tier: £290/mo vs InsightDeck £340/mo = £50/mo saving (£600/yr). Migration at 8hrs × £48 = £384, amortised £128/yr. Net = £472/yr — below £1,200 threshold. Resolves: data lineage tracking (compliance gap), anomaly detection, CRM rate limit issue (real-time native connector), mobile view. Does NOT resolve: TaskBridge connector absent (Q2 2025 roadmap), client self-serve embedded reporting. Partial stack coverage is the blocker. Strong HOLD candidate — reassess Q2 2025 when TaskBridge connector ships."
+  "notes": "At Business tier: £290/mo vs InsightDeck £340/mo = £50/mo saving (£600/yr). Migration at 8hrs × £48 = £384, amortised £128/yr. Net = £472/yr — below £1,200 threshold. Resolves: data lineage tracking (compliance gap), anomaly detection, CRM rate limit issue (real-time native connector), mobile view. Does NOT resolve: TaskBridge connector absent (Q2 2025 roadmap), client self-serve embedded reporting. Partial stack coverage is the blocker. Strong HOLD candidate — reassess Q2 2025 when TaskBridge connector ships.",
+  "scraper_url": ""
 }

@@ -42,7 +42,7 @@
     "forms and intake workflows"
   ],
   "known_limitations": [
-    "AI scheduling assistant in beta \u2014 Pro and above only",
+    "AI scheduling assistant in beta — Pro and above only",
     "Reporting less flexible than SprintDesk for engineering teams",
     "Client portal requires Pro tier"
   ],
@@ -55,5 +55,6 @@
     "Zapier"
   ],
   "recent_trajectory": "strong_improvement",
-  "last_updated": "2024-11-01"
+  "last_updated": "2024-11-01",
+  "scraper_url": ""
 }

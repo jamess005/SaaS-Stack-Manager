@@ -5,16 +5,16 @@
   "monthly_cost_gbp": 240,
   "seat_count_assumed": 150,
   "pricing_model": "per_seat",
-  "cost_per_seat_gbp": 1.60,
+  "cost_per_seat_gbp": 1.6,
   "pricing_tiers": [
     {
       "tier": "Team",
-      "cost_per_seat_gbp": 1.60,
+      "cost_per_seat_gbp": 1.6,
       "min_seats": 1
     },
     {
       "tier": "Business",
-      "cost_per_seat_gbp": 2.80,
+      "cost_per_seat_gbp": 2.8,
       "min_seats": 10,
       "notes": "Adds SSO, advanced reporting, API access"
     }
@@ -57,5 +57,6 @@
   ],
   "recent_trajectory": "developer_tool_limited_pm_breadth",
   "last_updated": "2024-07-01",
-  "notes": "Team tier: £240/mo vs TaskBridge £290/mo = £50/mo saving (£600/yr). BUT: SSO required (>10 seats) → must use Business tier at £2.80/seat × 150 = £420/mo — more expensive than TaskBridge. Additionally: no time tracking (ChronoLog cost remains), no client portal, no billing integration, no Gantt. Resolves none of TaskBridge's known issues. Built for software dev teams, not consulting. STAY verdict — SSO tier pricing eliminates saving, and tool is a poor functional fit for consulting project delivery."
+  "notes": "Team tier: £240/mo vs TaskBridge £290/mo = £50/mo saving (£600/yr). BUT: SSO required (>10 seats) → must use Business tier at £2.80/seat × 150 = £420/mo — more expensive than TaskBridge. Additionally: no time tracking (ChronoLog cost remains), no client portal, no billing integration, no Gantt. Resolves none of TaskBridge's known issues. Built for software dev teams, not consulting. STAY verdict — SSO tier pricing eliminates saving, and tool is a poor functional fit for consulting project delivery.",
+  "scraper_url": ""
 }

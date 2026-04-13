@@ -62,5 +62,6 @@
   ],
   "recent_trajectory": "enterprise_focused_feature_complete",
   "last_updated": "2024-09-30",
-  "notes": "Technically resolves all InsightDeck known issues. However: £520/mo vs £340/mo = £180/mo MORE expensive (£2,160/yr cost increase). Migration at 20hrs × £48 = £960, amortised £320/yr. Net = -£2,480/yr (negative ROI). Additionally: requires dedicated analyst resource not currently on staff, and 20+ hours setup exceeds migration budget. Feature excellence is not in question, but economic case is strongly negative. STAY verdict — cost increase and implementation overhead make this non-viable despite feature quality."
+  "notes": "Technically resolves all InsightDeck known issues. However: £520/mo vs £340/mo = £180/mo MORE expensive (£2,160/yr cost increase). Migration at 20hrs × £48 = £960, amortised £320/yr. Net = -£2,480/yr (negative ROI). Additionally: requires dedicated analyst resource not currently on staff, and 20+ hours setup exceeds migration budget. Feature excellence is not in question, but economic case is strongly negative. STAY verdict — cost increase and implementation overhead make this non-viable despite feature quality.",
+  "scraper_url": ""
 }

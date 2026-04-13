@@ -5,16 +5,16 @@
   "monthly_cost_gbp": 360,
   "seat_count_assumed": 150,
   "pricing_model": "per_seat",
-  "cost_per_seat_gbp": 2.40,
+  "cost_per_seat_gbp": 2.4,
   "pricing_tiers": [
     {
       "tier": "Essentials",
-      "cost_per_seat_gbp": 2.40,
+      "cost_per_seat_gbp": 2.4,
       "min_seats": 20
     },
     {
       "tier": "Growth",
-      "cost_per_seat_gbp": 3.80,
+      "cost_per_seat_gbp": 3.8,
       "min_seats": 20,
       "note": "includes LMS, compensation benchmarking"
     }
@@ -54,5 +54,6 @@
     "Zapier"
   ],
   "recent_trajectory": "compliance_and_automation_focus",
-  "last_updated": "2025-02-01"
+  "last_updated": "2025-02-01",
+  "scraper_url": ""
 }

@@ -29,17 +29,17 @@
     "ifrs15_compliant": false
   },
   "features": [
-    "invoicing (GBP, USD, AUD \u2014 no EUR native)",
+    "invoicing (GBP, USD, AUD — no EUR native)",
     "expense management",
-    "bank reconciliation (Barclays native feed \u2014 real-time)",
+    "bank reconciliation (Barclays native feed — real-time)",
     "VAT / MTD filing",
     "UK payroll sync (PayAxis)",
     "reporting and P&L",
     "24/7 support SLA"
   ],
   "known_limitations": [
-    "EUR invoicing not supported \u2014 GBP only with manual conversion",
-    "Audit trail export is CSV only \u2014 no PDF with digital signature",
+    "EUR invoicing not supported — GBP only with manual conversion",
+    "Audit trail export is CSV only — no PDF with digital signature",
     "IFRS 15 revenue recognition not available",
     "Multi-entity consolidation not available"
   ],
@@ -50,5 +50,6 @@
     "Zapier"
   ],
   "recent_trajectory": "active_development",
-  "last_updated": "2024-10-01"
+  "last_updated": "2024-10-01",
+  "scraper_url": ""
 }

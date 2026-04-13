@@ -41,8 +41,8 @@ def test_run_lean_dry_run_returns_valid_verdict():
     context = load_context("finance", "ledgerflow", _DATA_ROOT)
     signal = parse_signal_payload("{}")
     roi = calculate_roi(extract_pass1_vars(context, signal))
-    result = run_lean("{}", context, roi, None, None)
-    verdict = extract_verdict_class(result)
+    text, _ = run_lean("{}", context, roi, None, None)
+    verdict = extract_verdict_class(text)
     assert verdict in {"SWITCH", "STAY", "HOLD"}
     del os.environ["AGENT_DRY_RUN"]
 
@@ -67,12 +67,13 @@ def test_run_lean_compliance_fail_short_circuits():
 
     with patch.object(mr, '_is_dry_run', return_value=False), \
          patch.object(mr, '_generate', side_effect=lambda *a, **kw: "ANALYSIS: fake\nVERDICT: SWITCH") as mock_gen:
-        result = run_lean("{}", context, roi, None, None)
-        verdict = extract_verdict_class(result)
+        text, confidence = run_lean("{}", context, roi, None, None)
+        verdict = extract_verdict_class(text)
         assert verdict == "STAY"
+        assert confidence is None
         # _generate should NOT have been called for the verdict step
         # It may be called for compliance_changes parsing (0 or 1 times, not for verdict)
-        # The key check is that result is STAY from Python gate
-        assert "compliance" in result.lower() or verdict == "STAY"
+        # The key check is that text is STAY from Python gate
+        assert "compliance" in text.lower() or verdict == "STAY"
 
     del os.environ["AGENT_DRY_RUN"]

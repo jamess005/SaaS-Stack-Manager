@@ -284,6 +284,122 @@ def _generate(tokenizer, model, messages: list[dict], max_new_tokens: int, tempe
     return tokenizer.decode(new_tokens, skip_special_tokens=True)
 
 
+# ── Confidence extraction ──────────────────────────────────────────────────────
+
+_VERDICT_WORDS = ["SWITCH", "STAY", "HOLD"]
+
+
+def _extract_verdict_confidence(tokenizer, scores, generated_ids) -> dict | None:
+    """
+    Extract the probability distribution over SWITCH/STAY/HOLD at the verdict token position.
+
+    Walks the generated token sequence until it finds a verdict word that follows
+    "VERDICT:" in the accumulated text, then reads the softmax distribution over
+    the three verdict token IDs from that position's logit scores.
+
+    Returns None if the verdict token cannot be located (e.g. malformed output).
+    """
+    import math
+
+    import torch
+
+    # Encode each verdict word to its primary token ID.
+    # For Qwen2.5 these are single tokens; the first sub-token is used if not.
+    verdict_tids: dict[str, int] = {}
+    for word in _VERDICT_WORDS:
+        tids = tokenizer.encode(word, add_special_tokens=False)
+        if tids:
+            verdict_tids[word] = tids[0]
+
+    if not verdict_tids:
+        return None
+
+    tid_to_word = {v: k for k, v in verdict_tids.items()}
+    accumulated = ""
+
+    for pos, token_id in enumerate(generated_ids.tolist()):
+        if pos >= len(scores):
+            break
+        accumulated += tokenizer.decode([token_id], skip_special_tokens=True)
+
+        if token_id not in tid_to_word:
+            continue
+
+        word = tid_to_word[token_id]
+        acc_upper = accumulated.upper()
+        label_pos = acc_upper.rfind("VERDICT:")
+        word_pos = acc_upper.rfind(word)
+        if label_pos == -1 or word_pos <= label_pos:
+            continue
+
+        # Found verdict token — extract probability distribution
+        probs = torch.softmax(scores[pos].float(), dim=-1)
+        vprobs = {
+            w: float(probs[tid].item())
+            for w, tid in verdict_tids.items()
+            if tid < probs.shape[0]
+        }
+        if word not in vprobs:
+            return None
+
+        total = sum(vprobs.values())
+        if total > 0:
+            norm = [v / total for v in vprobs.values()]
+            entropy = -sum(p * math.log2(p) if p > 0 else 0.0 for p in norm)
+        else:
+            entropy = 0.0
+
+        sorted_p = sorted(vprobs.values(), reverse=True)
+        margin = sorted_p[0] - sorted_p[1] if len(sorted_p) >= 2 else 1.0
+
+        return {
+            "verdict_token_prob": round(vprobs[word], 4),
+            "verdict_entropy_bits": round(entropy, 4),
+            "verdict_margin": round(margin, 4),
+            "verdict_probs": {k: round(v, 4) for k, v in vprobs.items()},
+        }
+
+    return None
+
+
+def _generate_with_scores(
+    tokenizer, model, messages: list[dict], max_new_tokens: int
+) -> tuple[str, dict | None]:
+    """
+    Greedy generation returning (text, confidence_dict).
+
+    Uses output_scores=True so the logit distribution at the verdict token
+    position can be extracted as a real model-internal confidence signal.
+    Used only for verdict-generating calls (run_lean, run_voting Vote 4).
+    """
+    import torch
+
+    encoded = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    )
+    input_ids = encoded["input_ids"] if hasattr(encoded, "keys") else encoded
+    input_ids = input_ids.to(model.device)
+    attention_mask = torch.ones_like(input_ids)
+    input_length = input_ids.shape[-1]
+
+    with torch.no_grad():
+        outputs = model.generate(
+            input_ids,
+            attention_mask=attention_mask,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+            repetition_penalty=1.1,
+            output_scores=True,
+            return_dict_in_generate=True,
+        )
+
+    generated_ids = outputs.sequences[0][input_length:]
+    text = tokenizer.decode(generated_ids, skip_special_tokens=True)
+    confidence = _extract_verdict_confidence(tokenizer, outputs.scores, generated_ids)
+    return text.strip(), confidence
+
+
 # ── Multi-step helpers ─────────────────────────────────────────────────────────
 
 
@@ -844,7 +960,7 @@ def run_voting(
     tokenizer: Any,
     model: Any,
     retry_hint: list[str] | None = None,
-) -> str:
+) -> tuple[str, dict | None]:
     """
     Run the independent voting pipeline.
 
@@ -860,13 +976,14 @@ def run_voting(
     steps 1-3 plus ROI data.
 
     Returns:
-        The full verdict memo as a plain-text string.
+        (memo_text, confidence_dict) where confidence_dict contains model-internal
+        probability signals from the verdict token. None in dry-run mode.
     """
     if _is_dry_run():
         fixture = _load_fixture(context["category"], context["competitor_slug"])
         memo = fixture.get("memo_text", "")
         logger.debug("Dry-run voting memo (%d chars).", len(memo))
-        return memo
+        return memo, None
 
     signal = parse_signal_payload(inbox_text) or {}
 
@@ -901,14 +1018,16 @@ def run_voting(
                             max_new_tokens=400, temperature=0.3)
 
     # Vote 4: Verdict (sees summaries from votes 1-3 + ROI, but NOT raw context)
+    # Use _generate_with_scores to capture real model-internal confidence signals.
     logger.info("Vote 4/4: Verdict")
     verdict_msgs = [
         {"role": "system", "content": SYS_VERDICT},
         {"role": "user", "content": _build_verdict_user(
             context, roi_result, compliance_result, push_result, pull_result)},
     ]
-    verdict_result = _generate(tokenizer, model, verdict_msgs,
-                               max_new_tokens=250, temperature=0.1)
+    verdict_result, confidence = _generate_with_scores(
+        tokenizer, model, verdict_msgs, max_new_tokens=250
+    )
     logger.info("Verdict: %s", verdict_result.strip())
 
     # Assemble the full memo from the 4 independent outputs
@@ -917,7 +1036,7 @@ def run_voting(
     )
 
     logger.debug("Voting memo (%d chars).", len(memo))
-    return memo.strip()
+    return memo.strip(), confidence
 
 
 def run_lean(
@@ -926,9 +1045,12 @@ def run_lean(
     roi_result: dict,
     tokenizer: Any,
     model: Any,
-) -> str:
+) -> tuple[str, dict | None]:
     """
     Lean single-pass pipeline.
+
+    Returns (memo_text, confidence_dict) where confidence_dict is None in
+    dry-run mode or when the verdict token cannot be located.
 
     1. Parse signal for compliance_changes.
     2. If compliance_changes present and model available: tiny constrained call to
@@ -940,7 +1062,7 @@ def run_lean(
     """
     if _is_dry_run():
         fixture = _load_fixture(context["category"], context.get("competitor_slug", ""))
-        return fixture.get("memo_text", "ANALYSIS: Dry run — no model call.\nVERDICT: SWITCH")
+        return fixture.get("memo_text", "ANALYSIS: Dry run — no model call.\nVERDICT: SWITCH"), None
 
     from agent.prompts import _CATEGORY_RULES_COMPACT, SYS_VERDICT_LEAN
 
@@ -971,7 +1093,7 @@ def run_lean(
             f"ANALYSIS: Compliance blocks present — {failure_str}. "
             f"Hard compliance blocks are non-negotiable. VERDICT is STAY.\n"
             f"VERDICT: STAY"
-        )
+        ), None
 
     logger.info("Compliance PASS (Python gate)")
 
@@ -983,9 +1105,9 @@ def run_lean(
         {"role": "user", "content": user_content},
     ]
 
-    result = _generate(tokenizer, model, messages, max_new_tokens=700, temperature=0.0)
+    result, confidence = _generate_with_scores(tokenizer, model, messages, max_new_tokens=700)
     logger.debug("run_lean output (%d chars): %s", len(result), result[:100])
-    return result.strip()
+    return result.strip(), confidence
 
 
 _HOLD_NOTE_KW = frozenset([
