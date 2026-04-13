@@ -67,7 +67,7 @@ async function pollStatus() {
 async function loadDashboard() {
   const [statsR, verdictsR, healthR] = await Promise.all([
     fetch('/api/stats'),
-    fetch('/api/verdicts?n=10'),
+    fetch('/api/verdicts?n=12'),
     fetch('/api/health'),
   ]);
   const stats    = await statsR.json();
@@ -162,7 +162,7 @@ function feedbackRow(filename, verdict) {
       <span class="fb-label">Correct?</span>
       <div class="fb-btns">
         <button class="fb-btn" id="yes-${id}" onclick="voteFb('${filename}','${verdict}',true,'${id}')">👍</button>
-        <button class="fb-btn" id="no-${id}"  onclick="openFbNote('${filename}','${verdict}','${id}')">👎</button>
+        <button class="fb-btn" id="no-${id}"  onclick="openFbNote('${id}')">👎</button>
       </div>
     </div>
     <div class="fb-note" id="note-${id}">
@@ -177,7 +177,7 @@ function toggleAcc(btn) {
   btn.nextElementSibling.classList.toggle('open');
 }
 
-function openFbNote(filename, verdict, id) {
+function openFbNote(id) {
   $(`yes-${id}`)?.classList.remove('yes');
   $(`no-${id}`)?.classList.add('no');
   $(`note-${id}`).style.display = 'block';
