@@ -77,6 +77,7 @@ def get_recent_verdicts(
     summaries_path = summaries_path if summaries_path is not None else _SUMMARIES
     records = _load_drift_records(log_path)
     live_runs = [r for r in records if r.get("type") == "live_run"]
+    live_runs.sort(key=lambda r: r.get("ts", ""))
     recent = live_runs[-n:]
     summaries = _load_summaries(summaries_path)
 
