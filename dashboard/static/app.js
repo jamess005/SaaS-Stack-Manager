@@ -520,7 +520,7 @@ async function loadHealth() {
       const col = confColor(t.prob);
       const pct = t.prob != null ? Math.round(t.prob * 100) : 0;
       return `<div class="conf-item">
-        <div class="conf-name" style="width:110px">${t.ts} ${displayName(t.competitor)}</div>
+        <div class="conf-name">${displayName(t.competitor)}</div>
         <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
         <div class="conf-val" style="color:${col}">${t.prob?.toFixed(3) ?? '—'}</div>
       </div>`;

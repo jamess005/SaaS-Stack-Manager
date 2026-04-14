@@ -126,7 +126,7 @@ nav { display: flex; gap: 2px; }
 /* Confidence bars */
 .conf-item { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
 .conf-item:last-child { margin-bottom: 0; }
-.conf-name { font-size: .72rem; width: 75px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.conf-name { font-size: .72rem; width: 140px; min-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
 .conf-track { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
 .conf-fill { height: 100%; border-radius: 3px; transition: width .4s; }
 .conf-val { font-size: .7rem; font-family: monospace; width: 32px; text-align: right; }
