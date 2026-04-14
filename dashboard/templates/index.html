@@ -102,7 +102,10 @@
   <!-- History view -->
   <div class="view" id="view-history">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <div class="section-label">Verdict History</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="section-label">Verdict History</div>
+        <span id="history-count" style="font-size:.72rem;color:var(--muted);font-weight:500"></span>
+      </div>
       <div style="display:flex;gap:8px;align-items:center">
         <select id="history-filter" onchange="loadHistory()" style="font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
           <option value="all">All verdicts</option>
@@ -190,7 +193,7 @@
       <div class="stat-tile tile-ho">
         <div class="t-label">Low Confidence</div>
         <div class="t-num" id="h-low-conf">—</div>
-        <div class="t-sub">runs below 0.60</div>
+        <div class="t-sub">runs below 0.65</div>
       </div>
       <div class="stat-tile tile-st">
         <div class="t-label">Regression</div>

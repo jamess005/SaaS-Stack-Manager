@@ -26,6 +26,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -50,12 +51,38 @@ logger = logging.getLogger(__name__)
 _SUMMARIES_PATH = _PROJECT_ROOT / "outputs" / "summaries.json"
 
 _SUMMARY_SYSTEM_PROMPT = (
-    "You are helping a business team understand a software recommendation. "
-    "Read the analyst memo and write 2-3 warm, plain-English sentences explaining "
-    "why the recommendation makes sense for them. Focus on what the new tool does "
-    "better — not technical details, compliance codes, or business rules. "
-    "Be conversational and direct. No bullet points."
+    "You are an internal analyst writing a brief for a decision-maker. "
+    "Read the verdict memo and write 2-3 factual sentences that state: "
+    "what the key push issue(s) are with the current tool, what the competitor "
+    "change(s) address, whether the ROI threshold was met, and what the verdict is. "
+    "Use neutral, precise language. Do not use promotional or persuasive phrasing. "
+    "No bullet points."
 )
+
+
+def _build_summary_prompt(memo_text: str) -> str:
+    """Extract key fields from memo and build a structured summary prompt."""
+    def _find(pattern):
+        m = re.search(pattern, memo_text, re.IGNORECASE | re.MULTILINE)
+        return m.group(1).strip() if m else ""
+
+    verdict = _find(r"^VERDICT:\s*(\w+)") or _find(r"VERDICT:\s*(\w+)")
+    competitor = _find(r"^COMPETITOR:\s*(.+)")
+    current = _find(r"^CURRENT TOOL:\s*(.+)")
+    evidence_block = _find(r"EVIDENCE:\s*(.+?)(?=\n[A-Z][A-Z\s]+:|$)")
+    quotes = re.findall(r'"([^"]+)"', evidence_block)
+
+    lines = [
+        f"Verdict: {verdict}",
+        f"Current tool: {current}",
+        f"Recommended: {competitor}",
+        "",
+        "Key evidence from memo:",
+    ]
+    for q in quotes[:4]:
+        lines.append(f'- "{q}"')
+    lines += ["", "Full memo:", memo_text[:1200]]
+    return "\n".join(lines)
 
 
 def _auto_summarise(
@@ -82,7 +109,7 @@ def _auto_summarise(
 
     messages = [
         {"role": "system", "content": _SUMMARY_SYSTEM_PROMPT},
-        {"role": "user", "content": memo_text[:2000]},
+        {"role": "user", "content": _build_summary_prompt(memo_text)},
     ]
     try:
         import torch

@@ -4,17 +4,30 @@ const $ = id => document.getElementById(id);
 
 // Competitor name cache — loaded once from /api/competitors
 let _compNames = {};
+let _compLastUpdated = {};
 async function _ensureCompNames() {
   if (Object.keys(_compNames).length) return;
   try {
     const r = await fetch('/api/competitors');
     const comps = await r.json();
-    for (const c of comps) _compNames[c.slug] = c.name;
+    for (const c of comps) {
+      _compNames[c.slug] = c.name;
+      if (c.last_updated) _compLastUpdated[c.slug] = c.last_updated;
+    }
   } catch (_) {}
 }
 
 function displayName(slug) {
   return _compNames[slug] || slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function displayNameVersion(slug) {
+  const name = displayName(slug);
+  const lu = _compLastUpdated[slug];
+  if (!lu) return name;
+  // "2024-10-20" → "v24.10"
+  const ver = 'v' + lu.slice(2, 4) + '.' + lu.slice(5, 7);
+  return `${name} <span class="ver-tag">${ver}</span>`;
 }
 
 function fmtCategory(cat) {
@@ -24,7 +37,7 @@ function fmtCategory(cat) {
 
 function confColor(p) {
   if (p === null || p === undefined) return '#94a3b8';
-  return p >= 0.80 ? '#22c55e' : p >= 0.60 ? '#f59e0b' : '#ef4444';
+  return p >= 0.80 ? '#22c55e' : p >= 0.65 ? '#f59e0b' : '#ef4444';
 }
 
 function verdictBadge(v) {
@@ -365,6 +378,14 @@ async function loadHistory() {
   const filter = $('history-filter')?.value || 'all';
   const filtered = filter === 'all' ? all : all.filter(v => v.verdict === filter);
 
+  // Update total count in header
+  const countEl = $('history-count');
+  if (countEl) {
+    countEl.textContent = filter === 'all'
+      ? `${all.length} verdict${all.length !== 1 ? 's' : ''}`
+      : `${filtered.length} of ${all.length}`;
+  }
+
   const el = $('history-list');
   if (!filtered.length) {
     el.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px">No verdicts found.</div>';
@@ -384,7 +405,7 @@ async function loadHistory() {
         <div style="min-width:80px">${verdictBadge(v.verdict)}</div>
         <div class="rank-body">
           <div class="rank-header">
-            <span class="rank-name">${displayName(v.competitor)}</span>
+            <span class="rank-name">${displayNameVersion(v.competitor)}</span>
             <span class="rank-cat">${fmtCategory(v.category)}</span>
             <span class="rank-conf" style="color:${col}">P=${probStr}</span>
           </div>
@@ -479,7 +500,7 @@ async function loadHealth() {
   const withConf = allV.filter(v => v.verdict_token_prob != null);
   if (withConf.length) {
     const avg = withConf.reduce((s, v) => s + v.verdict_token_prob, 0) / withConf.length;
-    const low = withConf.filter(v => v.verdict_token_prob < 0.60).length;
+    const low = withConf.filter(v => v.verdict_token_prob < 0.65).length;
     $('h-avg-conf').textContent = avg.toFixed(2);
     $('h-low-conf').textContent = low;
   } else {
@@ -730,7 +751,7 @@ async function loadReview() {
     const margin = item.verdict_margin != null ? ` margin=${item.verdict_margin.toFixed(3)}` : '';
     const summarySection = item.summary
       ? `<div class="review-summary">${item.summary}</div>`
-      : `<div class="review-summary review-summary-pending">Summary pending — run python scripts/summarise.py</div>`;
+      : `<div class="review-summary review-summary-pending">Summary pending</div>`;
     return `
       <div class="review-card" id="review-card-${id}">
         <div class="review-card-top">
