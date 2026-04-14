@@ -27,11 +27,12 @@ from dashboard.data_layer import (  # noqa: E402
 )
 
 _SYSTEM_PROMPT = (
-    "You are helping a business team understand a software recommendation. "
-    "Read the analyst memo and write 2-3 warm, plain-English sentences explaining "
-    "why the recommendation makes sense for them. Focus on what the new tool does "
-    "better — not technical details, compliance codes, or business rules. "
-    "Be conversational and direct. No bullet points."
+    "You are an internal analyst writing a brief for a decision-maker. "
+    "Read the verdict memo and write 2-3 factual sentences that state: "
+    "what the key push issue(s) are with the current tool, what the competitor "
+    "change(s) address, whether the ROI threshold was met, and what the verdict is. "
+    "Use neutral, precise language. Do not use promotional or persuasive phrasing. "
+    "No bullet points."
 )
 
 

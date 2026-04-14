@@ -44,8 +44,18 @@ def get_stats(
     records = _load_drift_records(log_path)
     live_runs = [r for r in records if r.get("type") == "live_run"]
 
-    counts: dict[str, int] = {"SWITCH": 0, "HOLD": 0, "STAY": 0}
+    # Use latest verdict per competitor (not raw counts of all historical runs)
+    latest: dict[str, dict] = {}
     for r in live_runs:
+        key = r.get("competitor", "")
+        if not key:
+            continue
+        prev = latest.get(key)
+        if prev is None or r.get("ts", "") > prev.get("ts", ""):
+            latest[key] = r
+
+    counts: dict[str, int] = {"SWITCH": 0, "HOLD": 0, "STAY": 0}
+    for r in latest.values():
         v = r.get("verdict", "")
         if v in counts:
             counts[v] += 1
@@ -213,6 +223,219 @@ def get_health(log_path: Path | None = None) -> dict:
     }
 
 
+def get_rankings(
+    log_path: Path | None = None,
+    summaries_path: Path | None = None,
+) -> list[dict]:
+    """Return current SWITCH verdicts ranked by confidence, most recent per competitor."""
+    log_path = log_path or _DRIFT_LOG
+    summaries_path = summaries_path or _SUMMARIES
+    records = _load_drift_records(log_path)
+    summaries = _load_summaries(summaries_path)
+
+    # Latest verdict per competitor
+    latest: dict[str, dict] = {}
+    for r in records:
+        if r.get("type") != "live_run":
+            continue
+        key = r.get("competitor", "")
+        if not key:
+            continue
+        prev = latest.get(key)
+        if prev is None or r.get("ts", "") > prev.get("ts", ""):
+            latest[key] = r
+
+    switches = [r for r in latest.values() if r.get("verdict") == "SWITCH"]
+    switches.sort(key=lambda r: r.get("verdict_token_prob") or 0, reverse=True)
+
+    result = []
+    for rank, r in enumerate(switches, 1):
+        ts_date = r.get("ts", "")[:10]
+        cat = r.get("category", "")
+        comp = r.get("competitor", "")
+        memo_fn = f"{ts_date}-{cat}-{comp}.md"
+        result.append({
+            "rank": rank,
+            "category": cat,
+            "competitor": comp,
+            "confidence": r.get("verdict_token_prob"),
+            "margin": r.get("verdict_margin"),
+            "ts": r.get("ts", ""),
+            "summary": summaries.get(memo_fn),
+            "memo_filename": memo_fn,
+        })
+    return result
+
+
+def get_review_queue(
+    log_path: Path | None = None,
+    summaries_path: Path | None = None,
+    conf_threshold: float = 0.65,
+) -> dict:
+    """Return low-confidence live_run records not yet reviewed by a human.
+
+    Returns the latest run per competitor where verdict_token_prob < conf_threshold
+    and no human_feedback record exists for that memo filename yet.
+    """
+    log_path = log_path if log_path is not None else _DRIFT_LOG
+    summaries_path = summaries_path if summaries_path is not None else _SUMMARIES
+    records = _load_drift_records(log_path)
+    live_runs = [r for r in records if r.get("type") == "live_run"]
+    summaries = _load_summaries(summaries_path)
+
+    reviewed = {
+        r["memo_filename"]
+        for r in records
+        if r.get("type") == "human_feedback" and r.get("memo_filename")
+    }
+
+    # Latest run per competitor
+    latest: dict[str, dict] = {}
+    for r in live_runs:
+        key = r.get("competitor", "")
+        if not key:
+            continue
+        prev = latest.get(key)
+        if prev is None or r.get("ts", "") > prev.get("ts", ""):
+            latest[key] = r
+
+    queue = []
+    for r in latest.values():
+        prob = r.get("verdict_token_prob")
+        if prob is None or prob >= conf_threshold:
+            continue
+        ts = r.get("ts", "")[:10]
+        cat = r.get("category", "")
+        comp = r.get("competitor", "")
+        memo_fn = f"{ts}-{cat}-{comp}.md"
+        if memo_fn in reviewed:
+            continue
+        queue.append({
+            "memo_filename": memo_fn,
+            "competitor": comp,
+            "category": cat,
+            "verdict": r.get("verdict", ""),
+            "verdict_token_prob": prob,
+            "verdict_margin": r.get("verdict_margin"),
+            "ts": ts,
+            "summary": summaries.get(memo_fn),
+        })
+
+    queue.sort(key=lambda x: x["verdict_token_prob"] or 1.0)
+    return {"queue": queue, "count": len(queue)}
+
+
+def get_active_holds(
+    log_path: Path | None = None,
+    summaries_path: Path | None = None,
+    outputs_dir: Path | None = None,
+) -> list[dict]:
+    """Return latest HOLD verdicts (most recent per competitor)."""
+    log_path = log_path or _DRIFT_LOG
+    summaries_path = summaries_path or _SUMMARIES
+    outputs_dir = outputs_dir or _OUTPUTS_DIR
+    records = _load_drift_records(log_path)
+    summaries = _load_summaries(summaries_path)
+
+    latest: dict[str, dict] = {}
+    for r in records:
+        if r.get("type") != "live_run":
+            continue
+        key = r.get("competitor", "")
+        if not key:
+            continue
+        prev = latest.get(key)
+        if prev is None or r.get("ts", "") > prev.get("ts", ""):
+            latest[key] = r
+
+    holds = [r for r in latest.values() if r.get("verdict") == "HOLD"]
+    holds.sort(key=lambda r: r.get("ts", ""), reverse=True)
+
+    result = []
+    for r in holds:
+        ts_date = r.get("ts", "")[:10]
+        cat = r.get("category", "")
+        comp = r.get("competitor", "")
+        memo_fn = f"{ts_date}-{cat}-{comp}.md"
+
+        # Try to extract REASSESS CONDITION from the memo
+        reassess = ""
+        review_by = ""
+        memo_path = outputs_dir / memo_fn
+        if memo_path.exists():
+            text = memo_path.read_text(encoding="utf-8")
+            import re as _re
+            m = _re.search(r"REASSESS CONDITION:\s*(.+)", text)
+            if m:
+                reassess = m.group(1).strip()
+            m2 = _re.search(r"REVIEW BY:\s*(\S+)", text)
+            if m2:
+                review_by = m2.group(1).strip()
+
+        result.append({
+            "category": cat,
+            "competitor": comp,
+            "confidence": r.get("verdict_token_prob"),
+            "ts": r.get("ts", ""),
+            "memo_filename": memo_fn,
+            "summary": summaries.get(memo_fn),
+            "reassess_condition": reassess,
+            "review_by": review_by,
+        })
+    return result
+
+
+def get_all_verdicts(
+    log_path: Path | None = None,
+    summaries_path: Path | None = None,
+) -> list[dict]:
+    """Return ALL live_run records, most recent first, with summary."""
+    log_path = log_path or _DRIFT_LOG
+    summaries_path = summaries_path or _SUMMARIES
+    records = _load_drift_records(log_path)
+    summaries = _load_summaries(summaries_path)
+    live_runs = [r for r in records if r.get("type") == "live_run"]
+    live_runs.sort(key=lambda r: r.get("ts", ""), reverse=True)
+
+    result = []
+    for run in live_runs:
+        ts = run.get("ts", "")[:10]
+        category = run.get("category", "")
+        competitor = run.get("competitor", "")
+        memo_fn = f"{ts}-{category}-{competitor}.md"
+        result.append({
+            **run,
+            "memo_filename": memo_fn,
+            "summary": summaries.get(memo_fn),
+        })
+    return result
+
+
+def clean_outputs(
+    outputs_dir: Path | None = None,
+    log_path: Path | None = None,
+    summaries_path: Path | None = None,
+    lock_path: Path | None = None,
+) -> dict:
+    """Remove generated memos, reset drift log and summaries. Returns counts."""
+    outputs_dir = outputs_dir or _OUTPUTS_DIR
+    log_path = log_path or _DRIFT_LOG
+    summaries_path = summaries_path or _SUMMARIES
+    lock_path = lock_path or _LOCK_FILE
+
+    removed = 0
+    for md in outputs_dir.glob("*.md"):
+        md.unlink()
+        removed += 1
+    if log_path.exists():
+        log_path.write_text("", encoding="utf-8")
+    if summaries_path.exists():
+        summaries_path.write_text("{}", encoding="utf-8")
+    lock_path.unlink(missing_ok=True)
+
+    return {"memos_removed": removed}
+
+
 def is_model_busy(lock_path: Path | None = None) -> bool:
     lock_path = lock_path if lock_path is not None else _LOCK_FILE
     return lock_path.exists()
@@ -227,3 +450,51 @@ def set_model_busy(task: str, lock_path: Path | None = None) -> None:
 def clear_model_busy(lock_path: Path | None = None) -> None:
     lock_path = lock_path if lock_path is not None else _LOCK_FILE
     lock_path.unlink(missing_ok=True)
+
+
+_FEEDBACK_PAIRS = _PROJECT_ROOT / "training" / "feedback_pairs.jsonl"
+_DPO_ADAPTER = _PROJECT_ROOT / "training" / "checkpoints_dpo"
+
+
+def get_feedback_queue(log_path: Path | None = None) -> dict:
+    """Count actionable corrections awaiting retraining."""
+    log_path = log_path or _DRIFT_LOG
+    records = _load_drift_records(log_path)
+
+    # Human feedback corrections (wrong verdicts)
+    human_corrections = [
+        r for r in records
+        if r.get("type") == "human_feedback"
+        and not r.get("correct", True)
+        and r.get("stated_verdict", "") != r.get("actual_verdict", "")
+    ]
+    # Deduplicate by memo_filename (latest wins)
+    seen: dict[str, dict] = {}
+    for fb in human_corrections:
+        key = fb["memo_filename"]
+        if key not in seen or fb.get("ts", "") > seen[key].get("ts", ""):
+            seen[key] = fb
+    human_count = len(seen)
+
+    # Canary failures from latest accuracy_check
+    canary_count = 0
+    accuracy_checks = [r for r in records if r.get("type") == "accuracy_check"]
+    if accuracy_checks:
+        last = accuracy_checks[-1]
+        canary_count = sum(
+            1 for r in last.get("results", [])
+            if r.get("status") == "ok" and not r.get("correct", True)
+        )
+
+    total = human_count + canary_count
+    has_dpo_adapter = _DPO_ADAPTER.exists()
+    has_pending_pairs = _FEEDBACK_PAIRS.exists() and _FEEDBACK_PAIRS.stat().st_size > 0
+
+    return {
+        "human_corrections": human_count,
+        "canary_failures": canary_count,
+        "total_corrections": total,
+        "ready_to_train": total >= 1,
+        "has_pending_pairs": has_pending_pairs,
+        "has_dpo_adapter": has_dpo_adapter,
+    }

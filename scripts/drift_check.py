@@ -42,6 +42,11 @@ _CANARY_FILES = [
     _PROJECT_ROOT / "training" / "generated" / "finance_brightbooks_pull_dominant.json",
     _PROJECT_ROOT / "training" / "generated" / "hr_teamrise_shelfware_case.json",
     _PROJECT_ROOT / "training" / "generated" / "project_mgmt_opscanvas_contract_renewal_hold.json",
+    # Edge-case canaries — disqualifier, borderline ROI, shelfware variant, weak pull
+    _PROJECT_ROOT / "training" / "generated" / "crm_closerhub_negative_signal_buried.json",
+    _PROJECT_ROOT / "training" / "generated" / "finance_ledgerflow_pull_dominant.json",
+    _PROJECT_ROOT / "training" / "generated" / "project_mgmt_flowboard_shelfware_case.json",
+    _PROJECT_ROOT / "training" / "generated" / "hr_workforge_fluff_update.json",
 ]
 
 _EXPECTED: dict[str, str] = {
@@ -49,6 +54,11 @@ _EXPECTED: dict[str, str] = {
     "finance_brightbooks_pull_dominant":               "SWITCH",
     "hr_teamrise_shelfware_case":                      "SWITCH",
     "project_mgmt_opscanvas_contract_renewal_hold":    "HOLD",
+    # Edge-case canaries
+    "crm_closerhub_negative_signal_buried":            "STAY",
+    "finance_ledgerflow_pull_dominant":                "SWITCH",
+    "project_mgmt_flowboard_shelfware_case":           "SWITCH",
+    "hr_workforge_fluff_update":                       "STAY",
 }
 
 

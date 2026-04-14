@@ -15,8 +15,10 @@
   </div>
   <nav>
     <button class="nav-btn active" onclick="showView('dashboard', this)">Dashboard</button>
+    <button class="nav-btn" onclick="showView('history', this)">History</button>
     <button class="nav-btn" onclick="showView('competitors', this)">Competitors</button>
     <button class="nav-btn" onclick="showView('health', this)">Model Health</button>
+    <button class="nav-btn" id="nav-review" onclick="showView('review', this)">Review <span class="nav-badge" id="review-badge" style="display:none"></span></button>
   </nav>
   <div class="hdr-right">
     <div class="status-chip" id="status-chip" style="display:none">
@@ -59,27 +61,60 @@
       </div>
     </div>
 
-    <div class="main-row">
-      <div>
-        <div class="section-label">Most recent evaluations (last 10)</div>
-        <div class="verdict-grid" id="verdict-grid">
-          <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
+    <div class="detail-row">
+      <div class="detail-main">
+        <div class="detail-main-cols">
+          <div class="widget widget-scroll">
+            <div class="w-label">Switch Rankings</div>
+            <div style="font-size:.65rem;color:#94a3b8;margin-bottom:6px">Ranked by confidence</div>
+            <div class="scroll-inner" id="rankings-list">
+              <span style="color:#94a3b8;font-size:.75rem">No switch verdicts</span>
+            </div>
+          </div>
+          <div class="widget widget-scroll">
+            <div class="section-label">Recent evaluations</div>
+            <div class="scroll-inner">
+              <div class="verdict-grid" id="verdict-grid">
+                <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="sidebar">
-        <div class="widget">
+      <div class="detail-side">
+        <div class="widget widget-compact side-widget">
           <div class="w-label">Model Confidence</div>
-          <div style="font-size:.68rem;color:#94a3b8;margin-bottom:8px">P(verdict) from logits · live runs only</div>
-          <div id="conf-bars"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
+          <div style="font-size:.65rem;color:#94a3b8;margin-bottom:6px">P(verdict) from logits</div>
+          <div class="side-scroll" id="conf-bars"><span style="color:#94a3b8;font-size:.75rem">No live model data yet</span></div>
         </div>
-        <div class="widget">
+        <div class="widget widget-compact side-widget">
           <div class="w-label">Active HOLDs</div>
-          <div id="monitor-list"><span style="color:#94a3b8;font-size:.75rem">No active HOLDs</span></div>
+          <div class="side-scroll" id="monitor-list"><span style="color:#94a3b8;font-size:.75rem">No active HOLDs</span></div>
         </div>
-        <div class="widget">
-          <div class="w-label" style="margin-bottom:8px">Recent Feedback</div>
-          <div id="fb-history-side"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet</span></div>
+        <div class="widget widget-compact side-widget">
+          <div class="w-label" style="margin-bottom:6px">Recent Feedback</div>
+          <div class="side-scroll" id="fb-history-side"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet</span></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History view -->
+  <div class="view" id="view-history">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="section-label">Verdict History</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="history-filter" onchange="loadHistory()" style="font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+          <option value="all">All verdicts</option>
+          <option value="SWITCH">Switch only</option>
+          <option value="HOLD">Hold only</option>
+          <option value="STAY">Stay only</option>
+        </select>
+      </div>
+    </div>
+    <div class="widget widget-scroll" style="flex:1;min-height:0">
+      <div class="scroll-inner" id="history-list">
+        <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
       </div>
     </div>
   </div>
@@ -121,18 +156,20 @@
         <button class="btn btn-primary" onclick="submitAddCompetitor()">Save Competitor</button>
       </div>
     </div>
-    <div class="widget" style="padding:0;overflow:hidden">
-      <table class="comp-table">
-        <thead>
-          <tr>
-            <th>Category</th><th>Name</th><th>Cost/mo</th>
-            <th>Last Verdict</th><th>Last Run</th><th>Scraper URL</th>
-          </tr>
-        </thead>
-        <tbody id="comp-tbody">
-          <tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:20px">Loading…</td></tr>
-        </tbody>
-      </table>
+    <div class="widget widget-scroll" style="padding:0;flex:1;min-height:0">
+      <div class="scroll-inner">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Cost/mo</th>
+              <th>Last Verdict</th><th>Last Run</th><th>Scraper URL</th>
+            </tr>
+          </thead>
+          <tbody id="comp-tbody">
+            <tr><td colspan="5" style="color:#94a3b8;text-align:center;padding:20px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -164,7 +201,7 @@
 
     <div class="bottom-row">
       <div class="widget">
-        <div class="w-label" style="margin-bottom:12px">Confidence Trend (last 20 live runs)</div>
+        <div class="w-label" style="margin-bottom:12px">Confidence Trend (last 15 live runs)</div>
         <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model confidence data. Run the agent without --dry-run to get real scores.</span></div>
       </div>
       <div class="widget">
@@ -181,11 +218,58 @@
       <div id="health-validation"><span style="color:#94a3b8;font-size:.75rem">Loading…</span></div>
     </div>
 
-    <div class="widget">
+    <div class="widget health-fb-widget">
       <div class="w-label" style="margin-bottom:12px">Human Feedback Log</div>
-      <div id="health-feedback"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use the 👍/👎 buttons on verdict cards.</span></div>
+      <div class="health-fb-scroll" id="health-feedback"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use the 👍/👎 buttons on verdict cards.</span></div>
     </div>
 
+    <div class="widget" id="retrain-widget">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="w-label">Feedback Learning (DPO)</div>
+        <div id="retrain-badge" style="font-size:.68rem;padding:3px 8px;border-radius:4px;background:var(--border);color:var(--muted)">—</div>
+      </div>
+      <div id="retrain-info" style="font-size:.78rem;color:var(--muted);margin-bottom:12px">
+        Corrections from human feedback and canary failures are used to retrain the model via Direct Preference Optimization.
+      </div>
+      <div id="retrain-stats" style="display:flex;gap:16px;margin-bottom:16px">
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text)" id="rt-human">—</div>
+          <div style="font-size:.65rem;color:var(--subtle)">Human corrections</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text)" id="rt-canary">—</div>
+          <div style="font-size:.65rem;color:var(--subtle)">Canary failures</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text)" id="rt-total">—</div>
+          <div style="font-size:.65rem;color:var(--subtle)">Total pairs</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-retrain" id="btn-retrain" onclick="triggerRetrain()" disabled>Retrain Model</button>
+        <button class="btn-canary" id="btn-canary" onclick="triggerCanary()">Run Canaries</button>
+      </div>
+      <div id="retrain-status" style="font-size:.72rem;color:var(--subtle);margin-top:8px"></div>
+    </div>
+
+  </div>
+
+
+  <!-- Review view -->
+  <div class="view" id="view-review">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-label">Review Queue</div>
+      <button class="btn btn-ghost" onclick="loadReview()">Refresh</button>
+    </div>
+    <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">
+      Low-confidence predictions (P &lt; 0.65) awaiting review.
+      Confirming or correcting these feeds the DPO training loop.
+    </div>
+    <div class="widget widget-scroll" style="flex:1;min-height:0">
+      <div class="scroll-inner" id="review-list">
+        <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
+      </div>
+    </div>
   </div>
 
 </div>
