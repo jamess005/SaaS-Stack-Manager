@@ -33,13 +33,15 @@ def extract_pass1_vars(context: dict, signal: dict | None = None) -> dict:
         }
     """
     current = float(context["current_stack_entry"]["monthly_cost_gbp"])
+    addon = float(context["current_stack_entry"].get("addon_monthly_cost_gbp", 0))
+    effective_current = current + addon
     competitor = infer_competitor_monthly_cost(context, signal)
     return {
-        "current_monthly_cost": current,
+        "current_monthly_cost": effective_current,
         "competitor_monthly_cost": competitor,
         "migration_hours": _MIGRATION_HOURS_DEFAULT,
         "staff_hourly_rate": _STAFF_HOURLY_RATE_GBP,
-        "annual_saving": round((current - competitor) * 12, 2),
+        "annual_saving": round((effective_current - competitor) * 12, 2),
         "roi_threshold": _ROI_THRESHOLD_GBP,
     }
 

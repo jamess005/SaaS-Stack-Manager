@@ -230,9 +230,29 @@ def api_retrain():
             pairs_path = _PROJECT_ROOT / "training" / "feedback_pairs.jsonl"
             if not pairs_path.exists() or pairs_path.stat().st_size == 0:
                 return  # No pairs to train on
-            # Step 2: DPO training with canary gate
+            # Count pairs before training so we can log it in the checkpoint
+            try:
+                with pairs_path.open(encoding="utf-8") as _f:
+                    pairs_trained = sum(1 for ln in _f if ln.strip())
+            except OSError:
+                pairs_trained = 0
+            # Step 2: DPO training (model loads and unloads within this process)
+            dpo_result = subprocess.run(
+                [sys.executable, str(_PROJECT_ROOT / "training" / "dpo_train.py"),
+                 "--skip-canary"],
+                cwd=str(_PROJECT_ROOT),
+                env=env,
+            )
+            # Write checkpoint only on success so the pending count resets
+            if dpo_result.returncode == 0:
+                dl.write_training_checkpoint(
+                    pairs_trained=pairs_trained,
+                    log_path=dl._DRIFT_LOG,
+                )
+            # Step 3: Canary gate — runs as a separate process AFTER training
+            # exits so the GPU is fully free (avoids double-load OOM).
             subprocess.run(
-                [sys.executable, str(_PROJECT_ROOT / "training" / "dpo_train.py")],
+                [sys.executable, str(_PROJECT_ROOT / "scripts" / "drift_check.py")],
                 cwd=str(_PROJECT_ROOT),
                 env=env,
             )

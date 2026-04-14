@@ -108,15 +108,30 @@ def _severity(text: str) -> str:
     return "LOW"
 
 
+_NEGATION_PATTERNS = re.compile(
+    r"no\s+(beta|roadmap|caveats|hold)"
+    r"|all\b.*\bga\b"
+    r"|now\s+ga"
+    r"|without\s+(beta|roadmap|caveats)",
+    re.IGNORECASE,
+)
+
+
 def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None) -> str:
     for note in notes:
         note_lower = note.lower()
         if note_lower.startswith(_ADVISORY_PREFIXES):
             continue
+        # Skip notes that negate hold keywords (e.g. "no beta or roadmap caveats")
+        if _NEGATION_PATTERNS.search(note):
+            continue
         if any(kw in note_lower for kw in _HOLD_NOTE_KW):
             return note
     for change in (comp_changes or []):
-        if any(kw in change.lower() for kw in _HOLD_COMP_KW):
+        change_lower = change.lower()
+        if _NEGATION_PATTERNS.search(change_lower):
+            continue
+        if any(kw in change_lower for kw in _HOLD_COMP_KW):
             return change
     return "NONE"
 
@@ -179,7 +194,11 @@ def _find_signal_for_competitor(category: str, competitor: str) -> dict | None:
     inbox_path = inbox_dir / pattern
     if inbox_path.exists():
         text = inbox_path.read_text(encoding="utf-8")
-        return parse_signal_payload(text)
+        parsed = parse_signal_payload(text)
+        if parsed is not None:
+            return parsed
+        # Inbox file exists but is not structured JSON (e.g. auto-generated Markdown);
+        # fall through to training/generated for a structured signal.
 
     # Try training/generated
     for p in _GENERATED_DIR.glob(f"{category}_{competitor}_*.json"):
@@ -439,25 +458,31 @@ def _extract_human_feedback_pairs(records: list[dict]) -> list[dict]:
 
 
 def _extract_canary_pairs(records: list[dict]) -> list[dict]:
-    """Extract DPO pairs from canary accuracy_check results where model was wrong."""
+    """Extract DPO pairs from canary accuracy_check results where model was wrong.
+
+    Collects failures across ALL accuracy checks (not just the latest) so that
+    previously-learned corrections stay in the training set even after the
+    model starts getting them right.  Deduplicates by signal file name,
+    keeping the latest failure result for each signal.
+    """
     accuracy_checks = [r for r in records if r.get("type") == "accuracy_check"]
     if not accuracy_checks:
         logger.info("No accuracy checks found.")
         return []
 
-    # Use the latest accuracy check
-    latest_check = accuracy_checks[-1]
-    wrong_results = [
-        r for r in latest_check.get("results", [])
-        if r.get("status") == "ok" and not r.get("correct", True)
-    ]
+    # Collect every signal that was ever wrong, keeping the latest record
+    wrong_by_file: dict[str, dict] = {}
+    for check in accuracy_checks:
+        for r in check.get("results", []):
+            if r.get("status") == "ok" and not r.get("correct", True):
+                wrong_by_file[r["file"]] = r
 
-    if not wrong_results:
-        logger.info("All canaries correct in latest check — no pairs needed.")
+    if not wrong_by_file:
+        logger.info("All canaries correct across all checks — no pairs needed.")
         return []
 
     pairs = []
-    for result in wrong_results:
+    for result in wrong_by_file.values():
         signal_file = result["file"]
         stem = Path(signal_file).stem
         parsed = _parse_canary_stem(stem)

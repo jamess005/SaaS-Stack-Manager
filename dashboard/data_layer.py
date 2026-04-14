@@ -456,17 +456,37 @@ _FEEDBACK_PAIRS = _PROJECT_ROOT / "training" / "feedback_pairs.jsonl"
 _DPO_ADAPTER = _PROJECT_ROOT / "training" / "checkpoints_dpo"
 
 
+def write_training_checkpoint(pairs_trained: int, log_path: Path | None = None) -> None:
+    """Append a dpo_checkpoint record so the pending-correction count resets."""
+    import json as _json
+    from datetime import datetime, timezone
+    log_path = log_path or _DRIFT_LOG
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "type": "dpo_checkpoint",
+        "pairs_trained": pairs_trained,
+    }
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(_json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def get_feedback_queue(log_path: Path | None = None) -> dict:
-    """Count actionable corrections awaiting retraining."""
+    """Count actionable corrections awaiting retraining (since the last training run)."""
     log_path = log_path or _DRIFT_LOG
     records = _load_drift_records(log_path)
 
-    # Human feedback corrections (wrong verdicts)
+    # Anchor to the last successful training run — only count NEW corrections since then
+    checkpoints = [r for r in records if r.get("type") == "dpo_checkpoint"]
+    cutoff_ts = checkpoints[-1].get("ts", "") if checkpoints else ""
+
+    # Human feedback corrections since last training
     human_corrections = [
         r for r in records
         if r.get("type") == "human_feedback"
         and not r.get("correct", True)
         and r.get("stated_verdict", "") != r.get("actual_verdict", "")
+        and r.get("ts", "") > cutoff_ts
     ]
     # Deduplicate by memo_filename (latest wins)
     seen: dict[str, dict] = {}
@@ -476,9 +496,12 @@ def get_feedback_queue(log_path: Path | None = None) -> dict:
             seen[key] = fb
     human_count = len(seen)
 
-    # Canary failures from latest accuracy_check
+    # Canary failures from the most recent accuracy_check that is itself after the cutoff
     canary_count = 0
-    accuracy_checks = [r for r in records if r.get("type") == "accuracy_check"]
+    accuracy_checks = [
+        r for r in records
+        if r.get("type") == "accuracy_check" and r.get("ts", "") > cutoff_ts
+    ]
     if accuracy_checks:
         last = accuracy_checks[-1]
         canary_count = sum(

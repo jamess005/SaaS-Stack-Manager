@@ -72,6 +72,7 @@ def _load_fixture(category: str, competitor_slug: str) -> dict:
 
 _DEFAULT_MODEL_PATH = str(_MODEL_PATH)
 _DEFAULT_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_sft_cot")
+_DEFAULT_DPO_ADAPTER_PATH = str(Path(__file__).parent.parent / "training" / "checkpoints_dpo")
 
 
 def load_model(
@@ -79,6 +80,7 @@ def load_model(
     model_path: str | None = _DEFAULT_MODEL_PATH,
     adapter_path: str | None = _DEFAULT_ADAPTER_PATH,
     quantize_bits: int = 0,
+    dpo_adapter_path: str | None = None,
 ) -> tuple[Any, Any]:
     """
     Load tokenizer and model for inference.
@@ -156,9 +158,20 @@ def load_model(
 
     if adapter_path:
         from peft import PeftModel  # type: ignore[import-untyped]
-        logger.info("Loading LoRA adapter from: %s", adapter_path)
-        model = PeftModel.from_pretrained(model, adapter_path)
-        logger.info("Adapter loaded.")
+        if dpo_adapter_path and Path(dpo_adapter_path).exists():
+            # DPO adapter was trained on the SFT-merged model.
+            # Stack: merge SFT into base, then apply DPO LoRA on top.
+            logger.info("Loading SFT adapter from: %s (will merge for DPO stacking)", adapter_path)
+            model = PeftModel.from_pretrained(model, adapter_path)
+            model = model.merge_and_unload()
+            logger.info("SFT adapter merged into base.")
+            logger.info("Loading DPO adapter from: %s", dpo_adapter_path)
+            model = PeftModel.from_pretrained(model, dpo_adapter_path)
+            logger.info("DPO adapter loaded.")
+        else:
+            logger.info("Loading LoRA adapter from: %s", adapter_path)
+            model = PeftModel.from_pretrained(model, adapter_path)
+            logger.info("Adapter loaded.")
 
     model.eval()
     logger.info("Model loaded.")
@@ -774,6 +787,58 @@ def _compliance_pass_python(context: dict) -> tuple[bool, list[str]]:
     return len(failures) == 0, failures
 
 
+def _assemble_stay_memo(
+    context: dict,
+    roi_result: dict,
+    compliance_failures: list[str],
+) -> str:
+    """Build a STAY memo when the Python compliance gate rejects a competitor."""
+    import datetime as _dt
+
+    category = context["category"]
+    tool_name = context["current_stack_entry"]["tool"]
+    tool_cost = context["current_stack_entry"]["monthly_cost_gbp"]
+    comp_name = context["competitor_data"].get("name", "")
+    comp_cost = context["competitor_data"].get("monthly_cost_gbp", "?")
+    date_str = _dt.date.today().isoformat()
+
+    fail_lines = "\n".join(f"  - {f}" for f in compliance_failures)
+    features = context["competitor_data"].get("features", [])
+    evidence = "\n".join(f'  "{f}"' for f in features[:4])
+
+    fin_lines = [
+        f"  Migration cost: {roi_result.get('migration_hours', 15)}hrs × £48 = £{roi_result['migration_cost_one_time']:.0f} one-time",
+        f"  Annual saving: £{roi_result['annual_direct_saving']:.0f}",
+        f"  Amortised migration: £{roi_result['amortised_migration_cost_per_year']:.0f}/yr over 3 years",
+        f"  Annual net: £{roi_result['annual_net_gbp']:.0f}",
+        f"  ROI threshold (£1,200/yr): {'MET' if roi_result['roi_threshold_met'] else 'NOT MET'}",
+        f"  ROI threshold met: {'YES' if roi_result['roi_threshold_met'] else 'NO'}",
+    ]
+
+    return "\n".join([
+        f"CATEGORY: {category.title()}",
+        f"CURRENT TOOL: {tool_name} (£{tool_cost}/mo)",
+        f"COMPETITOR: {comp_name} (£{comp_cost}/mo)",
+        f"DATE: {date_str}",
+        "",
+        "PUSH SIGNALS:",
+        "  - (not evaluated — compliance hard block)",
+        "",
+        "PULL SIGNALS:",
+        "  - (not evaluated — compliance hard block)",
+        "",
+        f"COMPLIANCE BLOCKS:\n{fail_lines}",
+        "",
+        "FINANCIAL ANALYSIS:",
+        "\n".join(fin_lines),
+        "",
+        "VERDICT: STAY",
+        "",
+        "EVIDENCE:",
+        evidence or '  "No evidence — evaluation blocked by compliance failure."',
+    ])
+
+
 def _parse_compliance_changes(
     changes_text: str,
     compliance: dict,
@@ -1027,6 +1092,21 @@ def run_voting(
 
     from agent.prompts import SYS_COMPLIANCE, SYS_PULL, SYS_PUSH, SYS_VERDICT
 
+    # ── Python compliance gate (deterministic, non-negotiable) ──────────────
+    # The model compliance vote (Vote 1) is advisory; the Python gate is
+    # authoritative.  If any hard block is present the verdict is STAY.
+    py_passed, py_failures = _compliance_pass_python(context)
+    if not py_passed:
+        logger.info("Python compliance gate FAIL: %s", "; ".join(py_failures))
+        fail_lines = "\n".join(f"  - {f}" for f in py_failures)
+        stay_memo = _assemble_stay_memo(context, roi_result, py_failures)
+        return stay_memo, {
+            "verdict_token_prob": 1.0,
+            "verdict_entropy_bits": 0.0,
+            "verdict_margin": 1.0,
+            "verdict_probs": {"SWITCH": 0.0, "STAY": 1.0, "HOLD": 0.0},
+        }
+
     # Vote 1: Compliance (independent)
     logger.info("Vote 1/4: Compliance gate")
     compliance_msgs = [
@@ -1158,6 +1238,14 @@ _HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
 # Notes that start with these words are advisory, not hold conditions
 _ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
 
+_NEGATION_PATTERNS = re.compile(
+    r"no\s+(beta|roadmap|caveats|hold)"
+    r"|all\b.*\bga\b"
+    r"|now\s+ga"
+    r"|without\s+(beta|roadmap|caveats)",
+    re.IGNORECASE,
+)
+
 
 def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None) -> str:
     """Return the first hold condition found in notes (or competitor_changes), or 'NONE'.
@@ -1165,15 +1253,21 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
     Notes that are advisory (starting with "consider", "suggest", etc.) are skipped
     to avoid false positives from phrases like "consider re-evaluating the contract".
     Competitor changes are checked for beta/roadmap/not-ga signals.
+    Notes that negate hold keywords (e.g. "no beta or roadmap caveats") are skipped.
     """
     for note in notes:
         note_lower = note.lower()
         if note_lower.startswith(_ADVISORY_PREFIXES):
             continue
+        if _NEGATION_PATTERNS.search(note):
+            continue
         if any(kw in note_lower for kw in _HOLD_NOTE_KW):
             return note
     for change in (comp_changes or []):
-        if any(kw in change.lower() for kw in _HOLD_COMP_KW):
+        change_lower = change.lower()
+        if _NEGATION_PATTERNS.search(change_lower):
+            continue
+        if any(kw in change_lower for kw in _HOLD_COMP_KW):
             return change
     return "NONE"
 

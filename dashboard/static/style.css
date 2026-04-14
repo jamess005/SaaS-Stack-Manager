@@ -202,9 +202,19 @@ nav { display: flex; gap: 2px; }
 .side-scroll::-webkit-scrollbar { width: 4px; }
 .side-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Model Health view containment */
-#view-health { overflow-y: auto; padding-bottom: 20px; }
-.health-fb-widget { max-height: 320px; display: flex; flex-direction: column; overflow: hidden; }
+/* Model Health view containment — same flex pattern as History/Competitors */
+#view-health { overflow: hidden; }
+/* Two data rows grow equally to fill remaining height */
+#view-health .bottom-row { flex: 1; min-height: 0; }
+#view-health .bottom-row .widget { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+/* Retrain widget stays at natural height, never grows */
+#retrain-widget { flex-shrink: 0; }
+/* Inner scroll containers */
+.health-inner-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.health-inner-scroll::-webkit-scrollbar { width: 4px; }
+.health-inner-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* Health feedback widget — inherits height from its row */
+.health-fb-widget { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .health-fb-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 .health-fb-scroll::-webkit-scrollbar { width: 4px; }
 .health-fb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -219,7 +229,7 @@ nav { display: flex; gap: 2px; }
 
 /* Review queue */
 .nav-badge { display: inline-block; background: var(--conf-lo); color: #fff; font-size: .6rem; font-weight: 700; padding: 1px 5px; border-radius: 8px; margin-left: 4px; vertical-align: middle; line-height: 1.4; }
-#view-review { overflow-y: auto; padding-bottom: 20px; }
+#view-review { overflow: hidden; }
 .review-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
 .review-card-top { margin-bottom: 8px; }
 .review-summary { font-size: .76rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }

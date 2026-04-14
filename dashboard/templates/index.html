@@ -204,26 +204,33 @@
 
     <div class="bottom-row">
       <div class="widget">
-        <div class="w-label" style="margin-bottom:12px">Confidence Trend (last 15 live runs)</div>
-        <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model confidence data. Run the agent without --dry-run to get real scores.</span></div>
+        <div class="w-label" style="margin-bottom:8px">Confidence Trend (last 15 live runs)</div>
+        <div class="health-inner-scroll">
+          <div id="health-conf"><span style="color:#94a3b8;font-size:.75rem">No live model confidence data. Run the agent without --dry-run to get real scores.</span></div>
+        </div>
       </div>
       <div class="widget">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div class="w-label">Canary / Regression History</div>
           <div class="reg-score" id="health-reg-score">—</div>
         </div>
-        <div id="health-reg-list"><span style="color:#94a3b8;font-size:.75rem">No checks recorded. Run: python scripts/drift_check.py</span></div>
+        <div class="health-inner-scroll">
+          <div id="health-reg-list"><span style="color:#94a3b8;font-size:.75rem">No checks recorded. Run: python scripts/drift_check.py</span></div>
+        </div>
       </div>
     </div>
 
-    <div class="widget">
-      <div class="w-label" style="margin-bottom:12px">Validation Attempts per Run</div>
-      <div id="health-validation"><span style="color:#94a3b8;font-size:.75rem">Loading…</span></div>
-    </div>
-
-    <div class="widget health-fb-widget">
-      <div class="w-label" style="margin-bottom:12px">Human Feedback Log</div>
-      <div class="health-fb-scroll" id="health-feedback"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use the 👍/👎 buttons on verdict cards.</span></div>
+    <div class="bottom-row">
+      <div class="widget" id="health-validation-widget">
+        <div class="w-label" style="margin-bottom:8px">Validation Attempts per Run</div>
+        <div class="health-inner-scroll">
+          <div id="health-validation"><span style="color:#94a3b8;font-size:.75rem">Loading…</span></div>
+        </div>
+      </div>
+      <div class="widget health-fb-widget">
+        <div class="w-label" style="margin-bottom:8px">Human Feedback Log</div>
+        <div class="health-fb-scroll" id="health-feedback"><span style="color:#94a3b8;font-size:.75rem">No feedback recorded yet. Use the 👍/👎 buttons on verdict cards.</span></div>
+      </div>
     </div>
 
     <div class="widget" id="retrain-widget">
@@ -260,11 +267,11 @@
 
   <!-- Review view -->
   <div class="view" id="view-review">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
       <div class="section-label">Review Queue</div>
       <button class="btn btn-ghost" onclick="loadReview()">Refresh</button>
     </div>
-    <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">
+    <div style="font-size:.76rem;color:var(--muted)">
       Low-confidence predictions (P &lt; 0.65) awaiting review.
       Confirming or correcting these feeds the DPO training loop.
     </div>

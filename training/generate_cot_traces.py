@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -164,6 +165,14 @@ _HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
 
 _ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
 
+_NEGATION_PATTERNS = re.compile(
+    r"no\s+(beta|roadmap|caveats|hold)"
+    r"|all\b.*\bga\b"
+    r"|now\s+ga"
+    r"|without\s+(beta|roadmap|caveats)",
+    re.IGNORECASE,
+)
+
 
 def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None) -> str:
     """Return the first hold condition found in notes (or competitor_changes), or 'NONE'."""
@@ -171,10 +180,15 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
         note_lower = note.lower()
         if note_lower.startswith(_ADVISORY_PREFIXES):
             continue
+        if _NEGATION_PATTERNS.search(note):
+            continue
         if any(kw in note_lower for kw in _HOLD_NOTE_KW):
             return note
     for change in (comp_changes or []):
-        if any(kw in change.lower() for kw in _HOLD_COMP_KW):
+        change_lower = change.lower()
+        if _NEGATION_PATTERNS.search(change_lower):
+            continue
+        if any(kw in change_lower for kw in _HOLD_COMP_KW):
             return change
     return "NONE"
 

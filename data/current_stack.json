@@ -84,6 +84,8 @@
     "tool": "TaskBridge",
     "vendor": "TaskBridge Software",
     "monthly_cost_gbp": 290,
+    "addon_monthly_cost_gbp": 95,
+    "addon_tool": "ChronoLog (time tracking)",
     "seat_count": 150,
     "cost_per_seat_gbp": 1.93,
     "contract_type": "monthly",

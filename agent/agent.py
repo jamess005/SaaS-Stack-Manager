@@ -206,6 +206,7 @@ def run_agent(
     register_path: Path | None = None,
     model_path: str | None = None,
     adapter_path: str | None = None,
+    dpo_adapter_path: str | None = None,
     log_path: Path | None = None,
 ) -> dict:
     """
@@ -254,7 +255,8 @@ def run_agent(
     inbox_text = inbox_path.read_text(encoding="utf-8")
 
     # ── Step 3: Load model ─────────────────────────────────────────────────────
-    tokenizer, model = load_model(model_path=model_path, adapter_path=adapter_path)
+    tokenizer, model = load_model(model_path=model_path, adapter_path=adapter_path,
+                                  dpo_adapter_path=dpo_adapter_path)
 
     # ── Step 4: Extract financial variables from context (Python, no model) ───
     signal = parse_signal_payload(inbox_text)
@@ -362,6 +364,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Path to a fine-tuned LoRA adapter directory (e.g. training/checkpoints/).",
     )
+    parser.add_argument(
+        "--dpo-adapter-path",
+        default=None,
+        help="Path to a DPO adapter to stack on the SFT adapter.",
+    )
     return parser.parse_args()
 
 
@@ -373,6 +380,7 @@ def main() -> None:
             dry_run=args.dry_run,
             model_path=args.model_path,
             adapter_path=args.adapter_path,
+            dpo_adapter_path=args.dpo_adapter_path,
         )
         print(f"\nVerdict:  {result['verdict']}")
         print(f"Output:   {result['output_path']}")
