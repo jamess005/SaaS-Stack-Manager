@@ -68,6 +68,7 @@ _GOLDEN_CANARIES: dict[str, tuple[str, str]] = {
     "project_mgmt_flowboard_shelfware_case":        ("SWITCH", "STAY"),
     "hr_workforge_fluff_update":                    ("STAY",   "SWITCH"),
     "analytics_pulsemetrics_irrelevant_change":     ("STAY",   "SWITCH"),
+    "finance_exactspend_irrelevant_change":         ("STAY",   "HOLD"),
     "finance_exactspend_competitor_nearly_ready":   ("HOLD",   "SWITCH"),
     # Hold-resolved scenarios — model must not re-issue HOLD when hold_signal=NONE
     "finance_exactspend_hold_resolved":                ("SWITCH", "HOLD"),
