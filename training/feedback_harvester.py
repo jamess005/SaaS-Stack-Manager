@@ -52,15 +52,48 @@ _DRIFT_LOG = _PROJECT_ROOT / "outputs" / "drift_log.jsonl"
 _DATA_ROOT = _PROJECT_ROOT / "data"
 _GENERATED_DIR = _PROJECT_ROOT / "training" / "generated"
 _OUTPUT_PATH = _PROJECT_ROOT / "training" / "feedback_pairs.jsonl"
+_SAMPLE_SFT_PATH = _PROJECT_ROOT / "training" / "sft_cot_traces.jsonl"
 _OUTPUTS_DIR = _PROJECT_ROOT / "outputs"
+
+# Golden canary fixtures — generate reinforcement pairs for ALL known-answer signals.
+# Format: stem → (correct_verdict, canonical_wrong_verdict)
+# Wrong verdicts are the model's most common error for each scenario type.
+_GOLDEN_CANARIES: dict[str, tuple[str, str]] = {
+    "crm_leadsphere_competitor_nearly_ready":       ("HOLD",   "SWITCH"),
+    "finance_brightbooks_pull_dominant":            ("SWITCH", "STAY"),
+    "hr_teamrise_shelfware_case":                   ("SWITCH", "STAY"),
+    "project_mgmt_opscanvas_contract_renewal_hold": ("HOLD",   "SWITCH"),
+    "crm_closerhub_negative_signal_buried":         ("STAY",   "SWITCH"),
+    "finance_ledgerflow_pull_dominant":             ("SWITCH", "STAY"),
+    "project_mgmt_flowboard_shelfware_case":        ("SWITCH", "STAY"),
+    "hr_workforge_fluff_update":                    ("STAY",   "SWITCH"),
+    "analytics_pulsemetrics_irrelevant_change":     ("STAY",   "SWITCH"),
+    "finance_exactspend_competitor_nearly_ready":   ("HOLD",   "SWITCH"),
+    # Hold-resolved scenarios — model must not re-issue HOLD when hold_signal=NONE
+    "finance_exactspend_hold_resolved":                ("SWITCH", "HOLD"),
+    "analytics_pulsemetrics_hold_resolved":             ("SWITCH", "HOLD"),
+    # Persistent pull/push dominant failures
+    "hr_hrnest_pull_dominant":                          ("SWITCH", "STAY"),
+    "project_mgmt_teamsync_projects_push_dominant":     ("SWITCH", "STAY"),
+}
 
 # ── Scenario metadata (imported from generate_cot_traces) ─────────────────────
 
 _HOLD_NOTE_KW = frozenset([
     "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga",
+    "early access",
+])
+
+_DISQUALIFIER_NOTE_KW = frozenset([
+    "preview", "early access", "beta", "not ga",
+    "no relevance", "not relevant", "irrelevant to", "irrelevant", "unrelated",
+    "poor fit", "wrong product", "not designed for",
+    "hard requirement",
+    "without relevance", "does not align", "does not address", "no impact on",
 ])
 _HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
 _ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
+_SHELFWARE_KW = frozenset(["shelfware", "inactive seats", "inactive seat"])
 
 _CONCRETE_KW = {
     "native", "integration", "api", "connector", "sso", "saml", "soc2", "gdpr",
@@ -133,6 +166,43 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
             continue
         if any(kw in change_lower for kw in _HOLD_COMP_KW):
             return change
+    return "NONE"
+
+
+def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
+    """Return a disqualifier note if notes indicate the competitor is not viable.
+
+    Only fires when hold_signal is 'NONE' — disqualifier and hold are mutually exclusive.
+    """
+    if hold_signal != "NONE":
+        return "NONE"
+    for note in notes:
+        note_lower = note.lower()
+        if note_lower.startswith(_ADVISORY_PREFIXES):
+            continue
+        if any(kw in note_lower for kw in _DISQUALIFIER_NOTE_KW):
+            return note
+    return "NONE"
+
+
+_SHELFWARE_NEGATION = re.compile(
+    r"no\s+shelfware|not\s+shelfware|no\s+inactive\s+seats?|no\s+unused",
+    re.IGNORECASE,
+)
+
+
+def _detect_shelfware(tool_changes: list[str]) -> str:
+    """Return the shelfware-flagging line from current_tool_status, or 'NONE'.
+
+    Detects explicit shelfware/inactive-seat mentions so they can be surfaced as a
+    structured field, matching the Hold signal pattern. Excludes negation phrases
+    ('no shelfware', 'no inactive seats') to avoid false positives from signal
+    files that write negation as a status line.
+    """
+    for change in tool_changes:
+        if any(kw in change.lower() for kw in _SHELFWARE_KW):
+            if not _SHELFWARE_NEGATION.search(change):
+                return change
     return "NONE"
 
 
@@ -246,9 +316,15 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict) -> str:
     if notes_text:
         msg += f"\nBuried signals / notes:\n{notes_text}\n"
     hold_signal = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold_signal)
+    shelfware_signal = _detect_shelfware(tool_changes)
     msg += f"\nROI: {roi_summary}"
     msg += "\nCompliance: PASSED"
     msg += f"\nHold signal: {hold_signal}"
+    if disqualifier != "NONE":
+        msg += f"\nDisqualifier: {disqualifier}"
+    if shelfware_signal != "NONE":
+        msg += f"\nShelfware flag: {shelfware_signal}"
     return msg
 
 
@@ -460,25 +536,40 @@ def _extract_human_feedback_pairs(records: list[dict]) -> list[dict]:
 def _extract_canary_pairs(records: list[dict]) -> list[dict]:
     """Extract DPO pairs from canary accuracy_check results where model was wrong.
 
-    Collects failures across ALL accuracy checks (not just the latest) so that
-    previously-learned corrections stay in the training set even after the
-    model starts getting them right.  Deduplicates by signal file name,
-    keeping the latest failure result for each signal.
+    Only creates pairs for signals wrong in their MOST RECENT accuracy check.
+    Signals the model now gets correct are excluded — training on stale failures
+    causes regressions by undoing already-learned behaviour.
     """
     accuracy_checks = [r for r in records if r.get("type") == "accuracy_check"]
     if not accuracy_checks:
         logger.info("No accuracy checks found.")
         return []
 
-    # Collect every signal that was ever wrong, keeping the latest record
-    wrong_by_file: dict[str, dict] = {}
+    # Track the most recent result (correct or wrong) for each signal file.
+    # Individual result entries don't carry their own timestamp, so we order
+    # by the parent accuracy_check's ts field.
+    latest_result_by_file: dict[str, dict] = {}
     for check in accuracy_checks:
+        check_ts = check.get("ts", "")
         for r in check.get("results", []):
-            if r.get("status") == "ok" and not r.get("correct", True):
-                wrong_by_file[r["file"]] = r
+            if r.get("status") != "ok":
+                continue
+            fname = r["file"]
+            existing = latest_result_by_file.get(fname)
+            if existing is None or check_ts >= existing.get("_check_ts", ""):
+                entry = dict(r)
+                entry["_check_ts"] = check_ts
+                latest_result_by_file[fname] = entry
+
+    # Only generate pairs for signals that are STILL wrong in their latest check.
+    wrong_by_file = {
+        fname: r
+        for fname, r in latest_result_by_file.items()
+        if not r.get("correct", True)
+    }
 
     if not wrong_by_file:
-        logger.info("All canaries correct across all checks — no pairs needed.")
+        logger.info("All canaries correct in most recent checks — no pairs needed.")
         return []
 
     pairs = []
@@ -520,7 +611,12 @@ def _extract_canary_pairs(records: list[dict]) -> list[dict]:
         ]
 
         chosen = _build_trace(context, parsed_signal, roi, correct_verdict)
-        rejected = _build_trace(context, parsed_signal, roi, wrong_verdict)
+        wrong_memo = result.get("wrong_memo")
+        if wrong_memo:
+            rejected = wrong_memo
+            logger.info("Using saved wrong_memo as rejected trace for %s", signal_file)
+        else:
+            rejected = _build_trace(context, parsed_signal, roi, wrong_verdict)
 
         pairs.append({
             "source": "canary",
@@ -542,11 +638,183 @@ def _extract_canary_pairs(records: list[dict]) -> list[dict]:
     return pairs
 
 
+def _extract_golden_canary_pairs() -> list[dict]:
+    """Generate reinforcement pairs for all 10 known-answer canary fixtures.
+
+    Unlike _extract_canary_pairs (which only trains on current failures), these
+    pairs are always included. They anchor the model to correct behaviour and
+    self-regulate: when the model is already correct, the chosen/rejected margin
+    is large and the gradient is near-zero; when it starts to drift, the gradient
+    pulls it back.
+    """
+    from training.generate_cot_traces import SCENARIO_TYPES
+
+    pairs = []
+    for stem, (correct_verdict, wrong_verdict) in _GOLDEN_CANARIES.items():
+        # Find the signal file
+        matches = list(_GENERATED_DIR.glob(f"{stem}*.json"))
+        if not matches:
+            logger.warning("Golden canary signal not found for stem: %s", stem)
+            continue
+        signal_path = matches[0]
+
+        # Parse category and competitor from stem
+        category = None
+        competitor = None
+        for cat in sorted(VALID_CATEGORIES, key=len, reverse=True):
+            if stem.startswith(cat + "_"):
+                remainder = stem[len(cat) + 1:]
+                for sc in sorted(SCENARIO_TYPES, key=len, reverse=True):
+                    if remainder.endswith("_" + sc):
+                        competitor = remainder[: -(len(sc) + 1)]
+                        category = cat
+                        break
+                if competitor:
+                    break
+
+        if not category or not competitor:
+            logger.warning("Cannot parse golden canary stem: %s", stem)
+            continue
+
+        try:
+            context = load_context(category, competitor, _DATA_ROOT)
+        except (FileNotFoundError, ValueError, KeyError) as exc:
+            logger.warning("Cannot load context for golden canary %s/%s: %s", category, competitor, exc)
+            continue
+
+        with signal_path.open(encoding="utf-8") as f:
+            signal = json.load(f)
+
+        inbox_text = json.dumps(signal, indent=2, ensure_ascii=False)
+        parsed_signal = parse_signal_payload(inbox_text)
+        pass1 = extract_pass1_vars(context, parsed_signal)
+        roi = calculate_roi(pass1)
+
+        user_msg = _build_lean_user(context, roi, parsed_signal)
+        prompt = [
+            {"role": "system", "content": SYS_VERDICT_LEAN},
+            {"role": "user", "content": user_msg},
+        ]
+
+        chosen = _build_trace(context, parsed_signal, roi, correct_verdict)
+        rejected = _build_trace(context, parsed_signal, roi, wrong_verdict)
+
+        pairs.append({
+            "source": "golden_canary",
+            "signal_file": signal_path.name,
+            "category": category,
+            "competitor": competitor,
+            "correct_verdict": correct_verdict,
+            "wrong_verdict": wrong_verdict,
+            "prompt": prompt,
+            "chosen": chosen,
+            "rejected": rejected,
+        })
+        logger.info(
+            "Golden canary pair: %s/%s correct=%s rejected=%s",
+            category, competitor, correct_verdict, wrong_verdict,
+        )
+
+    return pairs
+
+
+def _sample_sft_traces(n: int = 30, seed: int = 42) -> list[dict]:
+    """Sample from SFT CoT traces to augment DPO with genuine reasoning patterns.
+
+    chosen = authentic SFT trace (step-by-step ANALYSIS, correct verdict)
+    rejected = same trace with VERDICT swapped (same analysis, wrong verdict)
+
+    DPO loss: model learns that genuine analysis → correct verdict is preferred
+    over genuine analysis → wrong verdict. Anchors the model to the reasoning
+    style it was originally trained on, not just template outputs.
+
+    Deduplicates traces by assistant content before sampling.
+    """
+    import random
+
+    if not _SAMPLE_SFT_PATH.exists():
+        logger.warning("SFT traces not found at %s — skipping SFT augmentation", _SAMPLE_SFT_PATH)
+        return []
+
+    traces = []
+    with _SAMPLE_SFT_PATH.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                traces.append(json.loads(line))
+
+    # Deduplicate by assistant content
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for t in traces:
+        key = t["messages"][2]["content"]
+        if key not in seen:
+            seen.add(key)
+            unique.append(t)
+    logger.info("SFT traces: %d total, %d unique after dedup", len(traces), len(unique))
+
+    switch_traces = [t for t in unique if "VERDICT: SWITCH" in t["messages"][2]["content"]]
+    stay_traces   = [t for t in unique if "VERDICT: STAY"   in t["messages"][2]["content"]]
+    hold_traces   = [t for t in unique if "VERDICT: HOLD"   in t["messages"][2]["content"]]
+
+    rng = random.Random(seed)
+    per_bucket = n // 3
+    sampled = (
+        rng.sample(switch_traces, min(per_bucket, len(switch_traces))) +
+        rng.sample(stay_traces,   min(per_bucket, len(stay_traces)))   +
+        rng.sample(hold_traces,   min(per_bucket, len(hold_traces)))
+    )
+
+    pairs = []
+    for trace in sampled:
+        user_msg = trace["messages"][1]
+        assistant_content = trace["messages"][2]["content"]
+
+        if "VERDICT: SWITCH" in assistant_content:
+            correct_verdict, wrong_verdict = "SWITCH", "STAY"
+        elif "VERDICT: HOLD" in assistant_content:
+            correct_verdict, wrong_verdict = "HOLD", "SWITCH"
+        else:
+            correct_verdict, wrong_verdict = "STAY", "SWITCH"
+
+        # Use current SYS_VERDICT_LEAN (not the old version embedded in the SFT trace)
+        prompt = [
+            {"role": "system", "content": SYS_VERDICT_LEAN},
+            user_msg,
+        ]
+        # Rejected: same genuine reasoning, wrong verdict — model learns verdict must
+        # match its own analysis, not that analysis quality is irrelevant.
+        rejected = assistant_content.replace(
+            f"VERDICT: {correct_verdict}", f"VERDICT: {wrong_verdict}", 1
+        )
+
+        pairs.append({
+            "source": "sft_sample",
+            "category": "various",
+            "competitor": "various",
+            "wrong_verdict": wrong_verdict,
+            "correct_verdict": correct_verdict,
+            "prompt": prompt,
+            "chosen": assistant_content,
+            "rejected": rejected,
+        })
+
+    n_sw = sum(1 for p in pairs if p["correct_verdict"] == "SWITCH")
+    n_st = sum(1 for p in pairs if p["correct_verdict"] == "STAY")
+    n_ho = sum(1 for p in pairs if p["correct_verdict"] == "HOLD")
+    logger.info(
+        "SFT augmentation: %d pairs (%d SWITCH, %d STAY, %d HOLD)", len(pairs), n_sw, n_st, n_ho
+    )
+    return pairs
+
+
 def harvest(
     log_path: Path | None = None,
     output_path: Path | None = None,
     min_pairs: int = 1,
     dry_run: bool = False,
+    no_golden: bool = False,
+    no_sft_samples: bool = False,
 ) -> list[dict]:
     """
     Harvest DPO preference pairs from drift log.
@@ -563,11 +831,13 @@ def harvest(
 
     human_pairs = _extract_human_feedback_pairs(records)
     canary_pairs = _extract_canary_pairs(records)
-    all_pairs = human_pairs + canary_pairs
+    golden_pairs = [] if no_golden else _extract_golden_canary_pairs()
+    sft_pairs = [] if no_sft_samples else _sample_sft_traces()
+    all_pairs = human_pairs + canary_pairs + golden_pairs + sft_pairs
 
     logger.info(
-        "Harvested %d pairs: %d from human feedback, %d from canaries",
-        len(all_pairs), len(human_pairs), len(canary_pairs),
+        "Harvested %d pairs: %d human, %d canary failures, %d golden canary, %d sft samples",
+        len(all_pairs), len(human_pairs), len(canary_pairs), len(golden_pairs), len(sft_pairs),
     )
 
     if len(all_pairs) < min_pairs:
@@ -595,12 +865,18 @@ def main() -> None:
                         help="Preview pairs without writing.")
     parser.add_argument("--output", type=str, default=str(_OUTPUT_PATH),
                         help="Output path for feedback_pairs.jsonl")
+    parser.add_argument("--no-golden", action="store_true",
+                        help="Skip golden canary pairs — include only failure corrections.")
+    parser.add_argument("--no-sft-samples", action="store_true",
+                        help="Skip SFT trace augmentation — use only failure/canary pairs.")
     args = parser.parse_args()
 
     pairs = harvest(
         min_pairs=args.min_pairs,
         dry_run=args.dry_run,
         output_path=Path(args.output),
+        no_golden=args.no_golden,
+        no_sft_samples=args.no_sft_samples,
     )
 
     if not pairs:
