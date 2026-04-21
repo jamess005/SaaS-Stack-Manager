@@ -67,15 +67,16 @@ _GOLDEN_CANARIES: dict[str, tuple[str, str]] = {
     "finance_ledgerflow_pull_dominant":             ("SWITCH", "STAY"),
     "project_mgmt_flowboard_shelfware_case":        ("SWITCH", "STAY"),
     "hr_workforge_fluff_update":                    ("STAY",   "SWITCH"),
-    "analytics_pulsemetrics_irrelevant_change":     ("STAY",   "SWITCH"),
-    "finance_exactspend_irrelevant_change":         ("STAY",   "HOLD"),
-    "finance_exactspend_competitor_nearly_ready":   ("HOLD",   "SWITCH"),
-    # Hold-resolved scenarios — model must not re-issue HOLD when hold_signal=NONE
-    "finance_exactspend_hold_resolved":                ("SWITCH", "HOLD"),
-    "analytics_pulsemetrics_hold_resolved":             ("SWITCH", "HOLD"),
+    # 1 canary per previously-divergent competitor (keep only the most diagnostic)
+    "finance_exactspend_hold_resolved":             ("SWITCH", "HOLD"),
+    "analytics_pulsemetrics_hold_resolved":         ("SWITCH", "HOLD"),
     # Persistent pull/push dominant failures
-    "hr_hrnest_pull_dominant":                          ("SWITCH", "STAY"),
-    "project_mgmt_teamsync_projects_push_dominant":     ("SWITCH", "STAY"),
+    "hr_hrnest_pull_dominant":                      ("SWITCH", "STAY"),
+    "project_mgmt_teamsync_projects_push_dominant": ("SWITCH", "STAY"),
+    # Scenario-diverse replacements (no competitor duplicates)
+    "hr_crewplan_roadmap_confirmed_hold":            ("HOLD",   "SWITCH"),
+    "crm_dealstream_fluff_update":                   ("STAY",   "SWITCH"),
+    "project_mgmt_sprintdesk_compliance_newly_met":  ("SWITCH", "STAY"),
 }
 
 # ── Scenario metadata (imported from generate_cot_traces) ─────────────────────
