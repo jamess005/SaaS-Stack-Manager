@@ -5,11 +5,13 @@ const $ = id => document.getElementById(id);
 // Competitor name cache — loaded once from /api/competitors
 let _compNames = {};
 let _compLastUpdated = {};
+let _competitorRegistry = [];
 async function _ensureCompNames() {
   if (Object.keys(_compNames).length) return;
   try {
     const r = await fetch('/api/competitors');
     const comps = await r.json();
+    _competitorRegistry = comps;
     for (const c of comps) {
       _compNames[c.slug] = c.name;
       if (c.last_updated) _compLastUpdated[c.slug] = c.last_updated;
@@ -55,6 +57,48 @@ function fmtDate(ts) {
   const d = ts.slice(0, 10);
   const t = ts.slice(11, 16);
   return t && t !== '00:00' ? `${d} ${t}` : d;
+}
+
+function resetCompetitorCache() {
+  _compNames = {};
+  _compLastUpdated = {};
+  _competitorRegistry = [];
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function syncSelectOptions(selectId, values, allLabel, labelForValue = value => value) {
+  const select = $(selectId);
+  if (!select) return;
+  const previous = select.value || 'all';
+  const unique = [...new Set(values.filter(Boolean))].sort((a, b) => {
+    const left = labelForValue(a);
+    const right = labelForValue(b);
+    return left.localeCompare(right);
+  });
+
+  select.innerHTML = [
+    `<option value="all">${escapeHtml(allLabel)}</option>`,
+    ...unique.map(value => (
+      `<option value="${escapeHtml(value)}">${escapeHtml(labelForValue(value))}</option>`
+    )),
+  ].join('');
+  select.value = unique.includes(previous) ? previous : 'all';
+}
+
+function syncCompetitorDatalist(competitors) {
+  const list = $('competitor-registry-options');
+  if (!list) return;
+  list.innerHTML = competitors.map(competitor => (
+    `<option value="${escapeHtml(competitor.name)}">${escapeHtml(`${competitor.name} (${competitor.slug})`)}</option>`
+  )).join('');
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -108,7 +152,7 @@ async function loadDashboard() {
   await _ensureCompNames();
   const [statsR, verdictsR, healthR, rankingsR, holdsR] = await Promise.all([
     fetch('/api/stats'),
-    fetch('/api/verdicts?n=6'),
+    fetch('/api/verdicts?n=30'),
     fetch('/api/health'),
     fetch('/api/rankings'),
     fetch('/api/holds'),
@@ -134,7 +178,6 @@ function renderStats(s) {
   $('stat-ho').textContent    = s.hold;
   $('stat-st').textContent    = s.stay;
   $('stat-total').textContent = s.total_tracked;
-  $('stat-eval-sub').textContent = `${s.total_evaluated} evaluated`;
 }
 
 function renderDonut(s) {
@@ -171,7 +214,7 @@ function renderVerdictGrid(verdicts) {
     const isStay = v.verdict === 'STAY';
     const prob   = v.verdict_token_prob;
     const probTag = prob != null
-      ? `<span style="font-size:.65rem;color:${confColor(prob)};font-family:monospace;margin-left:auto">P=${prob.toFixed(2)}</span>`
+      ? `<span style="font-size:.65rem;color:${confColor(prob)};font-family:monospace;margin-left:auto">P=${prob.toFixed(4)}</span>`
       : '';
 
     const whySection = v.summary
@@ -311,7 +354,7 @@ function renderConfBars(verdicts) {
     return `<div class="conf-item">
       <div class="conf-name">${displayName(v.competitor)}</div>
       <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
-      <div class="conf-val" style="color:${col}">${p.toFixed(2)}</div>
+      <div class="conf-val" style="color:${col}">${p.toFixed(4)}</div>
     </div>`;
   }).join('');
 }
@@ -357,13 +400,14 @@ function renderFeedbackSidebar(health) {
 
 function _extractDisplayName(memo_filename) {
   if (!memo_filename) return '—';
-  // Strip date prefix and .md extension: "2026-04-13-project_mgmt-flowboard.md" → "flowboard"
   const stripped = memo_filename.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, '');
-  // Split on first hyphen: "project_mgmt-flowboard" → category + slug
   const dashIdx = stripped.indexOf('-');
   if (dashIdx >= 0) {
-    const slug = stripped.slice(dashIdx + 1);
+    const remainder = stripped.slice(dashIdx + 1);
     const cat = stripped.slice(0, dashIdx);
+    const slug = Object.keys(_compNames)
+      .sort((a, b) => b.length - a.length)
+      .find(candidate => remainder === candidate || remainder.startsWith(`${candidate}-`)) || remainder;
     return `${displayName(slug)} <span class="rank-cat">${fmtCategory(cat)}</span>`;
   }
   return displayName(stripped);
@@ -373,22 +417,40 @@ function _extractDisplayName(memo_filename) {
 
 async function loadHistory() {
   await _ensureCompNames();
-  const r = await fetch('/api/history');
-  const all = await r.json();
-  const filter = $('history-filter')?.value || 'all';
-  const filtered = filter === 'all' ? all : all.filter(v => v.verdict === filter);
+  const [historyR, competitorR] = await Promise.all([
+    fetch('/api/history'),
+    fetch('/api/competitors'),
+  ]);
+  const all = await historyR.json();
+  const competitors = await competitorR.json();
+  _competitorRegistry = competitors;
+  syncSelectOptions('history-category-filter', competitors.map(v => v.category), 'All categories', fmtCategory);
+  syncSelectOptions('history-competitor-filter', competitors.map(v => v.slug), 'All competitors', displayName);
+
+  const verdictFilter = $('history-filter')?.value || 'all';
+  const categoryFilter = $('history-category-filter')?.value || 'all';
+  const competitorFilter = $('history-competitor-filter')?.value || 'all';
+  const filtered = all.filter(v => {
+    if (verdictFilter !== 'all' && v.verdict !== verdictFilter) return false;
+    if (categoryFilter !== 'all' && v.category !== categoryFilter) return false;
+    if (competitorFilter !== 'all' && v.competitor !== competitorFilter) return false;
+    return true;
+  });
 
   // Update total count in header
   const countEl = $('history-count');
   if (countEl) {
-    countEl.textContent = filter === 'all'
+    countEl.textContent = filtered.length === all.length
       ? `${all.length} verdict${all.length !== 1 ? 's' : ''}`
       : `${filtered.length} of ${all.length}`;
   }
 
   const el = $('history-list');
   if (!filtered.length) {
-    el.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px">No verdicts found.</div>';
+    const emptyText = competitorFilter !== 'all'
+      ? `No history for ${displayName(competitorFilter)} yet.`
+      : 'No verdicts found.';
+    el.innerHTML = `<div style="color:#94a3b8;text-align:center;padding:20px">${emptyText}</div>`;
     return;
   }
 
@@ -424,41 +486,95 @@ async function loadCompetitors() {
   await _ensureCompNames();
   const [compR, vR] = await Promise.all([
     fetch('/api/competitors'),
-    fetch('/api/verdicts?n=100'),
+    fetch('/api/history'),
   ]);
-  const comps    = await compR.json();
+  const comps = await compR.json();
   const verdicts = await vR.json();
+  _competitorRegistry = comps;
+  syncCompetitorDatalist(comps);
 
-  const lastVerdict = {};
-  for (const v of verdicts) lastVerdict[v.competitor] = {verdict: v.verdict, ts: fmtDate(v.ts)};
-
-  // Group by category, sorted alphabetically
-  const groups = {};
-  for (const c of comps) {
-    const cat = c.category || 'other';
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(c);
+  const latestByCompetitor = {};
+  for (const verdict of verdicts) {
+    if (!latestByCompetitor[verdict.competitor]) {
+      latestByCompetitor[verdict.competitor] = verdict;
+    }
   }
 
-  let rows = '';
-  for (const cat of Object.keys(groups).sort()) {
-    rows += `<tr class="cat-header-row"><td colspan="5">${fmtCategory(cat)}</td></tr>`;
-    rows += groups[cat].map(c => {
-      const lv = lastVerdict[c.slug];
-      return `<tr>
-        <td><strong>${c.name}</strong></td>
-        <td>£${c.monthly_cost_gbp ?? '—'}</td>
-        <td>${lv ? verdictBadge(lv.verdict) : '<span style="color:#94a3b8">not run</span>'}</td>
-        <td style="color:#94a3b8;font-size:.75rem">${lv?.ts || '—'}</td>
-        <td><input class="url-input" value="${c.scraper_url || ''}" placeholder="https://…"
-             data-slug="${c.slug}"></td>
-      </tr>`;
-    }).join('');
-  }
-  $('comp-tbody').innerHTML = rows || '<tr><td colspan="5" style="color:#94a3b8;text-align:center;padding:20px">No competitors loaded.</td></tr>';
+  syncSelectOptions('comp-category-filter', comps.map(c => c.category), 'All categories', fmtCategory);
+
+  const search = $('comp-search')?.value.trim().toLowerCase() || '';
+  const categoryFilter = $('comp-category-filter')?.value || 'all';
+  const verdictFilter = $('comp-verdict-filter')?.value || 'all';
+  const sortKey = $('comp-sort')?.value || 'name';
+  const verdictRank = {SWITCH: 0, HOLD: 1, STAY: 2, NONE: 3};
+
+  const filtered = comps.filter(c => {
+    const lastRun = latestByCompetitor[c.slug];
+    const lastVerdict = lastRun?.verdict || 'NONE';
+    const haystack = `${c.name || ''} ${c.slug || ''} ${c.category || ''}`.toLowerCase();
+    if (search && !haystack.includes(search)) return false;
+    if (categoryFilter !== 'all' && c.category !== categoryFilter) return false;
+    if (verdictFilter !== 'all' && lastVerdict !== verdictFilter) return false;
+    return true;
+  });
+
+  filtered.sort((left, right) => {
+    const leftRun = latestByCompetitor[left.slug];
+    const rightRun = latestByCompetitor[right.slug];
+    const leftCost = Number(left.monthly_cost_gbp);
+    const rightCost = Number(right.monthly_cost_gbp);
+    const leftTs = leftRun?.ts || '';
+    const rightTs = rightRun?.ts || '';
+
+    if (sortKey === 'cost_desc') {
+      return (Number.isFinite(rightCost) ? rightCost : -1) - (Number.isFinite(leftCost) ? leftCost : -1)
+        || left.name.localeCompare(right.name);
+    }
+    if (sortKey === 'cost_asc') {
+      return (Number.isFinite(leftCost) ? leftCost : Number.MAX_SAFE_INTEGER) - (Number.isFinite(rightCost) ? rightCost : Number.MAX_SAFE_INTEGER)
+        || left.name.localeCompare(right.name);
+    }
+    if (sortKey === 'last_verdict') {
+      return (verdictRank[leftRun?.verdict || 'NONE'] ?? 3) - (verdictRank[rightRun?.verdict || 'NONE'] ?? 3)
+        || rightTs.localeCompare(leftTs)
+        || left.name.localeCompare(right.name);
+    }
+    if (sortKey === 'last_run_desc') {
+      return rightTs.localeCompare(leftTs) || left.name.localeCompare(right.name);
+    }
+    return left.name.localeCompare(right.name);
+  });
+
+  const rows = filtered.map(c => {
+    const lastRun = latestByCompetitor[c.slug];
+    const cost = Number(c.monthly_cost_gbp);
+    const costLabel = Number.isFinite(cost) ? `£${cost.toLocaleString('en-GB')}` : '—';
+    return `<tr>
+      <td>
+        <strong>${escapeHtml(c.name)}</strong>
+        <div style="color:#94a3b8;font-size:.72rem;margin-top:2px">${escapeHtml(c.slug)}</div>
+      </td>
+      <td><span class="rank-cat">${fmtCategory(c.category)}</span></td>
+      <td>${costLabel}</td>
+      <td>${lastRun ? verdictBadge(lastRun.verdict) : '<span style="color:#94a3b8">not run</span>'}</td>
+      <td style="color:#94a3b8;font-size:.75rem">${fmtDate(lastRun?.ts || '')}</td>
+      <td><input class="url-input" value="${escapeHtml(c.scraper_url || '')}" placeholder="https://…"
+           data-slug="${escapeHtml(c.slug)}"></td>
+    </tr>`;
+  }).join('');
+
+  $('comp-tbody').innerHTML = rows || '<tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:20px">No competitors match the current filters.</td></tr>';
 }
 
 function toggleAddForm() { $('add-form').classList.toggle('open'); }
+
+function toggleRemoveForm() {
+  $('remove-form').classList.toggle('open');
+  if ($('remove-form').classList.contains('open')) {
+    $('fc-remove-name').value = '';
+    $('fc-remove-name').focus();
+  }
+}
 
 function autoSlug() {
   $('fc-slug').value = $('fc-name').value.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -476,8 +592,46 @@ async function submitAddCompetitor() {
   const r = await fetch('/api/competitors', {
     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
   });
-  if (r.ok) { toggleAddForm(); loadCompetitors(); }
+  if (r.ok) {
+    toggleAddForm();
+    resetCompetitorCache();
+    loadCompetitors();
+  }
   else { alert('Failed to add competitor'); }
+}
+
+async function submitRemoveCompetitor() {
+  await _ensureCompNames();
+  const rawValue = $('fc-remove-name')?.value.trim() || '';
+  if (!rawValue) {
+    alert('Enter a competitor name or slug');
+    return;
+  }
+
+  const normalized = rawValue.toLowerCase();
+  const match = _competitorRegistry.find(competitor => (
+    competitor.slug.toLowerCase() === normalized ||
+    competitor.name.toLowerCase() === normalized
+  ));
+  if (!match) {
+    alert('No competitor matched that name');
+    return;
+  }
+
+  const label = match.name || match.slug;
+  if (!confirm(`Remove ${label} from the registry?`)) return;
+
+  const r = await fetch(`/api/competitors/${encodeURIComponent(match.category)}/${encodeURIComponent(match.slug)}`, {
+    method: 'DELETE',
+  });
+  if (r.ok) {
+    toggleRemoveForm();
+    resetCompetitorCache();
+    loadCompetitors();
+    loadHistory();
+    return;
+  }
+  alert('Failed to remove competitor');
 }
 
 // ── Model Health view ─────────────────────────────────────────────────────────
@@ -522,7 +676,7 @@ async function loadHealth() {
       return `<div class="conf-item">
         <div class="conf-name">${displayName(t.competitor)}</div>
         <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
-        <div class="conf-val" style="color:${col}">${t.prob?.toFixed(3) ?? '—'}</div>
+        <div class="conf-val" style="color:${col}">${t.prob?.toFixed(4) ?? '—'}</div>
       </div>`;
     }).join('');
   }
@@ -757,7 +911,7 @@ async function loadReview() {
         <div class="review-card-top">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
             ${verdictBadge(item.verdict)}
-            <span style="font-size:.68rem;font-family:monospace;color:${col};font-weight:700">P=${prob.toFixed(3)}${margin}</span>
+            <span style="font-size:.68rem;font-family:monospace;color:${col};font-weight:700">P=${prob.toFixed(4)}${margin}</span>
           </div>
           <div class="vcard-name">${displayName(item.competitor)}</div>
           <div class="vcard-meta">

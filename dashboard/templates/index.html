@@ -48,9 +48,9 @@
         <div class="t-sub">No action needed</div>
       </div>
       <div class="stat-tile tile-total">
-        <div class="t-label">Tracked</div>
+        <div class="t-label">Runs</div>
         <div class="t-num" id="stat-total">—</div>
-        <div class="t-sub" id="stat-eval-sub">— evaluated</div>
+        <div class="t-sub" id="stat-eval-sub">total evaluations</div>
       </div>
       <div class="donut-widget">
         <div class="w-label">Verdict split</div>
@@ -72,7 +72,7 @@
             </div>
           </div>
           <div class="widget widget-scroll">
-            <div class="section-label">Recent evaluations</div>
+            <div class="section-label" id="recent-evals-label">Recent evaluations</div>
             <div class="scroll-inner">
               <div class="verdict-grid" id="verdict-grid">
                 <div style="color:#94a3b8;font-size:.8rem;padding:12px">Loading…</div>
@@ -106,12 +106,18 @@
         <div class="section-label">Verdict History</div>
         <span id="history-count" style="font-size:.72rem;color:var(--muted);font-weight:500"></span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="history-filter" onchange="loadHistory()" style="font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
           <option value="all">All verdicts</option>
           <option value="SWITCH">Switch only</option>
           <option value="HOLD">Hold only</option>
           <option value="STAY">Stay only</option>
+        </select>
+        <select id="history-category-filter" onchange="loadHistory()" style="font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+          <option value="all">All categories</option>
+        </select>
+        <select id="history-competitor-filter" onchange="loadHistory()" style="font-size:.78rem;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+          <option value="all">All competitors</option>
         </select>
       </div>
     </div>
@@ -126,7 +132,40 @@
   <div class="view" id="view-competitors">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div class="section-label">Competitor Registry</div>
-      <button class="btn btn-ghost" onclick="toggleAddForm()">+ Add Competitor</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="toggleRemoveForm()">− Remove</button>
+        <button class="btn btn-ghost" onclick="toggleAddForm()">+ Add Competitor</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <input id="comp-search" type="text" placeholder="Filter competitors" oninput="loadCompetitors()" style="font-size:.78rem;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);min-width:220px">
+      <select id="comp-category-filter" onchange="loadCompetitors()" style="font-size:.78rem;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+        <option value="all">All categories</option>
+      </select>
+      <select id="comp-verdict-filter" onchange="loadCompetitors()" style="font-size:.78rem;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+        <option value="all">All verdicts</option>
+        <option value="SWITCH">Switch</option>
+        <option value="HOLD">Hold</option>
+        <option value="STAY">Stay</option>
+        <option value="NONE">Not run</option>
+      </select>
+      <select id="comp-sort" onchange="loadCompetitors()" style="font-size:.78rem;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+        <option value="name">Sort: name</option>
+        <option value="cost_desc">Sort: highest cost</option>
+        <option value="cost_asc">Sort: lowest cost</option>
+        <option value="last_verdict">Sort: last verdict</option>
+        <option value="last_run_desc">Sort: most recent run</option>
+      </select>
+    </div>
+    <div class="add-form" id="remove-form">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="fc-remove-name" type="text" list="competitor-registry-options"
+               placeholder="Type name or slug"
+               style="flex:1;min-width:200px;font-size:.78rem;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card)">
+        <datalist id="competitor-registry-options"></datalist>
+        <button class="btn btn-primary" onclick="submitRemoveCompetitor()">Remove</button>
+        <button class="btn btn-ghost" onclick="toggleRemoveForm()">Cancel</button>
+      </div>
     </div>
     <div class="add-form" id="add-form">
       <div class="form-grid">
@@ -164,12 +203,12 @@
         <table class="comp-table">
           <thead>
             <tr>
-              <th>Name</th><th>Cost/mo</th>
+              <th>Name</th><th>Category</th><th>Cost/mo</th>
               <th>Last Verdict</th><th>Last Run</th><th>Scraper URL</th>
             </tr>
           </thead>
           <tbody id="comp-tbody">
-            <tr><td colspan="5" style="color:#94a3b8;text-align:center;padding:20px">Loading…</td></tr>
+            <tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:20px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -239,7 +278,7 @@
         <div id="retrain-badge" style="font-size:.68rem;padding:3px 8px;border-radius:4px;background:var(--border);color:var(--muted)">—</div>
       </div>
       <div id="retrain-info" style="font-size:.78rem;color:var(--muted);margin-bottom:12px">
-        Corrections from human feedback and canary failures are used to retrain the model via Direct Preference Optimization.
+        Human feedback is used directly for DPO retraining. Canary failures are tracked for drift but excluded from the default DPO harvest.
       </div>
       <div id="retrain-stats" style="display:flex;gap:16px;margin-bottom:16px">
         <div style="text-align:center">

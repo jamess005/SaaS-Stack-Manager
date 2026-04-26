@@ -10,13 +10,16 @@ def drift_log(tmp_path):
     records = [
         {"ts": "2026-04-12T10:00:00+00:00", "type": "live_run", "category": "finance",
          "competitor": "ledgerflow", "verdict": "SWITCH", "format_valid": True,
-         "validation_attempts": 1, "verdict_token_prob": 0.91},
+         "validation_attempts": 1, "verdict_token_prob": 0.91,
+         "memo_filename": "2026-04-12-finance-ledgerflow-pull_dominant.md"},
         {"ts": "2026-04-12T11:00:00+00:00", "type": "live_run", "category": "hr",
          "competitor": "workforge", "verdict": "HOLD", "format_valid": True,
-         "validation_attempts": 1, "verdict_token_prob": 0.78},
+         "validation_attempts": 1, "verdict_token_prob": 0.78,
+         "memo_filename": "2026-04-12-hr-workforge-contract_renewal_hold.md"},
         {"ts": "2026-04-12T12:00:00+00:00", "type": "live_run", "category": "crm",
          "competitor": "velocitycrm", "verdict": "STAY", "format_valid": True,
-         "validation_attempts": 1, "verdict_token_prob": 0.55},
+         "validation_attempts": 1, "verdict_token_prob": 0.55,
+         "memo_filename": "2026-04-12-crm-velocitycrm-negative_signal_buried.md"},
         {"ts": "2026-04-12T13:00:00+00:00", "type": "accuracy_check",
          "correct": 4, "total": 4, "accuracy": 1.0, "results": []},
     ]
@@ -73,6 +76,9 @@ def test_get_recent_verdicts_includes_confidence(drift_log, tmp_path):
 from dashboard.data_layer import (
     get_competitors, record_feedback, get_health,
     is_model_busy, set_model_busy, clear_model_busy,
+    get_all_verdicts, get_active_holds,
+    get_rankings, get_review_queue,
+    delete_competitor,
 )
 
 
@@ -96,6 +102,15 @@ def test_get_competitors_returns_list(competitors_dir):
     assert comps[0]["name"] == "TestCRM"
     assert comps[0]["slug"] == "testcrm"
     assert comps[0]["category"] == "crm"
+
+
+def test_delete_competitor_removes_file(competitors_dir):
+    assert delete_competitor("crm", "testcrm", competitors_dir=competitors_dir) is True
+    assert get_competitors(competitors_dir=competitors_dir) == []
+
+
+def test_delete_competitor_returns_false_when_missing(competitors_dir):
+    assert delete_competitor("crm", "missing", competitors_dir=competitors_dir) is False
 
 
 def test_record_feedback_appends_record(tmp_path):
@@ -144,6 +159,52 @@ def test_get_health_no_checks(tmp_path):
     assert health["last_accuracy"] is None
 
 
+def test_dashboard_queries_use_logged_memo_filename(drift_log, tmp_path):
+    summaries = tmp_path / "summaries.json"
+    summaries.write_text(json.dumps({
+        "2026-04-12-finance-ledgerflow-pull_dominant.md": "Ledger summary",
+        "2026-04-12-hr-workforge-contract_renewal_hold.md": "Workforge summary",
+        "2026-04-12-crm-velocitycrm-negative_signal_buried.md": "Velocity summary",
+    }), encoding="utf-8")
+
+    (tmp_path / "2026-04-12-crm-velocitycrm-negative_signal_buried.md").write_text(
+        "EVIDENCE: Scenario-specific evidence\nANALYSIS: Rest\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "2026-04-12-hr-workforge-contract_renewal_hold.md").write_text(
+        "REASSESS CONDITION: Wait for GA\nREVIEW BY: 2026-05-01\n",
+        encoding="utf-8",
+    )
+
+    recent = get_recent_verdicts(
+        n=10,
+        log_path=drift_log,
+        outputs_dir=tmp_path,
+        summaries_path=summaries,
+    )
+    velocity = next(v for v in recent if v["competitor"] == "velocitycrm")
+    assert velocity["memo_filename"] == "2026-04-12-crm-velocitycrm-negative_signal_buried.md"
+    assert velocity["memo_excerpt"] == "Scenario-specific evidence"
+    assert velocity["summary"] == "Velocity summary"
+
+    rankings = get_rankings(log_path=drift_log, summaries_path=summaries)
+    assert rankings[0]["memo_filename"] == "2026-04-12-finance-ledgerflow-pull_dominant.md"
+    assert rankings[0]["summary"] == "Ledger summary"
+
+    queue = get_review_queue(log_path=drift_log, summaries_path=summaries, conf_threshold=0.65)
+    assert queue["queue"][0]["memo_filename"] == "2026-04-12-crm-velocitycrm-negative_signal_buried.md"
+    assert queue["queue"][0]["summary"] == "Velocity summary"
+
+    holds = get_active_holds(log_path=drift_log, summaries_path=summaries, outputs_dir=tmp_path)
+    assert holds[0]["memo_filename"] == "2026-04-12-hr-workforge-contract_renewal_hold.md"
+    assert holds[0]["reassess_condition"] == "Wait for GA"
+    assert holds[0]["review_by"] == "2026-05-01"
+
+    all_verdicts = get_all_verdicts(log_path=drift_log, summaries_path=summaries)
+    hold = next(v for v in all_verdicts if v["competitor"] == "workforge")
+    assert hold["memo_filename"] == "2026-04-12-hr-workforge-contract_renewal_hold.md"
+
+
 def test_model_lock(tmp_path):
     lock = tmp_path / ".model_lock"
     assert not is_model_busy(lock_path=lock)
@@ -184,6 +245,15 @@ def test_index_returns_200(client):
     assert r.status_code == 200
 
 
+def test_competitors_page_has_remove_form_element(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    assert 'id="remove-form"' in body
+    assert 'id="fc-remove-name"' in body
+    assert 'toggleRemoveForm' in body
+
+
 def test_api_stats(client):
     r = client.get("/api/stats")
     assert r.status_code == 200
@@ -206,6 +276,20 @@ def test_api_competitors(client):
     assert r.status_code == 200
     data = r.get_json()
     assert data[0]["name"] == "TestCRM"
+
+
+def test_api_delete_competitor(client):
+    r = client.delete("/api/competitors/crm/testcrm")
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True
+
+    remaining = client.get("/api/competitors").get_json()
+    assert remaining == []
+
+
+def test_api_delete_competitor_missing(client):
+    r = client.delete("/api/competitors/crm/missing")
+    assert r.status_code == 404
 
 
 def test_api_feedback_post(client):
