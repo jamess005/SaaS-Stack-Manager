@@ -99,7 +99,7 @@ def load_model(
         (tokenizer, model) — both None in dry-run mode.
 
     ROCm: device_map="auto" triggers HIP kernel dispatch failures on ROCm 7.x.
-          On ROCm, explicit device_map={{"":0}} is used instead.
+          On ROCm, explicit device_map={"":0} is used instead.
           Ensure HSA_OVERRIDE_GFX_VERSION=11.0.0 for RX 7800 XT.
     """
     if _is_dry_run():
@@ -163,7 +163,7 @@ def load_model(
             # Stack: merge SFT into base, then apply DPO LoRA on top.
             logger.info("Loading SFT adapter from: %s (will merge for DPO stacking)", adapter_path)
             model = PeftModel.from_pretrained(model, adapter_path)
-            model = model.merge_and_unload()
+            model = model.merge_and_unload()  # type: ignore[assignment]
             logger.info("SFT adapter merged into base.")
             logger.info("Loading DPO adapter from: %s", dpo_adapter_path)
             model = PeftModel.from_pretrained(model, dpo_adapter_path)
@@ -302,115 +302,116 @@ def _generate(tokenizer, model, messages: list[dict], max_new_tokens: int, tempe
 _VERDICT_WORDS = ["SWITCH", "STAY", "HOLD"]
 
 
-def _extract_verdict_confidence(tokenizer, scores, generated_ids) -> dict | None:
-    """
-    Extract the probability distribution over SWITCH/STAY/HOLD at the verdict token position.
-
-    Strategy:
-      1. Scan token-by-token, accumulating decoded text.
-      2. When accumulated text first matches VERDICT:\\s*(SWITCH|STAY|HOLD), walk back
-         in generated_ids to find where the first subtoken of the verdict word was emitted.
-      3. Read scores[first_token_pos] — the logit distribution at the moment the model
-         committed to one of the three verdict words.
-      4. Compare like-for-like: use bare or spaced first-tokens consistently, depending
-         on which variant the model actually generated.
-
-    Handles multi-token verdict words (Qwen2.5: "STAY"→["ST","AY"], "SWITCH"→["SW","ITCH"],
-    "HOLD"→["H","OLD"]) and space-prefixed variants (" HOLD"→[" HOLD"], etc.).
-
-    Returns None if the verdict token cannot be located (e.g. malformed output).
-    """
-    import math
+def _locate_verdict_span(tokenizer, generated_ids):
     import re
 
-    import torch
-
-    # Encode each verdict word in bare and space-prefixed variants.
     bare_seqs: dict[str, list[int]] = {
-        w: tokenizer.encode(w, add_special_tokens=False) for w in _VERDICT_WORDS
+        word: tokenizer.encode(word, add_special_tokens=False) for word in _VERDICT_WORDS
     }
     spaced_seqs: dict[str, list[int]] = {
-        w: tokenizer.encode(" " + w, add_special_tokens=False) for w in _VERDICT_WORDS
+        word: tokenizer.encode(" " + word, add_special_tokens=False) for word in _VERDICT_WORDS
     }
 
-    # All possible last-subtoken IDs (triggers the check).
     last_tid_set: set[int] = set()
-    for w in _VERDICT_WORDS:
-        if bare_seqs[w]:
-            last_tid_set.add(bare_seqs[w][-1])
-        if spaced_seqs[w]:
-            last_tid_set.add(spaced_seqs[w][-1])
+    for word in _VERDICT_WORDS:
+        if bare_seqs[word]:
+            last_tid_set.add(bare_seqs[word][-1])
+        if spaced_seqs[word]:
+            last_tid_set.add(spaced_seqs[word][-1])
 
-    _VERDICT_RE = re.compile(r"VERDICT:\s*(SWITCH|STAY|HOLD)", re.IGNORECASE)
-
+    verdict_re = re.compile(r"VERDICT:\s*(SWITCH|STAY|HOLD)", re.IGNORECASE)
     token_ids = generated_ids.tolist()
     accumulated = ""
 
     for pos, token_id in enumerate(token_ids):
-        if pos >= len(scores):
-            break
         accumulated += tokenizer.decode([token_id], skip_special_tokens=True)
-
         if token_id not in last_tid_set:
             continue
 
-        m = _VERDICT_RE.search(accumulated)
-        if not m:
+        match = verdict_re.search(accumulated)
+        if not match:
             continue
 
-        word = m.group(1).upper()
-
-        # Find which variant (bare or spaced) was actually generated, and at what pos.
-        first_token_pos: int | None = None
-        matched_variant: str = "bare"  # "bare" or "spaced"
+        word = match.group(1).upper()
         for variant, seq in (("bare", bare_seqs[word]), ("spaced", spaced_seqs[word])):
-            n = len(seq)
-            if n == 0 or pos + 1 < n:
+            length = len(seq)
+            if length == 0 or pos + 1 < length:
                 continue
-            if token_ids[pos + 1 - n : pos + 1] == seq:
-                first_token_pos = pos + 1 - n
-                matched_variant = variant
-                break
-
-        if first_token_pos is None or first_token_pos >= len(scores):
-            return None
-
-        # Build the comparison first-token IDs using the SAME variant for all words.
-        # This ensures we compare like-for-like at the branching position.
-        if matched_variant == "spaced":
-            cmp_tids = {w: spaced_seqs[w][0] for w in _VERDICT_WORDS if spaced_seqs[w]}
-        else:
-            cmp_tids = {w: bare_seqs[w][0] for w in _VERDICT_WORDS if bare_seqs[w]}
-
-        # outputs.scores[i] has shape (batch_size, vocab_size); squeeze batch dim.
-        probs = torch.softmax(scores[first_token_pos][0].float(), dim=-1)
-        vprobs: dict[str, float] = {
-            w: float(probs[tid].item())
-            for w, tid in cmp_tids.items()
-            if tid < probs.shape[0]
-        }
-
-        if word not in vprobs or not vprobs:
-            return None
-
-        total = sum(vprobs.values())
-        if total > 0:
-            norm = [v / total for v in vprobs.values()]
-            entropy = -sum(p * math.log2(p) if p > 0 else 0.0 for p in norm)
-        else:
-            entropy = 0.0
-
-        sorted_p = sorted(vprobs.values(), reverse=True)
-        margin = sorted_p[0] - sorted_p[1] if len(sorted_p) >= 2 else 1.0
-
-        return {
-            "verdict_token_prob": round(vprobs[word], 4),
-            "verdict_entropy_bits": round(entropy, 4),
-            "verdict_margin": round(margin, 4),
-            "verdict_probs": {k: round(v, 4) for k, v in vprobs.items()},
-        }
-
+            if token_ids[pos + 1 - length : pos + 1] == seq:
+                return {
+                    "word": word,
+                    "first_token_pos": pos + 1 - length,
+                    "last_token_pos": pos,
+                    "variant": variant,
+                    "bare_seqs": bare_seqs,
+                    "spaced_seqs": spaced_seqs,
+                }
     return None
+
+
+def _extract_verdict_confidence(tokenizer, scores, generated_ids) -> dict | None:
+    """
+    Extract confidence from softmax over verdict tokens at the first verdict token position.
+
+    Returns the probability renormalized across SWITCH/STAY/HOLD — answers
+    "how decisively did the model pick this verdict?" with values in [0.33, 1.0].
+    """
+    import math
+
+    import torch
+
+    span = _locate_verdict_span(tokenizer, generated_ids)
+    if span is None:
+        return None
+
+    word = span["word"]
+    first_token_pos = span["first_token_pos"]
+    matched_variant = span["variant"]
+    bare_seqs = span["bare_seqs"]
+    spaced_seqs = span["spaced_seqs"]
+
+    if first_token_pos >= len(scores):
+        return None
+
+    if matched_variant == "spaced":
+        cmp_tids = {
+            token_word: spaced_seqs[token_word][0]
+            for token_word in _VERDICT_WORDS
+            if spaced_seqs[token_word]
+        }
+    else:
+        cmp_tids = {
+            token_word: bare_seqs[token_word][0]
+            for token_word in _VERDICT_WORDS
+            if bare_seqs[token_word]
+        }
+
+    probs = torch.softmax(scores[first_token_pos][0].float(), dim=-1)
+    vprobs: dict[str, float] = {
+        token_word: float(probs[token_id].item())
+        for token_word, token_id in cmp_tids.items()
+        if token_id < probs.shape[0]
+    }
+    if word not in vprobs or not vprobs:
+        return None
+
+    total = sum(vprobs.values())
+    if total > 0:
+        vprobs = {k: v / total for k, v in vprobs.items()}
+
+    entropy = -sum(
+        v * math.log2(v) if v > 0 else 0.0
+        for v in vprobs.values()
+    )
+    sorted_p = sorted(vprobs.values(), reverse=True)
+    margin = sorted_p[0] - sorted_p[1] if len(sorted_p) >= 2 else 1.0
+
+    return {
+        "verdict_token_prob": round(vprobs[word], 6),
+        "verdict_entropy_bits": round(entropy, 6),
+        "verdict_margin": round(margin, 6),
+        "verdict_probs": {k: round(v, 6) for k, v in vprobs.items()},
+    }
 
 
 def _generate_with_scores(
@@ -850,9 +851,9 @@ def _parse_compliance_changes(
     """
     Interpret free-text compliance_changes using keyword heuristics.
 
-    Looks for positive signals (achieved/added/now available) paired with
-    hard-requirement keywords (soc2, sso, residency, audit log).  Negative
-    or unchanged text is ignored.  No model call required.
+    Handles both upgrades (false→true) and downgrades (true→false).
+    Strips embedded JSON dict prefixes to avoid cross-contamination from
+    key names (e.g. "ifrs15_compliant" matching "compliant").
 
     Returns updated compliance dict (original is not mutated).
     """
@@ -861,49 +862,117 @@ def _parse_compliance_changes(
     if _is_dry_run():
         return compliance
 
-    text = changes_text.lower()
     updated = dict(compliance)
 
+    # ── Strip embedded JSON dict prefix ────────────────────────────────────
+    # Some signals embed a JSON dict followed by semicolon-separated text.
+    # The dict values are unreliable (LLM-generated) — ignore them and only
+    # process the free-text portion that follows.
+    text = changes_text.strip()
+    if text.startswith("{"):
+        brace_depth = 0
+        end_idx = 0
+        for i, ch in enumerate(text):
+            if ch == "{":
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth -= 1
+                if brace_depth == 0:
+                    end_idx = i + 1
+                    break
+        text = text[end_idx:].strip().lstrip(";").strip()
+
+    if not text or text.lower() in ("unchanged", "no changes", "none"):
+        return compliance
+
+    text = text.lower()
+
     _POSITIVE = frozenset([
-        "achieved", "acquired", "certified", "added", "now available", "launched", "shipped",
-        "compliant", "now meets", "now compliant", "met", "passed", "attained",
-        "enabled", "available", "live",
+        "achieved", "acquired", "certified", "added", "now available", "launched",
+        "shipped", "now meets", "now compliant", "passed", "attained", "enabled", "live",
     ])
 
-    def _positive_context(snippet: str) -> bool:
-        return any(kw in snippet for kw in _POSITIVE)
+    _NEGATIVE = frozenset([
+        "not available", "not yet", "not achieved", "not certified", "not compliant",
+        "no ", "lacks", "missing", "in progress", "pending",
+        "not met", "not passed", "unavailable", "absent",
+    ])
 
-    # SOC2 Type II
-    if not compliance.get("soc2_type2"):
-        if ("soc2" in text or "soc 2" in text) and _positive_context(text):
+    def _find_segment(text: str, keywords: tuple[str, ...]) -> str | None:
+        """Extract the semicolon/newline-delimited segment containing any keyword."""
+        for sep in (";", "\n"):
+            for part in text.split(sep):
+                part_s = part.strip()
+                if any(kw in part_s for kw in keywords):
+                    return part_s
+        # Fall back to full text only if a keyword appears at all
+        if any(kw in text for kw in keywords):
+            return text
+        return None
+
+    def _is_positive(segment: str) -> bool:
+        """True when the segment conveys a positive compliance change."""
+        if any(neg in segment for neg in _NEGATIVE):
+            strong = ("achieved", "acquired", "certified", "now available", "launched",
+                      "shipped", "now meets", "now compliant", "passed", "attained", "live")
+            for kw in strong:
+                idx = segment.find(kw)
+                if idx >= 0:
+                    prefix = segment[max(0, idx - 5):idx].strip()
+                    if not prefix.endswith("not"):
+                        return True
+            return False
+        return any(kw in segment for kw in _POSITIVE)
+
+    def _is_negative(segment: str) -> bool:
+        """True when the segment conveys a negative compliance status."""
+        return any(neg in segment for neg in _NEGATIVE)
+
+    # ── SOC2 Type II ──────────────────────────────────────────────────────
+    soc2_seg = _find_segment(text, ("soc2", "soc 2"))
+    if soc2_seg is not None:
+        if not compliance.get("soc2_type2") and _is_positive(soc2_seg):
             updated["soc2_type2"] = True
+        elif compliance.get("soc2_type2") and _is_negative(soc2_seg):
+            updated["soc2_type2"] = False
 
-    # SSO / SAML (only matters if seat_count > 10)
-    if seat_count > 10 and not compliance.get("sso_saml"):
-        if ("sso" in text or "saml" in text or "oidc" in text) and _positive_context(text):
+    # ── SSO / SAML (only matters if seat_count > 10) ─────────────────────
+    sso_seg = _find_segment(text, ("sso", "saml", "oidc"))
+    if sso_seg is not None:
+        if seat_count > 10 and not compliance.get("sso_saml") and _is_positive(sso_seg):
             updated["sso_saml"] = True
+        elif compliance.get("sso_saml") and _is_negative(sso_seg):
+            updated["sso_saml"] = False
 
-    # UK / EU data residency
-    if not (compliance.get("uk_residency") or compliance.get("gdpr_eu_residency")):
-        if "uk" in text and "residency" in text and _positive_context(text):
+    # ── UK / EU data residency ───────────────────────────────────────────
+    uk_seg = _find_segment(text, ("uk",))
+    if uk_seg and "residency" in uk_seg:
+        if _is_positive(uk_seg):
             updated["uk_residency"] = True
             updated["gdpr_eu_residency"] = True
-        elif ("eu" in text or "gdpr" in text) and "residency" in text and _positive_context(text):
+        elif _is_negative(uk_seg):
+            updated["uk_residency"] = False
+
+    if not updated.get("gdpr_eu_residency"):
+        eu_seg = _find_segment(text, ("eu", "gdpr"))
+        if eu_seg and "residency" in eu_seg and _is_positive(eu_seg):
             updated["gdpr_eu_residency"] = True
 
-    # Audit log (required for finance, hr, crm)
+    # ── Audit log (required for finance, hr, crm) ────────────────────────
     if category in ("finance", "hr", "crm"):
-        if not compliance.get("audit_log"):
-            if ("audit log" in text or "audit trail" in text) and _positive_context(text):
-                # Don't set if the text explicitly says it's still inadequate
-                if "csv only" not in text and "not available" not in text:
+        audit_seg = _find_segment(text, ("audit log", "audit trail", "exportable audit"))
+        if audit_seg is not None:
+            if not compliance.get("audit_log") and _is_positive(audit_seg):
+                if "csv only" not in audit_seg:
                     updated["audit_log"] = True
                     updated["audit_log_exportable"] = True
-        elif not compliance.get("audit_log_exportable"):
-            # audit_log exists but export wasn't available — handle separately
-            _export_kw = ("audit log export", "exportable audit", "audit trail export")
-            if any(kw in text for kw in _export_kw) and _positive_context(text):
-                updated["audit_log_exportable"] = True
+            elif compliance.get("audit_log") and _is_negative(audit_seg):
+                updated["audit_log"] = False
+                updated["audit_log_exportable"] = False
+            elif not compliance.get("audit_log_exportable"):
+                _export_kw = ("audit log export", "exportable audit", "audit trail export")
+                if any(kw in audit_seg for kw in _export_kw) and _is_positive(audit_seg):
+                    updated["audit_log_exportable"] = True
 
     return updated
 
@@ -1188,34 +1257,7 @@ def run_lean(
     category = context["category"]
     seat_count = context["current_stack_entry"].get("seat_count", 0)
 
-    # Step 1: Optionally update compliance state from signal text
-    compliance_changes = signal_compliance_changes(signal)
-    compliance = dict(context["competitor_data"].get("compliance", {}))
-    if compliance_changes:
-        compliance = _parse_compliance_changes(
-            compliance_changes, compliance, category, seat_count, tokenizer, model
-        )
-
-    # Build a context view with (possibly updated) compliance
-    effective_context = {
-        **context,
-        "competitor_data": {**context["competitor_data"], "compliance": compliance},
-    }
-
-    # Step 2: Python compliance gate — short-circuit to STAY if any block
-    passed, failures = _compliance_pass_python(effective_context)
-    if not passed:
-        failure_str = "; ".join(failures)
-        logger.info("Compliance FAIL (Python gate): %s", failure_str)
-        return (
-            f"ANALYSIS: Compliance blocks present — {failure_str}. "
-            f"Hard compliance blocks are non-negotiable. VERDICT is STAY.\n"
-            f"VERDICT: STAY"
-        ), None
-
-    logger.info("Compliance PASS (Python gate)")
-
-    # Step 3: Build compact user message
+    # Build compact user message — model reasons about compliance from the raw profile
     user_content = _build_lean_user(context, roi_result, signal)
 
     messages = [
@@ -1229,11 +1271,18 @@ def run_lean(
 
 
 _HOLD_NOTE_KW = frozenset([
-    "hold:", "acquisition", "beta", "roadmap", "renews", "renewal", "pilot", "not ga",
+    "hold:", "acquisition", "roadmap", "renews", "renewal", "pilot",
 ])
 
+# Pre-GA keywords — these indicate a hold when found in competitor_changes,
+# but a disqualifier when found only in notes (per system prompt positional rule).
+_PRE_GA_KW = frozenset(["beta", "not ga", "early access", "preview"])
+
 # Competitor-changes keywords that indicate a hold condition (feature not yet GA)
-_HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview"])
+_HOLD_COMP_KW = frozenset(["beta", "roadmap", "not ga", "preview", "early access"])
+
+# Current-tool-status keywords that indicate a shelfware situation
+_SHELFWARE_KW = frozenset(["shelfware", "inactive seats", "inactive seat"])
 
 # Notes that start with these words are advisory, not hold conditions
 _ADVISORY_PREFIXES = ("consider", "suggest", "recommend", "note:", "fyi")
@@ -1272,7 +1321,13 @@ def _detect_hold_signal(notes: list[str], comp_changes: list[str] | None = None)
     return "NONE"
 
 
-_DISQUALIFIER_NOTE_KW = frozenset(["preview", "early access"])
+_DISQUALIFIER_NOTE_KW = frozenset([
+    "preview", "early access", "beta", "not ga",
+    "no relevance", "not relevant", "irrelevant to", "irrelevant", "unrelated",
+    "poor fit", "wrong product", "not designed for",
+    "hard requirement",
+    "without relevance", "does not align", "does not address", "no impact on",
+])
 
 
 def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
@@ -1281,6 +1336,8 @@ def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
     A disqualifier means the competitor is not viable (STAY), distinct from a hold condition
     (HOLD). Uses keywords disjoint from _HOLD_NOTE_KW to prevent double-labeling.
     Only fires when hold_signal is 'NONE'.
+    Negation phrases (e.g. 'no beta or roadmap caveats') are excluded to avoid
+    false positives that would flip a correct SWITCH to STAY.
     """
     if hold_signal != "NONE":
         return "NONE"
@@ -1288,9 +1345,77 @@ def _detect_disqualifier(notes: list[str], hold_signal: str) -> str:
         note_lower = note.lower()
         if note_lower.startswith(_ADVISORY_PREFIXES):
             continue
+        if _NEGATION_PATTERNS.search(note):
+            continue
         if any(kw in note_lower for kw in _DISQUALIFIER_NOTE_KW):
             return note
     return "NONE"
+
+
+_SHELFWARE_NEGATION = re.compile(
+    r"no\s+shelfware|not\s+shelfware|no\s+inactive\s+seats?|no\s+unused"
+    r"|reduced\s+to\s+0|seats\s+reduced|inactive\s+seats?\s+decrease"
+    r"|remains?\s+stable|increase\s+by\s+[0-5]%",
+    re.IGNORECASE,
+)
+
+_SHELFWARE_GLOBAL_NEGATION = re.compile(
+    r"shelfware(?:\s+(?:flag|status))?(?:\s*(?::|=)\s*|\s+remains?\s+)(?:false|no|none)\b",
+    re.IGNORECASE,
+)
+
+_SHELFWARE_COUNT = re.compile(r"inactive\s+seats?[^\d]*(\d+)", re.IGNORECASE)
+_SHELFWARE_PERCENT = re.compile(r"(\d+)%", re.IGNORECASE)
+
+
+def _detect_shelfware(tool_changes: list[str]) -> str:
+    """Return the shelfware-flagging line from current_tool_status, or 'NONE'.
+
+    Scans the current period's tool-status updates for explicit shelfware mentions
+    (inactive seats, shelfware rate). Returns the first matching line so it can be
+    surfaced as a structured field for the model — matching the Hold signal pattern.
+
+    Negation phrases ("no shelfware", "no inactive seats") are explicitly excluded
+    to avoid false positives from signal generators that write negation as status.
+    A global negation ("Shelfware: False") anywhere in tool_changes overrides all
+    detections.
+    """
+    # If any line globally negates shelfware, skip detection entirely.
+    for change in tool_changes:
+        if _SHELFWARE_GLOBAL_NEGATION.search(change):
+            return "NONE"
+    for change in tool_changes:
+        lower = change.lower()
+        if any(kw in lower for kw in _SHELFWARE_KW):
+            if _SHELFWARE_NEGATION.search(change):
+                continue
+            if "shelfware" in lower or "unused capacity" in lower or "underutilis" in lower:
+                return change
+            inactive_counts = [int(value) for value in _SHELFWARE_COUNT.findall(change)]
+            if inactive_counts and max(inactive_counts) >= 10:
+                return change
+            percents = [int(value) for value in _SHELFWARE_PERCENT.findall(change)]
+            if percents and max(percents) >= 30:
+                return change
+    return "NONE"
+
+
+def _format_compliance_block(context: dict, signal: dict) -> str:
+    """Format raw competitor compliance profile + signal for the model to reason from."""
+    profile = context.get("competitor_data", {}).get("compliance", {})
+    soc2 = "Yes" if profile.get("soc2_type2") else "No"
+    sso = "Yes" if profile.get("sso_saml") else "No"
+    uk = profile.get("uk_residency", False)
+    eu = profile.get("gdpr_eu_residency", False)
+    residency = ("UK+EU" if (uk and eu) else "UK" if uk else "EU" if eu else "No")
+    al = profile.get("audit_log", False)
+    ale = profile.get("audit_log_exportable", True) if al else False
+    audit = f"Yes (exportable: {'Yes' if ale else 'No'})" if al else "No"
+    cc = signal_compliance_changes(signal) or "unchanged"
+    return (
+        f"Competitor compliance: SOC2={soc2} | SSO/SAML={sso} | Residency={residency} | Audit log={audit}\n"
+        f"Compliance signal: {cc}"
+    )
 
 
 def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> str:
@@ -1331,12 +1456,18 @@ def _build_lean_user(context: dict, roi_result: dict, signal: dict | None) -> st
         user_content += f"\nBuried signals / notes:\n{notes_text}\n"
     hold_signal = _detect_hold_signal(notes, comp_changes)
     disqualifier = _detect_disqualifier(notes, hold_signal)
+    shelfware_signal = _detect_shelfware(tool_changes)
     user_content += f"\nROI: {roi_summary}"
-    user_content += "\nCompliance: PASSED"
+    user_content += f"\n{_format_compliance_block(context, signal)}"
     user_content += f"\nHold signal: {hold_signal}"
     if disqualifier != "NONE":
         user_content += f"\nDisqualifier: {disqualifier}"
+    # Disqualifier takes priority over Shelfware (don't present both — contradictory).
+    if shelfware_signal != "NONE" and hold_signal == "NONE" and disqualifier == "NONE":
+        user_content += f"\nShelfware flag: {shelfware_signal}"
     prev_verdict = signal.get("previous_verdict")
-    if prev_verdict:
+    if prev_verdict == "HOLD" and hold_signal == "NONE":
+        user_content += "\nHold status: RESOLVED (prior verdict was HOLD — blocker has now cleared)"
+    elif prev_verdict:
         user_content += f"\nPrevious verdict: {prev_verdict}"
     return user_content
