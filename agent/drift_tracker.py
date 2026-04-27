@@ -35,6 +35,7 @@ def log_live_run(
     validation_attempts: int,
     confidence: dict | None,
     log_path: Path | None = None,
+    memo_filename: str | None = None,
 ) -> None:
     """Append a live_run record to the drift log."""
     log_path = log_path or _DRIFT_LOG
@@ -50,6 +51,8 @@ def log_live_run(
     }
     if confidence:
         record.update(confidence)
+    if memo_filename is not None:
+        record["memo_filename"] = memo_filename
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 

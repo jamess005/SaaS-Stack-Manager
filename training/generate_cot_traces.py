@@ -9,9 +9,11 @@ Usage:
     python training/generate_cot_traces.py              # 8 per scenario (~144 total)
     python training/generate_cot_traces.py --limit 5    # 5 per scenario (~90 total)
     python training/generate_cot_traces.py --limit 12   # 12 per scenario (~216 total)
+    python training/generate_cot_traces.py --balance --val-ratio 0.15
 """
 
 import argparse
+from collections import Counter, defaultdict
 import json
 import random
 import re
@@ -25,6 +27,8 @@ _OUTPUT_PATH = _PROJECT_ROOT / "training" / "sft_cot_traces.jsonl"
 
 sys.path.insert(0, str(_PROJECT_ROOT))
 
+from training.drift_canaries import DRIFT_CANARY_FILENAMES  # noqa: E402
+from training.reasoning_alignment import build_semantic_view  # noqa: E402
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
 from agent.prompts import SYS_VERDICT_LEAN, _CATEGORY_RULES_COMPACT  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
@@ -87,8 +91,7 @@ _HOLD_SCENARIOS = {
     "pilot_in_progress_hold",
 }
 
-# Excluded from training: Python compliance gate handles these, model is never called.
-_SKIP_SCENARIOS = {"hard_compliance_failure"}
+_SKIP_SCENARIOS: set[str] = set()
 
 # ── Filename parsing ───────────────────────────────────────────────────────────
 
@@ -239,7 +242,18 @@ _SHELFWARE_NEGATION = re.compile(
 )
 
 _SHELFWARE_GLOBAL_NEGATION = re.compile(
-    r"shelfware\s*:\s*false|shelfware\s*:\s*no\b|shelfware\s*:\s*none\b",
+    r"shelfware(?:\s+(?:flag|status))?(?:\s*(?::|=)\s*|\s+remains?\s+)(?:false|no|none)\b",
+    re.IGNORECASE,
+)
+
+_SHELFWARE_COUNT = re.compile(r"inactive\s+seats?[^\d]*(\d+)", re.IGNORECASE)
+_SHELFWARE_PERCENT = re.compile(r"(\d+)%", re.IGNORECASE)
+
+_PRICE_HIKE_RE = re.compile(
+    r"(?:price|pricing|cost|tier|per[- ]user|per[- ]active[- ]user)[^\n]{0,40}"
+    r"(?:increase|increased|increasing|higher|hike|rise|rose|raised|more expensive)"
+    r"|(?:increase|increased|higher|raised)[^\n]{0,20}(?:price|pricing|cost|tier)"
+    r"|per[- ]active[- ]user\s+pricing",
     re.IGNORECASE,
 )
 
@@ -256,10 +270,245 @@ def _detect_shelfware(tool_changes: list[str]) -> str:
         if _SHELFWARE_GLOBAL_NEGATION.search(change):
             return "NONE"
     for change in tool_changes:
-        if any(kw in change.lower() for kw in _SHELFWARE_KW):
-            if not _SHELFWARE_NEGATION.search(change):
+        lower = change.lower()
+        if any(kw in lower for kw in _SHELFWARE_KW):
+            if _SHELFWARE_NEGATION.search(change):
+                continue
+            if "shelfware" in lower or "unused capacity" in lower or "underutilis" in lower:
+                return change
+            inactive_counts = [int(value) for value in _SHELFWARE_COUNT.findall(change)]
+            if inactive_counts and max(inactive_counts) >= 10:
+                return change
+            percents = [int(value) for value in _SHELFWARE_PERCENT.findall(change)]
+            if percents and max(percents) >= 30:
                 return change
     return "NONE"
+
+
+def _detect_price_hike(tool_changes: list[str]) -> str:
+    for change in tool_changes:
+        if _PRICE_HIKE_RE.search(change):
+            return change
+    return "NONE"
+
+
+_TRAINING_PLACEHOLDER_REPLACEMENTS = {
+    "state the contract renewal timing explicitly": "the contract renewal window is not yet open",
+    "shallow_degradation": "a shallow incumbent degradation signal",
+    "minor maintenance update only": "a maintenance-only competitor update",
+    "issues persist": "the incumbent issues remain unresolved",
+    "known issues persist": "the incumbent issues remain unresolved",
+    "push issues persisting": "the incumbent issues remain unresolved",
+    "surface cannot deliver": "the competitor cannot deliver",
+    "acquisition certainty uncertain": "vendor acquisition remains uncertain",
+    "shelfware case: no new changes": "a shelfware-driven switch case even without major new competitor changes",
+}
+
+
+def _normalize_training_text(text: str) -> str:
+    cleaned = text
+    for token, replacement in _TRAINING_PLACEHOLDER_REPLACEMENTS.items():
+        cleaned = re.sub(re.escape(token), replacement, cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = re.sub(r"\.\.+", ".", cleaned)
+    return cleaned.strip()
+
+
+def _normalize_training_list(items: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for item in items:
+        normalized = _normalize_training_text(item)
+        if normalized:
+            cleaned.append(normalized)
+    return cleaned
+
+
+def _primary_issue_for_boundary(context: dict, signal: dict) -> str:
+    view = _semantic_view(context, signal)
+    return view.primary_issue or "the incumbent gap"
+
+
+def _primary_pull_for_boundary(context: dict, signal: dict, *, allow_pending: bool = False) -> str:
+    view = _semantic_view(context, signal)
+    if view.positive_pull is not None:
+        return view.positive_pull.change
+    if allow_pending and view.pending_pull is not None:
+        return view.pending_pull.change
+    return view.primary_pull or "the competitor change"
+
+
+def _has_active_hold_signal(signal: dict) -> bool:
+    notes = _normalize_training_list(signal_notes(signal))
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    return _detect_hold_signal(notes, comp_changes) != "NONE"
+
+
+def _active_hold_signal_text(signal: dict) -> str:
+    notes = _normalize_training_list(signal_notes(signal))
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    hold = _detect_hold_signal(notes, comp_changes)
+    return _normalize_training_text(hold) if hold != "NONE" else "NONE"
+
+
+def _disqualifier_text(signal: dict) -> str:
+    notes = _normalize_training_list(signal_notes(signal))
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    hold = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold)
+    return _normalize_training_text(disqualifier) if disqualifier != "NONE" else "NONE"
+
+
+def _shelfware_text(signal: dict) -> str:
+    tool_changes = _normalize_training_list(signal_current_tool_status(signal))
+    shelfware = _detect_shelfware(tool_changes)
+    return _normalize_training_text(shelfware) if shelfware != "NONE" else "NONE"
+
+
+def _boundary_rejections(verdict: str, scenario: str, signal: dict, context: dict, roi: dict) -> str:
+    view = _semantic_view(context, signal)
+    issue = _primary_issue_for_boundary(context, signal)
+    pull = _primary_pull_for_boundary(context, signal, allow_pending=verdict == "HOLD")
+    hold = _active_hold_signal_text(signal)
+    disqualifier = _disqualifier_text(signal)
+    shelfware = _shelfware_text(signal)
+    roi_str = f"£{roi['annual_net_gbp']:+.0f}/yr"
+
+    if verdict == "STAY":
+        if disqualifier != "NONE":
+            not_switch = (
+                f"Not SWITCH: the disqualifier '{disqualifier}' makes the competitor non-viable today, "
+                f"so there is no valid migration target."
+            )
+        elif view.positive_pull is None:
+            not_switch = (
+                f"Not SWITCH: there is no shipped competitor change that clearly addresses '{issue}', "
+                f"so the switch case never starts."
+            )
+        elif not roi["roi_threshold_met"]:
+            not_switch = f"Not SWITCH: the economics still fail the move, with ROI below threshold at {roi_str}."
+        else:
+            not_switch = f"Not SWITCH: the competitor change ('{pull}') does not solve the decisive gap ('{issue}') clearly enough to justify migration."
+
+        if hold != "NONE":
+            not_hold = f"Not HOLD: '{hold}' is not the decisive issue here; even after waiting, the switch case still lacks merit."
+        elif disqualifier != "NONE":
+            not_hold = "Not HOLD: this is not a wait-for-later case; the blocker is a real disqualifier, not a temporary delivery or timing gate."
+        else:
+            not_hold = "Not HOLD: no active contract, pilot, roadmap, or pre-GA gate is blocking the decision, so waiting would not create a stronger case."
+        return f"{not_switch} {not_hold}"
+
+    if verdict == "HOLD":
+        not_switch = f"Not SWITCH: the active hold condition ('{hold}') still blocks commitment, so switching now would ignore a live temporal gate."
+        if view.positive_pull is not None or view.pending_pull is not None:
+            not_stay = (
+                f"Not STAY: the competitor still shows a real switch case once the blocker clears, because '{pull}' "
+                f"materially improves the incumbent gap."
+            )
+        else:
+            not_stay = "Not STAY: the case is paused for timing, not rejected on merit; the decisive issue is when to move, not whether the competitor is viable at all."
+        return f"{not_switch} {not_stay}"
+
+    if shelfware != "NONE":
+        not_stay = (
+            f"Not STAY: staying would preserve known waste from underutilisation ('{shelfware}'), "
+            "which is itself the decisive reason to move."
+        )
+    elif view.positive_pull is not None:
+        not_stay = f"Not STAY: staying leaves '{issue}' unresolved even though the competitor now ships '{pull}'."
+    else:
+        not_stay = "Not STAY: staying leaves the decisive gap unresolved even though the source trace still presents a viable path away from the incumbent."
+
+    if signal.get("previous_verdict") == "HOLD" and hold == "NONE":
+        not_hold = "Not HOLD: Hold status is RESOLVED — the prior blocker is gone; re-issuing HOLD would ignore the resolved gate."
+    else:
+        not_hold = "Not HOLD: there is no active contract, pilot, roadmap, or pre-GA blocker left to wait on, so delaying would only postpone a justified move."
+    return f"{not_stay} {not_hold}"
+
+
+# ── Compliance status (matches _compliance_pass_python logic in model_runner.py) ─
+
+_COMPLIANCE_POSITIVE_KW = frozenset({
+    "achieved", "certified", "now available", "launched", "shipped",
+    "enabled", "live", "now meets", "now compliant", "passed", "attained",
+})
+
+
+def _effective_compliance_status(context: dict, signal: dict) -> str:
+    """Compute compliance status from baseline profile + signal text (no model call).
+
+    Used internally for CoT generation and consistency checks — NOT shown to the model
+    in the user message (the raw profile is shown instead via _format_compliance_block).
+    """
+    category = context["category"]
+    seat_count = context["current_stack_entry"].get("seat_count", 0)
+    profile = dict(context.get("competitor_data", {}).get("compliance", {}))
+
+    cc = _normalize_training_text(signal_compliance_changes(signal))
+    if cc and cc.lower().strip() not in ("unchanged", "no change", "none", ""):
+        cc_l = cc.lower()
+        positive = any(kw in cc_l for kw in _COMPLIANCE_POSITIVE_KW)
+
+        if "soc2" in cc_l or "soc 2" in cc_l:
+            if positive and "not soc2" not in cc_l and "no soc2" not in cc_l:
+                profile["soc2_type2"] = True
+            elif "not soc2" in cc_l or "no soc2" in cc_l:
+                profile["soc2_type2"] = False
+
+        if any(kw in cc_l for kw in ("sso", "saml", "oidc")):
+            if positive and not any(kw in cc_l for kw in ("no sso", "lacks sso", "no saml", "lacks saml")):
+                profile["sso_saml"] = True
+            elif any(kw in cc_l for kw in ("no sso", "lacks sso", "no saml", "lacks saml")):
+                profile["sso_saml"] = False
+
+        if "uk" in cc_l and "residency" in cc_l:
+            if positive:
+                profile["uk_residency"] = True
+                profile["gdpr_eu_residency"] = True
+            else:
+                profile["uk_residency"] = False
+
+        if "audit" in cc_l:
+            if any(kw in cc_l for kw in ("no audit log", "lacks audit log", "no audit trail", "no exportable audit")):
+                profile["audit_log"] = False
+                profile["audit_log_exportable"] = False
+            elif positive:
+                profile["audit_log"] = True
+                profile["audit_log_exportable"] = True
+
+    failures: list[str] = []
+    if not profile.get("soc2_type2"):
+        failures.append("No SOC2 Type II")
+    if seat_count > 10 and not profile.get("sso_saml"):
+        failures.append(f"No SSO/SAML ({seat_count} seats)")
+    if not (profile.get("uk_residency") or profile.get("gdpr_eu_residency")):
+        failures.append("No UK/EU data residency")
+    if category in ("finance", "hr", "crm"):
+        audit_ok = profile.get("audit_log") and profile.get("audit_log_exportable", True)
+        if not audit_ok:
+            failures.append("No exportable audit log")
+
+    return f"BLOCKED — {'; '.join(failures)}" if failures else "PASSED"
+
+
+def _format_compliance_block(context: dict, signal: dict) -> str:
+    """Format raw competitor compliance profile + signal for the model to reason from.
+
+    Mirrors _format_compliance_block in model_runner.py — must stay in sync.
+    """
+    profile = context.get("competitor_data", {}).get("compliance", {})
+    soc2 = "Yes" if profile.get("soc2_type2") else "No"
+    sso = "Yes" if profile.get("sso_saml") else "No"
+    uk = profile.get("uk_residency", False)
+    eu = profile.get("gdpr_eu_residency", False)
+    residency = ("UK+EU" if (uk and eu) else "UK" if uk else "EU" if eu else "No")
+    al = profile.get("audit_log", False)
+    ale = profile.get("audit_log_exportable", True) if al else False
+    audit = f"Yes (exportable: {'Yes' if ale else 'No'})" if al else "No"
+    cc = _normalize_training_text(signal_compliance_changes(signal)) or "unchanged"
+    return (
+        f"Competitor compliance: SOC2={soc2} | SSO/SAML={sso} | Residency={residency} | Audit log={audit}\n"
+        f"Compliance signal: {cc}"
+    )
 
 
 # ── User message builder (matches _build_lean_user in model_runner.py) ────────
@@ -267,12 +516,12 @@ def _detect_shelfware(tool_changes: list[str]) -> str:
 def _build_user_message(context: dict, roi_result: dict, signal: dict, scenario: str = "") -> str:
     category = context["category"]
     tool_name = context["current_stack_entry"]["tool"]
-    issues = context["current_stack_entry"].get("known_issues", [])
+    issues = _normalize_training_list(context["current_stack_entry"].get("known_issues", []))
     issues_text = "\n".join(f"- {i}" for i in issues) if issues else "(none)"
 
-    comp_changes = signal_competitor_changes(signal)
-    tool_changes = signal_current_tool_status(signal)
-    notes = signal_notes(signal)
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    tool_changes = _normalize_training_list(signal_current_tool_status(signal))
+    notes = _normalize_training_list(signal_notes(signal))
 
     comp_text = "\n".join(f"- {c}" for c in comp_changes) if comp_changes else "(none)"
     tool_change_text = (
@@ -300,7 +549,7 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict, scenario:
     hold_signal = _detect_hold_signal(notes, comp_changes)
     disqualifier = _detect_disqualifier(notes, hold_signal)
     msg += f"\nROI: {roi_summary}"
-    msg += "\nCompliance: PASSED"
+    msg += f"\n{_format_compliance_block(context, signal)}"
     msg += f"\nHold signal: {hold_signal}"
     if disqualifier != "NONE":
         msg += f"\nDisqualifier: {disqualifier}"
@@ -311,7 +560,9 @@ def _build_user_message(context: dict, roi_result: dict, signal: dict, scenario:
     if shelfware_signal != "NONE" and hold_signal == "NONE" and disqualifier == "NONE":
         msg += f"\nShelfware flag: {shelfware_signal}"
     prev_verdict = signal.get("previous_verdict")
-    if prev_verdict:
+    if prev_verdict == "HOLD" and hold_signal == "NONE":
+        msg += "\nHold status: RESOLVED (prior verdict was HOLD — blocker has now cleared)"
+    elif prev_verdict:
         msg += f"\nPrevious verdict: {prev_verdict}"
     return msg
 
@@ -324,13 +575,135 @@ _NO_CHANGE_MARKERS = {
     "unchanged",
 }
 
+
+def _semantic_view(context: dict, signal: dict):
+    known = _normalize_training_list(context["current_stack_entry"].get("known_issues", []))
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    tool_changes = [
+        change for change in _normalize_training_list(signal_current_tool_status(signal))
+        if change.lower().strip() not in _NO_CHANGE_MARKERS
+    ]
+    return build_semantic_view(known, comp_changes, tool_changes)
+
+
+def _supports_switch_case(context: dict, signal: dict, roi: dict, *, allow_pending: bool = False) -> bool:
+    if _shelfware_text(signal) != "NONE":
+        return True
+
+    view = _semantic_view(context, signal)
+    match = view.positive_pull or (view.pending_pull if allow_pending else None)
+    if match is None:
+        return False
+
+    if roi["roi_threshold_met"]:
+        return True
+
+    return _severity(match.issue) == "HIGH"
+
+
+def _has_reassuring_current_tool_signal(signal: dict) -> bool:
+    reassuring_terms = (
+        "reliable",
+        "stable",
+        "consistent",
+        "perform well",
+        "no significant issues",
+        "no major incidents",
+        "responsive within",
+        "deadline reminders",
+        "intuitive",
+    )
+    tool_changes = _normalize_training_list(signal_current_tool_status(signal))
+    return any(any(term in change.lower() for term in reassuring_terms) for change in tool_changes)
+
+
+def _has_pending_hold_pull(context: dict, signal: dict) -> bool:
+    view = _semantic_view(context, signal)
+    return view.pending_pull is not None or view.has_pending_pull
+
+
+def _consistency_failure_reason(scenario: str, signal: dict, context: dict, roi: dict, verdict: str) -> str | None:
+    notes = _normalize_training_list(signal_notes(signal))
+    comp_changes = _normalize_training_list(signal_competitor_changes(signal))
+    tool_changes = _normalize_training_list(signal_current_tool_status(signal))
+    hold_signal = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold_signal)
+    shelfware_signal = _detect_shelfware(tool_changes)
+    price_hike_signal = _detect_price_hike(tool_changes)
+    view = _semantic_view(context, signal)
+
+    if verdict == "HOLD" and hold_signal == "NONE":
+        return "HOLD example has no active hold signal"
+
+    if scenario in _HOLD_SCENARIOS and hold_signal == "NONE":
+        return "HOLD scenario but no detectable hold signal"
+
+    if scenario == "hold_resolved":
+        if signal.get("previous_verdict") != "HOLD":
+            return "hold_resolved scenario without Previous verdict: HOLD"
+        if hold_signal != "NONE":
+            return "hold_resolved scenario still has an active hold signal"
+        if not _supports_switch_case(context, signal, roi):
+            return "hold_resolved scenario lacks a concrete aligned switch case"
+
+    if scenario == "shelfware_case" and shelfware_signal == "NONE":
+        return "shelfware_case scenario lacks a real shelfware flag"
+
+    if scenario == "price_hike_only" and price_hike_signal == "NONE":
+        return "price_hike_only scenario lacks a real incumbent price signal"
+
+    if verdict == "SWITCH" and shelfware_signal == "NONE" and not _supports_switch_case(context, signal, roi):
+        return "SWITCH example lacks a concrete competitor change aligned to a key issue"
+
+    if scenario == "current_tool_rally" and view.positive_tool is None and not _has_reassuring_current_tool_signal(signal):
+        return "current_tool_rally scenario lacks a real current-tool improvement"
+
+    if scenario == "dual_improvement":
+        if view.positive_tool is None:
+            return "dual_improvement scenario lacks a real current-tool improvement"
+        if view.positive_pull is None:
+            return "dual_improvement scenario lacks a competitor improvement aligned to a key issue"
+
+    if scenario == "competitor_nearly_ready" and not _has_pending_hold_pull(context, signal):
+        return "competitor_nearly_ready scenario lacks a pending pull aligned to a key issue"
+
+    if scenario == "roadmap_confirmed_hold":
+        if not (_supports_switch_case(context, signal, roi) or _has_pending_hold_pull(context, signal)):
+            return "roadmap_confirmed_hold scenario lacks a roadmap pull that would justify waiting"
+
+    if scenario in {"contract_renewal_hold", "vendor_acquisition_hold", "pilot_in_progress_hold"}:
+        if not _supports_switch_case(context, signal, roi):
+            return "hold scenario lacks a concrete underlying switch case once the hold clears"
+
+    if scenario == "fluff_update" and view.positive_pull is not None:
+        return "fluff_update scenario contains a concrete aligned competitor pull"
+
+    if scenario == "irrelevant_change" and view.positive_pull is not None and disqualifier == "NONE":
+        return "irrelevant_change scenario contains an aligned competitor pull"
+
+    if scenario == "negative_signal_buried" and disqualifier == "NONE":
+        return "negative_signal_buried scenario lacks a buried disqualifier"
+
+    if shelfware_signal != "NONE" and hold_signal == "NONE" and verdict == "STAY" and disqualifier == "NONE":
+        return "shelfware flag present with STAY verdict and no disqualifier"
+
+    # Compliance consistency: blocked competitors only appear in hard_compliance_failure traces
+    compliance_status = _effective_compliance_status(context, signal)
+    compliance_blocked = compliance_status.startswith("BLOCKED")
+    if scenario == "hard_compliance_failure" and not compliance_blocked:
+        return "hard_compliance_failure scenario but compliance is not blocked"
+    if compliance_blocked and scenario != "hard_compliance_failure":
+        return f"compliance blocked ({compliance_status}) in non-compliance scenario"
+
+    return None
+
 # ── CoT trace section builders ────────────────────────────────────────────────
 
 def _push_section(context: dict, signal: dict) -> str:
-    known = context["current_stack_entry"].get("known_issues", [])
+    known = _normalize_training_list(context["current_stack_entry"].get("known_issues", []))
     # Strip generic no-change placeholders — these are not push signals
     tool_changes = [
-        c for c in signal_current_tool_status(signal)
+        c for c in _normalize_training_list(signal_current_tool_status(signal))
         if c.lower().strip() not in _NO_CHANGE_MARKERS
     ]
 
@@ -349,7 +722,7 @@ def _push_section(context: dict, signal: dict) -> str:
 
 
 def _pull_section(signal: dict) -> str:
-    changes = signal_competitor_changes(signal)
+    changes = _normalize_training_list(signal_competitor_changes(signal))
     if not changes:
         return "PULL SIGNALS:\n  None identified"
     lines = [f"  - {c} — Substance: {_substance(c)}" for c in changes[:3]]
@@ -362,28 +735,25 @@ _COMPLIANCE_HARD_TERMS = frozenset([
 ])
 
 
-def _compliance_line(signal: dict) -> str:
-    """Generate compliance status line for the CoT trace.
+def _compliance_cot_line(context: dict, signal: dict) -> str:
+    """Generate the COMPLIANCE line for the CoT trace.
 
-    Only reports BLOCKED for the four hard requirements (SOC2, SSO, residency,
-    audit log).  Soft requirements like ISO27001 don't block the switch decision.
+    Uses the effective status (baseline + signal applied) to determine what the
+    model should conclude, then formats it as the model would reason from the
+    raw profile shown in the user message.
     """
-    cc = signal_compliance_changes(signal)
-    if not cc or cc.lower().strip() in ("unchanged", "no change", ""):
-        return "COMPLIANCE: PASSED"
-    cc_l = cc.lower()
-    achieved = {
-        "achieved", "certified", "added", "now available", "launched", "shipped",
-        "compliant", "now meets", "now compliant", "met", "passed", "attained",
-        "enabled", "live",
-    }
-    hard_blocked = {"not soc2", "no sso", "lacks sso", "no saml", "lacks saml",
-                    "no uk", "no eu", "not gdpr", "no audit log", "lacks audit log",
-                    "no audit trail", "lacks audit trail"}
-    if any(kw in cc_l for kw in achieved) and any(ht in cc_l for ht in _COMPLIANCE_HARD_TERMS):
+    eff = _effective_compliance_status(context, signal)
+    cc = _normalize_training_text(signal_compliance_changes(signal))
+    has_positive_change = (
+        cc
+        and cc.lower().strip() not in ("unchanged", "no change", "none", "")
+        and any(kw in cc.lower() for kw in _COMPLIANCE_POSITIVE_KW)
+        and any(ht in cc.lower() for ht in _COMPLIANCE_HARD_TERMS)
+    )
+    if eff.startswith("BLOCKED"):
+        return f"COMPLIANCE: {eff}"
+    if has_positive_change:
         return "COMPLIANCE: Previously BLOCKED — now MET"
-    if any(kw in cc_l for kw in hard_blocked):
-        return f"COMPLIANCE: BLOCKED — {cc}"
     return "COMPLIANCE: PASSED"
 
 
@@ -396,8 +766,8 @@ def _roi_line(roi: dict) -> str:
 
 
 def _hold_line(signal: dict, scenario: str) -> str:
-    notes = signal_notes(signal)
-    comp_ch = signal_competitor_changes(signal)
+    notes = _normalize_training_list(signal_notes(signal))
+    comp_ch = _normalize_training_list(signal_competitor_changes(signal))
     # Use the same detection logic as _build_user_message / _build_lean_user
     hold = _detect_hold_signal(notes, comp_ch)
     if scenario in _HOLD_SCENARIOS:
@@ -414,19 +784,26 @@ def _hold_line(signal: dict, scenario: str) -> str:
 def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: int = 0) -> str:
     comp = signal.get("competitor", "Competitor")
     tool = context["current_stack_entry"]["tool"]
-    known = context["current_stack_entry"].get("known_issues", [])
-    comp_ch = signal_competitor_changes(signal)
-    tool_ch = signal_current_tool_status(signal)
-    notes = signal_notes(signal)
-    cc = signal_compliance_changes(signal)
+    known = _normalize_training_list(context["current_stack_entry"].get("known_issues", []))
+    comp_ch = _normalize_training_list(signal_competitor_changes(signal))
+    tool_ch = _normalize_training_list(signal_current_tool_status(signal))
+    notes = _normalize_training_list(signal_notes(signal))
+    cc = _normalize_training_text(signal_compliance_changes(signal))
 
-    issue = (known[0] if known else "existing tool limitations").replace("\n", " ")
-    top_comp = (comp_ch[0] if comp_ch else "minor updates").replace("\n", " ")
-    top_tool = (tool_ch[0] if tool_ch else "no new changes").replace("\n", " ")
-    top_note = (notes[0] if notes else "").replace("\n", " ")
+    view = _semantic_view(context, signal)
+    relevant_pull = view.positive_pull or view.pending_pull
+    relevant_tool_negative = view.negative_tool
+    relevant_tool_positive = view.positive_tool
+
+    issue = _normalize_training_text(((relevant_pull.issue if relevant_pull else view.primary_issue) or "existing tool limitations").replace("\n", " "))
+    top_comp = _normalize_training_text(((relevant_pull.change if relevant_pull else view.primary_pull) or "minor updates").replace("\n", " "))
+    top_tool = _normalize_training_text(((relevant_tool_negative.change if relevant_tool_negative else view.primary_tool_change) or "no new changes").replace("\n", " "))
+    rally_tool = _normalize_training_text(((relevant_tool_positive.change if relevant_tool_positive else view.primary_tool_change) or "active improvements").replace("\n", " "))
+    top_note = _normalize_training_text((notes[0] if notes else "").replace("\n", " "))
     net = roi["annual_net_gbp"]
     met = roi["roi_threshold_met"]
     roi_str = f"ROI threshold {'met' if met else 'not met'} at £{net:+.0f}/yr net"
+    issue_severity = _severity(issue)
 
     if scenario == "pull_dominant":
         templates = [
@@ -470,64 +847,28 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
         return templates[variant % len(templates)]
 
     if scenario == "push_dominant":
-        push = top_tool if tool_ch else issue
-        pull_sub = _substance(top_comp)
-        if pull_sub == "VAGUE":
-            templates = [
-                # V0 — push dominance explanation
-                (
-                    f"Push signal: HIGH — {tool} is critically degrading ({push}). "
-                    f"Pull signal: VAGUE — {comp} delivers only '{top_comp}'. "
-                    f"Push dominance: escalating failure rate justifies leaving a degrading tool "
-                    f"even when pull signal is weak. ROI gate: {roi_str}. "
-                    f"Compliance gate: PASSED. Hold signal: NONE. SWITCH."
-                ),
-                # V1 — urgency framing
-                (
-                    f"The tool is failing: {push}. At HIGH push severity the rule changes — "
-                    f"a weak pull signal is sufficient when the incumbent is critically degrading. "
-                    f"{comp}'s '{top_comp}' provides a viable exit path. "
-                    f"Compliance: PASSED. Hold: NONE. ROI: {roi_str}. SWITCH."
-                ),
-                # V2 — derive from the severity principle
-                (
-                    f"{tool} is critically degrading: {push}. A tool in active failure cannot "
-                    f"wait for a perfect pull signal. The pull signal ('{top_comp}') is vague, "
-                    f"but vague pull is sufficient when push severity is HIGH — the priority is "
-                    f"exiting the failing tool. All blocking gates clear: compliance PASSED, "
-                    f"hold NONE, {roi_str}. SWITCH."
-                ),
-            ]
-        else:
-            templates = [
-                # V0 — double signal
-                (
-                    f"Push signal: HIGH — {tool} is degrading ({push}). "
-                    f"Pull signal: CONCRETE — {comp} resolves this with {top_comp}. "
-                    f"ROI gate: {roi_str}. Compliance gate: PASSED. Hold signal: NONE. "
-                    f"All gates clear. SWITCH."
-                ),
-                # V1 — aligned signals
-                (
-                    f"Both signals aligned: {tool} degrades ({push}) while {comp} delivers {top_comp}. "
-                    f"Push and pull reinforce the same decision. Compliance PASSED. Hold NONE. "
-                    f"ROI {roi_str}. SWITCH."
-                ),
-                # V2 — derive from both signal strengths
-                (
-                    f"{tool} is degrading: {push}. {comp} delivers a concrete resolution: '{top_comp}'. "
-                    f"The ideal switch scenario — the push driver has a concrete answer from the competitor. "
-                    f"Blocking gates: compliance PASSED, hold NONE, {roi_str}. SWITCH."
-                ),
-                # V3 — explicit alternatives ruled out
-                (
-                    f"{tool} is actively failing: {push}. This is ongoing operational harm, not a chronic gap. "
-                    f"{comp} delivers '{top_comp}', a concrete capability that directly resolves this active failure. "
-                    f"Not STAY: the cost of staying is ongoing operational damage — this cannot wait. "
-                    f"Not HOLD: the competitor delivers a working GA solution; there is no condition to wait for. "
-                    f"Gates: compliance PASSED, hold NONE, {roi_str}. SWITCH."
-                ),
-            ]
+        push = _normalize_training_text(((relevant_tool_negative.change if relevant_tool_negative else top_tool) or issue).replace("\n", " "))
+        templates = [
+            (
+                f"Push signal: HIGH — {tool} is actively harming operations ({push}). "
+                f"{comp} delivers '{top_comp}', which addresses '{issue}'. "
+                f"Compliance gate: PASSED. Hold signal: NONE. ROI gate: {roi_str}. SWITCH."
+            ),
+            (
+                f"{tool} is degrading where Meridian actually feels it: {push}. "
+                f"{comp}'s delivered change ('{top_comp}') addresses the same issue rather than a side concern. "
+                f"With the decisive gap matched to a live alternative, and no compliance or hold blocker remaining, SWITCH."
+            ),
+            (
+                f"Both signals point the same way. The incumbent gap is '{issue}', and {tool} is still degrading through '{push}'. "
+                f"{comp} now ships '{top_comp}', which gives the business a concrete exit path on that exact problem. "
+                f"{roi_str}. Compliance PASSED. Hold NONE. SWITCH."
+            ),
+            (
+                f"This is not a vague escape-hatch case. {tool} is deteriorating at '{push}', and {comp} answers the same operational problem with '{top_comp}'. "
+                f"Because the current pain is live, the competitor response is delivered, and the blocking gates are clear, the rational move is SWITCH."
+            ),
+        ]
         return templates[variant % len(templates)]
 
     if scenario == "shelfware_case":
@@ -541,112 +882,93 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
             )
         else:
             notes_clarification = ""
+        roi_override = (
+            f"ROI: {roi_str} — shelfware exception applies; "
+            f"the annual ROI figure does not block SWITCH when shelfware waste is the dominant signal."
+        )
         templates = [
-            # V0 — waste elimination
+            # V0 — waste elimination with explicit ROI override
             (
                 f"SWITCH CONFIRMED — shelfware case. {tool} is underutilised ({top_tool}). "
                 f"Paying for unused capacity with no utilisation improvement justifies switching. "
                 f"Shelfware waste elimination overrides the standard ROI threshold — "
                 f"the cost of inaction is the ongoing waste. "
+                f"{roi_override} "
                 f"Compliance: PASSED. Hold signal: NONE. "
                 f"Switch driven by waste elimination, not by competitor features.{notes_clarification} SWITCH."
             ),
-            # V1 — cost framing
+            # V1 — cost framing with explicit ROI override
             (
                 f"Decision driver: waste, not competitor quality. {tool} is {top_tool}. "
                 f"The organisation pays for idle capacity with no utilisation plan. "
                 f"The cost of staying (continued waste) exceeds migration cost. "
+                f"{roi_override} "
                 f"Compliance PASSED. Hold NONE.{notes_clarification} SWITCH."
             ),
-            # V2 — cost of inaction reasoning
+            # V2 — cost of inaction reasoning with explicit ROI override
             (
                 f"Shelfware case: {top_tool}. The cost of staying is not zero — it is the "
                 f"ongoing waste of paying for unused capacity. When the cost of inaction "
                 f"(continued waste) is certain and the cost of action (migration) is one-time, "
-                f"the economics favour switching. The standard ROI threshold relaxes for shelfware. "
+                f"the economics favour switching. {roi_override} "
                 f"Compliance PASSED.{notes_clarification} SWITCH."
             ),
         ]
         return templates[variant % len(templates)]
 
     if scenario == "hold_resolved":
-        prev = signal.get("previous_verdict", "")
-        prev_note = "Previous verdict: HOLD — " if prev == "HOLD" else ""
         if met:
-            roi_note = f"ROI: {roi_str} — gate PASSED."
+            roi_note = f"ROI: {roi_str} — standard switch economics are satisfied."
         else:
-            roi_note = (
-                f"ROI: {roi_str} — negative, but hold release is the binding gate; "
-                f"ROI does NOT block when a prior HOLD is cleared."
-            )
+            if issue_severity == "HIGH":
+                roi_note = (
+                    f"ROI: {roi_str} — below threshold, but '{issue}' remains a HIGH-severity blocker, "
+                    f"so the delivered capability still creates clear operational gain."
+                )
+            else:
+                roi_note = f"ROI: {roi_str}."
         templates = [
-            # V0 — blocking condition resolved
             (
-                f"{prev_note}Hold condition resolved — {comp} delivers '{top_comp}', "
-                f"removing the blocking condition. "
-                f"Hold signal: NONE (no new hold condition detected). "
-                f"Compliance: PASSED. {roi_note} "
-                f"Prior verdict was HOLD because a specific condition blocked the switch. "
-                f"That condition is now gone. With no hold signal remaining and compliance passing, "
-                f"the verdict is SWITCH — not HOLD (hold is cleared), not STAY (there is a pull signal). "
-                f"SWITCH."
+                f"Hold status is RESOLVED — the prior blocker has cleared and HOLD is not available. "
+                f"Re-evaluating on normal switch criteria: {comp} now delivers '{top_comp}', which addresses '{issue}'. "
+                f"Compliance PASSED. {roi_note} With the blocker gone and the core issue now covered, SWITCH."
             ),
-            # V1 — gate re-check framing
             (
-                f"{prev_note}Prior HOLD is cleared. {comp} delivers '{top_comp}', "
-                f"resolving the blocking condition. "
-                f"Gate re-check: Hold signal NONE. Compliance PASSED. {roi_note} "
-                f"With the hold released and no new blocking condition, verdict converts to SWITCH. SWITCH."
+                f"Hold status RESOLVED means the prior hold condition is gone. Once there is no active hold, "
+                f"the decision reverts to the ordinary SWITCH/STAY test. Here it passes: {comp} delivers '{top_comp}', "
+                f"which now covers '{issue}'. Compliance PASSED. {roi_note} No hold condition exists, so SWITCH."
             ),
-            # V2 — derive from hold-release logic
             (
-                f"A prior HOLD was in place because a specific condition blocked the switch. "
-                f"{comp} now delivers '{top_comp}', resolving that condition. "
-                f"When the blocking condition that caused HOLD is removed, the switch case "
-                f"reasserts — the pull signal still exists and compliance still passes. "
-                f"{roi_note} SWITCH."
+                f"RESOLVED hold status means the prior wait condition has cleared — HOLD is not the right verdict. "
+                f"The competitor change that mattered is live: '{top_comp}' addresses '{issue}'. "
+                f"Compliance PASSED. {roi_note} Reassessing on the merits now supports SWITCH."
             ),
-            # V3 — decision framework reasoning
             (
-                f"Step 1: Check blocking gates. Hold signal: NONE — no active hold. "
-                f"Previous verdict was HOLD — the prior blocking condition has been resolved. "
-                f"Step 2: Evaluate pull. '{top_comp}' from {comp} is CONCRETE — a shipped, GA capability. "
-                f"Step 3: Match to push driver. Resolves '{issue}'. "
-                f"Step 4: {roi_note} "
-                f"Hold cleared + concrete pull + compliance PASSED = SWITCH."
-            ),
-            # V4 — explicit alternatives ruled out
-            (
-                f"Previous verdict was HOLD. Hold signal now: NONE — the hold condition has cleared. "
-                f"Not HOLD: the hold gate is no longer active. Re-issuing HOLD when hold_signal=NONE "
-                f"means ignoring that the blocking condition is gone. HOLD requires an ACTIVE blocking signal. "
-                f"Not STAY: {comp} delivers '{top_comp}', a concrete pull signal that resolves '{issue}'. "
-                f"There is a concrete pull and the gates are clear. "
-                f"Compliance PASSED. {roi_note} SWITCH."
+                f"Step 1: Hold status RESOLVED — the old blocker has cleared; HOLD is no longer valid. "
+                f"Step 2: Re-evaluate the real decision. {comp} ships '{top_comp}', which addresses '{issue}'. "
+                f"Step 3: Compliance PASSED. Step 4: {roi_note} The trace clears the ordinary switch test, so SWITCH."
             ),
         ]
         return templates[variant % len(templates)]
 
     if scenario == "compliance_newly_met":
         templates = [
-            # V0 — gate unblocked
             (
                 f"Compliance gate: previously BLOCKED, now PASSED. "
-                f"Pull signal: CONCRETE — {comp} delivers {top_comp} resolving {issue}. "
+                f"That removes the hard stop, but the competitor still needs to address a real push issue. "
+                f"Here {comp} delivers '{top_comp}', which addresses '{issue}'. "
                 f"ROI gate: {roi_str}. Hold signal: NONE. "
                 f"All gates clear. SWITCH."
             ),
-            # V1 — unblocking framing
             (
                 f"Compliance unblocked. The only previous barrier has been cleared. "
-                f"Pull signal CONCRETE: {top_comp} from {comp} resolves {issue}. "
-                f"ROI: {roi_str}. Hold: NONE. All gates now clear. SWITCH."
+                f"That does not create a switch case by itself; it simply allows the real switch case to be evaluated. "
+                f"'{top_comp}' from {comp} now addresses '{issue}'. ROI: {roi_str}. Hold: NONE. All gates now clear. SWITCH."
             ),
-            # V2 — derive from gate unblock logic
             (
                 f"Compliance was the sole blocking gate. It is now cleared. "
                 f"With the blocker removed, evaluate the remaining signals on their merits: "
-                f"'{top_comp}' from {comp} directly resolves '{issue}' — a concrete pull. "
+                f"'{top_comp}' from {comp} directly addresses '{issue}' — a concrete pull. "
                 f"ROI {roi_str}. Hold NONE. The switch case that compliance previously blocked "
                 f"now goes through. SWITCH."
             ),
@@ -778,24 +1100,22 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
         return templates[variant % len(templates)]
 
     if scenario == "current_tool_rally":
-        rally = top_tool if tool_ch else "active improvements"
+        rally = rally_tool if relevant_tool_positive is not None else top_tool
+        incumbent_state = "actively improving" if relevant_tool_positive is not None else "operationally steady"
         templates = [
-            # V0 — weakening push
             (
-                f"Push signal: WEAKENING — {tool} is improving ({rally}). "
+                f"Push signal: WEAKENING — {tool} is {incumbent_state} ({rally}). "
                 f"The urgency to switch is diminishing. {comp}'s changes ({top_comp}) do not outpace "
                 f"the incumbent's recovery. Hold signal: NONE. Insufficient case for SWITCH or HOLD. STAY."
             ),
-            # V1 — incumbent recovery
             (
-                f"The incumbent is recovering: {tool} delivers {rally}. "
+                f"The incumbent is steadying: {tool} shows {rally}. "
                 f"When the current tool actively resolves its own issues, the urgency to switch drops. "
                 f"{comp}'s '{top_comp}' no longer provides a decisive advantage. STAY."
             ),
-            # V2 — derive from delta between improving incumbent vs competitor
             (
-                f"{tool} is actively improving: {rally}. The push signal weakens when the "
-                f"incumbent resolves its own issues. A switch requires the competitor to be "
+                f"{tool} is {incumbent_state}: {rally}. The push signal weakens when the "
+                f"incumbent is recovering or clearly stable. A switch requires the competitor to be "
                 f"decisively better — when the current tool is closing the gap, that threshold "
                 f"is harder to clear. {comp}'s '{top_comp}' does not create a sufficient delta "
                 f"over an improving incumbent. Hold signal: NONE. STAY."
@@ -992,7 +1312,7 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
 
     # Ambiguous scenarios — two variants (shorter, less critical to vary heavily)
     if scenario == "both_signals":
-        if met and comp_ch:
+        if _supports_switch_case(context, signal, roi) and view.positive_pull is not None:
             templates = [
                 (
                     f"Both push and pull signals are active. {comp} delivers {top_comp}, "
@@ -1010,12 +1330,12 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
             templates = [
                 (
                     f"Both push and pull signals are present but pull is insufficient. "
-                    f"{comp} shows {top_comp}, but {roi_str}. "
-                    f"A pull signal that does not resolve the primary push driver or clear the ROI gate "
+                    f"{comp} shows {top_comp}, but it does not clearly cover the decisive issue '{issue}', and {roi_str}. "
+                    f"A pull signal that does not clearly address the primary push driver or clear the ROI gate "
                     f"cannot justify SWITCH. No clear dominant signal — STAY."
                 ),
                 (
-                    f"Both signals active but pull is weak. '{top_comp}' does not overcome "
+                    f"Both signals active but the competitor delta is still weak. '{top_comp}' does not overcome "
                     f"{roi_str}. When push and pull are both present but neither dominates, "
                     f"the burden of proof for SWITCH is not met. STAY."
                 ),
@@ -1054,34 +1374,61 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
         return templates[variant % len(templates)]
 
     if scenario == "dual_improvement":
-        if met and comp_ch:
+        if _supports_switch_case(context, signal, roi) and view.positive_pull is not None and relevant_tool_positive is not None:
             templates = [
                 (
                     f"Both tools improved this period. The delta favours {comp}: {top_comp} "
-                    f"addresses {issue} more directly than {tool}'s {top_tool}. "
+                    f"addresses {issue} more directly than {tool}'s {rally_tool}. "
                     f"{roi_str.capitalize()}. When both improve but the competitor's improvement "
                     f"resolves the primary push driver, the switch case is established. SWITCH."
                 ),
                 (
                     f"Both improved; competitor edge is decisive: '{top_comp}' resolves '{issue}'. "
                     f"{roi_str}. The competitor's improvement addresses the push driver while "
-                    f"the incumbent's improvement does not close the gap. SWITCH."
+                    f"the incumbent's improvement ('{rally_tool}') does not close the gap enough. SWITCH."
                 ),
             ]
         else:
+            incumbent_clause = (
+                f"{tool} improves with {rally_tool}"
+                if relevant_tool_positive is not None
+                else f"{tool} does not materially improve on the decisive gap"
+            )
             templates = [
                 (
-                    f"Both tools improved this period. {tool} rallies with {top_tool} while "
+                    f"{incumbent_clause} while "
                     f"{comp} delivers {top_comp}. {roi_str}. When both tools improve, a SWITCH "
                     f"requires the competitor to be decisively better — but neither the pull signal "
                     f"nor the ROI case creates a decisive advantage. STAY."
                 ),
                 (
-                    f"Dual improvement — {tool} ships {top_tool}, {comp} ships {top_comp}. "
+                    f"Mutual-improvement test: {incumbent_clause}, while {comp} ships {top_comp}. "
                     f"Neither side establishes a decisive advantage. {roi_str}. Without a clear "
                     f"delta in the competitor's favour, switching during mutual improvement is premature. STAY."
                 ),
             ]
+        return templates[variant % len(templates)]
+
+    if scenario == "hard_compliance_failure":
+        cat = context["category"]
+        block_detail = _effective_compliance_status(context, signal)
+        block_reason = block_detail[len("BLOCKED — "):] if block_detail.startswith("BLOCKED") else cc
+        templates = [
+            (
+                f"The competitor cannot be adopted: {block_reason}. These are hard requirements for "
+                f"{cat} tools — they are non-negotiable. No business signal (price, features, ROI) "
+                f"overrides a compliance block. STAY — do not re-evaluate until compliance gaps are resolved."
+            ),
+            (
+                f"Hard compliance block: {block_reason}. A {cat} tool must meet these requirements "
+                f"before any business evaluation begins. The pull signals and ROI are irrelevant until "
+                f"the compliance gate clears. STAY."
+            ),
+            (
+                f"Compliance check fails first. The competitor is blocked on: {block_reason}. "
+                f"These are mandatory for {cat}. Until formally resolved, the switch case does not exist. STAY."
+            ),
+        ]
         return templates[variant % len(templates)]
 
     return f"Signal evaluated for {comp} vs {tool}. {roi_str.capitalize()}."
@@ -1089,8 +1436,14 @@ def _analysis(scenario: str, signal: dict, context: dict, roi: dict, variant: in
 
 # ── Ambiguous verdict inference ────────────────────────────────────────────────
 
-def _infer_ambiguous_verdict(roi: dict, signal: dict) -> str:
-    return "SWITCH" if (roi["roi_threshold_met"] and signal_competitor_changes(signal)) else "STAY"
+def _infer_ambiguous_verdict(scenario: str, roi: dict, signal: dict, context: dict) -> str:
+    if scenario == "price_hike_only":
+        return "SWITCH" if roi["roi_threshold_met"] else "STAY"
+
+    if scenario == "dual_improvement" and _semantic_view(context, signal).positive_tool is None:
+        return "STAY"
+
+    return "SWITCH" if _supports_switch_case(context, signal, roi) else "STAY"
 
 
 # ── Full CoT trace assembly ───────────────────────────────────────────────────
@@ -1098,10 +1451,11 @@ def _infer_ambiguous_verdict(roi: dict, signal: dict) -> str:
 def _build_cot_trace(scenario: str, signal: dict, context: dict, roi: dict, verdict: str, variant: int = 0) -> str:
     push = _push_section(context, signal)
     pull = _pull_section(signal)
-    comp_line = _compliance_line(signal)
+    comp_line = _compliance_cot_line(context, signal)
     roi_line = _roi_line(roi)
     hold_line = _hold_line(signal, scenario)
-    analysis_text = _analysis(scenario, signal, context, roi, variant=variant)
+    analysis_text = _normalize_training_text(_analysis(scenario, signal, context, roi, variant=variant))
+    analysis_text = f"{analysis_text} {_boundary_rejections(verdict, scenario, signal, context, roi)}".strip()
 
     return (
         f"{push}\n\n"
@@ -1114,12 +1468,393 @@ def _build_cot_trace(scenario: str, signal: dict, context: dict, roi: dict, verd
     )
 
 
+_POSITIVE_TOOL_TREND_KW = frozenset([
+    "improved", "faster", "resolved", "available", "live", "launched", "shipped",
+    "stable", "flexible", "covers", "white-labelling", "white-label", "ga",
+])
+
+_NEGATIVE_TOOL_TREND_KW = frozenset([
+    "still", "absent", "manual", "delay", "slow", "outdated", "deprecated",
+    "requires", "risk", "flagged", "crash", "error", "fails", "failing",
+    "bottleneck", "non-functional", "unstable", "missing", "inadequate",
+])
+
+_IRRELEVANCE_KW = frozenset([
+    "irrelevant", "unrelated", "no relevance", "poor fit", "wrong product",
+    "does not address", "does not align", "not designed for", "no impact on",
+])
+
+_COMPLIANCE_PUSH_KW = frozenset([
+    "audit", "compliance", "ifrs", "soc2", "soc 2", "sso", "saml",
+    "gdpr", "residency", "hipaa", "pci", "iso",
+])
+
+_INTEGRATION_PUSH_KW = frozenset([
+    "api", "sync", "integration", "connector", "barclays", "bank feed",
+    "real-time", "real time", "middleware",
+])
+
+_COST_PUSH_KW = frozenset([
+    "pricing", "price", "cost", "seat", "shelfware", "inactive", "unused capacity",
+])
+
+_OPERATIONAL_PUSH_KW = frozenset([
+    "manual", "slow", "delay", "outdated", "crash", "error", "503",
+    "deprecated", "workaround", "spreadsheet", "bottleneck", "non-functional",
+    "unstable", "requires export", "requires manual",
+])
+
+
+def _roi_bucket(roi: dict) -> str:
+    annual_net = roi["annual_net_gbp"]
+    if roi["roi_threshold_met"]:
+        return "met"
+    if annual_net >= 0:
+        return "positive_below_threshold"
+    return "negative"
+
+
+def _tool_trend(tool_changes: list[str]) -> str:
+    active_changes = [
+        change for change in tool_changes
+        if change.lower().strip() not in _NO_CHANGE_MARKERS
+    ]
+    if not active_changes:
+        return "stable"
+    if _detect_shelfware(active_changes) != "NONE":
+        return "shelfware"
+
+    text = " ".join(active_changes).lower()
+    pos_hits = sum(1 for kw in _POSITIVE_TOOL_TREND_KW if kw in text)
+    neg_hits = sum(1 for kw in _NEGATIVE_TOOL_TREND_KW if kw in text)
+
+    if pos_hits and not neg_hits:
+        return "rally"
+    if neg_hits and not pos_hits:
+        return "degrading"
+    if pos_hits and neg_hits:
+        return "mixed"
+    return "stable"
+
+
+def _push_profile(context: dict, signal: dict) -> str:
+    tool_changes = signal_current_tool_status(signal)
+    known_issues = context["current_stack_entry"].get("known_issues", [])
+    if _detect_shelfware(tool_changes) != "NONE":
+        return "shelfware"
+
+    text = " ".join([*tool_changes, *known_issues]).lower()
+    if any(kw in text for kw in _COMPLIANCE_PUSH_KW):
+        return "compliance_gap"
+    if any(kw in text for kw in _INTEGRATION_PUSH_KW):
+        return "integration_gap"
+    if any(kw in text for kw in _COST_PUSH_KW):
+        return "cost_pressure"
+    if any(kw in text for kw in _OPERATIONAL_PUSH_KW):
+        return "operational_friction"
+    return "general_gap"
+
+
+def _pull_profile(signal: dict, hold_signal: str, disqualifier: str) -> str:
+    if disqualifier != "NONE":
+        return "disqualified"
+    if hold_signal != "NONE":
+        return "blocked_pending"
+
+    changes = signal_competitor_changes(signal)
+    notes_text = " ".join(signal_notes(signal)).lower()
+    if any(kw in notes_text for kw in _IRRELEVANCE_KW):
+        return "irrelevant"
+    if not changes:
+        return "none"
+
+    substances = {_substance(change) for change in changes[:3]}
+    if substances == {"CONCRETE"}:
+        return "concrete"
+    if substances == {"VAGUE"}:
+        return "vague"
+    return "mixed"
+
+
+def _gate_state(signal: dict, scenario: str, hold_signal: str, disqualifier: str, shelfware_signal: str) -> str:
+    if disqualifier != "NONE":
+        return "disqualifier"
+    if hold_signal != "NONE":
+        return "hold_active"
+    if signal.get("previous_verdict") == "HOLD" and scenario == "hold_resolved":
+        return "hold_resolved"
+    if shelfware_signal != "NONE":
+        return "shelfware_override"
+    cc = _normalize_training_text(signal_compliance_changes(signal))
+    has_positive_compliance = (
+        cc
+        and cc.lower().strip() not in ("unchanged", "no change", "none", "")
+        and any(kw in cc.lower() for kw in _COMPLIANCE_POSITIVE_KW)
+        and any(ht in cc.lower() for ht in _COMPLIANCE_HARD_TERMS)
+    )
+    if has_positive_compliance:
+        return "compliance_unblocked"
+    return "open"
+
+
+def _build_trace_metadata(
+    signal_path: Path,
+    category: str,
+    competitor_slug: str,
+    scenario: str,
+    context: dict,
+    signal: dict,
+    roi: dict,
+    verdict: str,
+    variant_index: int,
+) -> dict:
+    comp_changes = signal_competitor_changes(signal)
+    tool_changes = signal_current_tool_status(signal)
+    notes = signal_notes(signal)
+    hold_signal = _detect_hold_signal(notes, comp_changes)
+    disqualifier = _detect_disqualifier(notes, hold_signal)
+    shelfware_signal = _detect_shelfware(tool_changes)
+    gate_state = _gate_state(signal, scenario, hold_signal, disqualifier, shelfware_signal)
+    push_profile = _push_profile(context, signal)
+    pull_profile = _pull_profile(signal, hold_signal, disqualifier)
+    roi_bucket = _roi_bucket(roi)
+    tool_trend = _tool_trend(tool_changes)
+    semantic_cell = "|".join([
+        scenario,
+        push_profile,
+        pull_profile,
+        gate_state,
+        roi_bucket,
+        tool_trend,
+    ])
+
+    return {
+        "source_file": signal_path.name,
+        "source_group": signal_path.stem,
+        "category": category,
+        "competitor_slug": competitor_slug,
+        "scenario": scenario,
+        "verdict": verdict,
+        "variant_index": variant_index,
+        "push_profile": push_profile,
+        "pull_profile": pull_profile,
+        "gate_state": gate_state,
+        "roi_bucket": roi_bucket,
+        "tool_trend": tool_trend,
+        "semantic_cell": semantic_cell,
+        "balance_cell": f"{verdict}:{category}",
+    }
+
+
+def _counter_to_dict(counter: Counter, top_n: int | None = None) -> dict[str, int]:
+    items = counter.most_common(top_n) if top_n is not None else sorted(counter.items(), key=lambda item: str(item[0]))
+    return {str(key): value for key, value in items}
+
+
+def _dataset_stats(examples: list[dict]) -> dict:
+    metadata = [example["metadata"] for example in examples]
+    return {
+        "total_traces": len(examples),
+        "unique_sources": len({meta["source_group"] for meta in metadata}),
+        "unique_competitors": len({meta["competitor_slug"] for meta in metadata}),
+        "by_verdict": _counter_to_dict(Counter(meta["verdict"] for meta in metadata)),
+        "by_category": _counter_to_dict(Counter(meta["category"] for meta in metadata)),
+        "by_scenario": _counter_to_dict(Counter(meta["scenario"] for meta in metadata)),
+        "by_balance_cell": _counter_to_dict(Counter(meta["balance_cell"] for meta in metadata)),
+        "by_gate_state": _counter_to_dict(Counter(meta["gate_state"] for meta in metadata)),
+        "by_push_profile": _counter_to_dict(Counter(meta["push_profile"] for meta in metadata)),
+        "by_pull_profile": _counter_to_dict(Counter(meta["pull_profile"] for meta in metadata)),
+        "by_roi_bucket": _counter_to_dict(Counter(meta["roi_bucket"] for meta in metadata)),
+        "by_tool_trend": _counter_to_dict(Counter(meta["tool_trend"] for meta in metadata)),
+        "by_variant_index": _counter_to_dict(Counter(meta["variant_index"] for meta in metadata)),
+        "top_semantic_cells": _counter_to_dict(Counter(meta["semantic_cell"] for meta in metadata), top_n=20),
+        "top_source_reuse": _counter_to_dict(Counter(meta["source_group"] for meta in metadata), top_n=20),
+    }
+
+
+def _select_diverse_examples(cell_examples: list[dict], target: int, rng: random.Random) -> list[dict]:
+    pool = list(cell_examples)
+    rng.shuffle(pool)
+
+    source_counts: Counter = Counter()
+    category_counts: Counter = Counter()
+    competitor_counts: Counter = Counter()
+    scenario_counts: Counter = Counter()
+    semantic_counts: Counter = Counter()
+    variant_counts: Counter = Counter()
+    selected: list[dict] = []
+    used_indexes: set[int] = set()
+
+    while len(selected) < target and len(used_indexes) < len(pool):
+        best_index: int | None = None
+        best_score: tuple[int, int, int, int, int] | None = None
+
+        for index, example in enumerate(pool):
+            if index in used_indexes:
+                continue
+            meta = example["metadata"]
+            score = (
+                source_counts[meta["source_group"]],
+                category_counts[meta["category"]],
+                competitor_counts[meta["competitor_slug"]],
+                scenario_counts[meta["scenario"]],
+                semantic_counts[meta["semantic_cell"]],
+                variant_counts[meta["variant_index"]],
+            )
+            if best_score is None or score < best_score:
+                best_index = index
+                best_score = score
+
+        if best_index is None:
+            break
+
+        example = pool[best_index]
+        meta = example["metadata"]
+        selected.append(example)
+        used_indexes.add(best_index)
+        source_counts[meta["source_group"]] += 1
+        category_counts[meta["category"]] += 1
+        competitor_counts[meta["competitor_slug"]] += 1
+        scenario_counts[meta["scenario"]] += 1
+        semantic_counts[meta["semantic_cell"]] += 1
+        variant_counts[meta["variant_index"]] += 1
+
+    return selected
+
+
+def _balance_examples(
+    examples: list[dict],
+    *,
+    granularity: str = "verdict",
+) -> tuple[list[dict], dict]:
+    rng = random.Random(99)
+
+    if granularity == "cell":
+        cells: dict[tuple[str, str], list[dict]] = defaultdict(list)
+        for example in examples:
+            meta = example["metadata"]
+            cells[(meta["verdict"], meta["category"])] .append(example)
+
+        raw_cell_counts = {
+            f"{verdict}:{category}": len(items)
+            for (verdict, category), items in sorted(cells.items())
+        }
+        min_cell = min((len(items) for items in cells.values()), default=0)
+        balanced: list[dict] = []
+
+        for key in sorted(cells.keys()):
+            balanced.extend(_select_diverse_examples(cells[key], min_cell, rng))
+
+        rng.shuffle(balanced)
+        balanced_verdict_counts = _counter_to_dict(
+            Counter(example["metadata"]["verdict"] for example in balanced)
+        )
+        info = {
+            "granularity": granularity,
+            "raw_group_counts": raw_cell_counts,
+            "target_per_group": min_cell,
+            "group_count": len(cells),
+            "total_after_balance": len(balanced),
+            "balanced_verdict_counts": balanced_verdict_counts,
+        }
+        return balanced, info
+
+    if granularity == "verdict":
+        verdict_groups: dict[str, list[dict]] = defaultdict(list)
+        for example in examples:
+            meta = example["metadata"]
+            verdict_groups[meta["verdict"]].append(example)
+
+        raw_group_counts = {
+            verdict: len(items)
+            for verdict, items in sorted(verdict_groups.items())
+        }
+        min_verdict = min((len(items) for items in verdict_groups.values()), default=0)
+        balanced: list[dict] = []
+
+        for verdict in sorted(verdict_groups.keys()):
+            balanced.extend(_select_diverse_examples(verdict_groups[verdict], min_verdict, rng))
+
+        rng.shuffle(balanced)
+        balanced_verdict_counts = _counter_to_dict(
+            Counter(example["metadata"]["verdict"] for example in balanced)
+        )
+        info = {
+            "granularity": granularity,
+            "raw_group_counts": raw_group_counts,
+            "target_per_group": min_verdict,
+            "group_count": len(verdict_groups),
+            "total_after_balance": len(balanced),
+            "balanced_verdict_counts": balanced_verdict_counts,
+        }
+        return balanced, info
+
+    raise ValueError(f"Unsupported balance granularity: {granularity}")
+
+
+def _default_split_paths(output_path: str) -> tuple[Path, Path]:
+    output = Path(output_path)
+    train_path = output.with_name(f"{output.stem}.train{output.suffix}")
+    val_path = output.with_name(f"{output.stem}.val{output.suffix}")
+    return train_path, val_path
+
+
+def _split_examples(examples: list[dict], val_ratio: float) -> tuple[list[dict], list[dict]]:
+    if val_ratio <= 0:
+        return list(examples), []
+
+    buckets: dict[tuple[str, str, str], dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    for example in examples:
+        meta = example["metadata"]
+        bucket_key = (meta["verdict"], meta["category"], meta["scenario"])
+        buckets[bucket_key][meta["source_group"]].append(example)
+
+    rng = random.Random(123)
+    train_examples: list[dict] = []
+    val_examples: list[dict] = []
+
+    for bucket_key in sorted(buckets.keys()):
+        groups = list(buckets[bucket_key].values())
+        rng.shuffle(groups)
+        if len(groups) < 2:
+            train_examples.extend(group for source_group in groups for group in source_group)
+            continue
+
+        val_groups = round(len(groups) * val_ratio)
+        if val_ratio > 0 and val_groups == 0 and len(groups) >= 3:
+            val_groups = 1
+        val_groups = min(val_groups, len(groups) - 1)
+
+        for index, group in enumerate(groups):
+            if index < val_groups:
+                val_examples.extend(group)
+            else:
+                train_examples.extend(group)
+
+    rng.shuffle(train_examples)
+    rng.shuffle(val_examples)
+    return train_examples, val_examples
+
+
+def _write_jsonl(path: Path, examples: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for example in examples:
+            handle.write(json.dumps(example["record"], ensure_ascii=False) + "\n")
+
+
 # ── File sampling ─────────────────────────────────────────────────────────────
 
-def _collect_samples(limit: int) -> list[tuple[Path, str, str, str]]:
+def _collect_samples(
+    limit: int,
+    *,
+    include_drift_canaries: bool = False,
+) -> list[tuple[Path, str, str, str]]:
     by_scenario: dict[str, list[Path]] = {s: [] for s in SCENARIO_TYPES}
 
     for path in _GENERATED_DIR.glob("*.json"):
+        if not include_drift_canaries and path.name in DRIFT_CANARY_FILENAMES:
+            continue
         parsed = _parse_filename(path.stem)
         if parsed is None:
             continue
@@ -1155,15 +1890,33 @@ def main() -> None:
     parser.add_argument("--output", default=str(_OUTPUT_PATH),
                         help="Output JSONL path.")
     parser.add_argument("--balance", action="store_true",
-                        help="Downsample to equal STAY/SWITCH/HOLD counts after generation.")
+                        help="Downsample with diversity-aware selection.")
+    parser.add_argument("--balance-granularity", choices=["verdict", "cell"], default="verdict",
+                        help="Balancing scope when --balance is set. 'verdict' preserves more coverage; 'cell' equalises exact verdict/category cells.")
+    parser.add_argument("--val-ratio", type=float, default=0.0,
+                        help="Optional validation split ratio grouped by source signal within each scenario bucket.")
+    parser.add_argument("--train-output", default=None,
+                        help="Optional train split JSONL path. Defaults to '<output>.train.jsonl' when splitting.")
+    parser.add_argument("--val-output", default=None,
+                        help="Optional validation split JSONL path. Defaults to '<output>.val.jsonl' when splitting.")
+    parser.add_argument("--stats-output", default=None,
+                        help="Optional JSON path for dataset audit stats.")
+    parser.add_argument("--include-drift-canaries", action="store_true",
+                        help="Include drift-check canary fixtures in SFT sampling. Disabled by default to keep eval fixtures held out.")
     args = parser.parse_args()
 
-    samples = _collect_samples(args.limit)
+    if not 0.0 <= args.val_ratio < 1.0:
+        raise ValueError("--val-ratio must be in the range [0.0, 1.0).")
+
+    samples = _collect_samples(
+        args.limit,
+        include_drift_canaries=args.include_drift_canaries,
+    )
     total = len(samples) * args.variants
     print(f"Processing {len(samples)} signal files × {args.variants} variants = {total} traces "
           f"({args.limit} per scenario, {len(SCENARIO_TYPES) - len(_SKIP_SCENARIOS)} scenarios)...")
 
-    records: list[dict] = []
+    examples: list[dict] = []
     skipped = 0
 
     for signal_path, category, competitor_slug, scenario in samples:
@@ -1186,102 +1939,103 @@ def main() -> None:
             continue
 
         expected = EXPECTED_VERDICT.get(scenario)
-        verdict = expected if expected is not None else _infer_ambiguous_verdict(roi, signal)
+        verdict = expected if expected is not None else _infer_ambiguous_verdict(scenario, roi, signal, context)
 
-        # ── Consistency gate: ensure structured fields match expected verdict ──
-        # This prevents contradictory training examples (e.g. Hold signal: NONE
-        # with VERDICT: HOLD) which confuse the model during training.
-        notes = signal_notes(signal)
-        comp_ch = signal_competitor_changes(signal)
-        detected_hold = _detect_hold_signal(notes, comp_ch)
-
-        if scenario in _HOLD_SCENARIOS and detected_hold == "NONE":
-            print(f"  SKIP {signal_path.name}: HOLD scenario but no detectable hold signal")
+        failure_reason = _consistency_failure_reason(scenario, signal, context, roi, verdict)
+        if failure_reason is not None:
+            print(f"  SKIP {signal_path.name}: {failure_reason}")
             skipped += 1
-            continue
-        if expected == "SWITCH" and detected_hold != "NONE" and scenario != "hold_resolved":
-            print(f"  SKIP {signal_path.name}: SWITCH scenario but stray hold signal: {detected_hold[:60]}")
-            skipped += 1
-            continue
-
-        # Gate: Shelfware flag present but verdict is STAY — contradicts system prompt.
-        tool_ch = signal_current_tool_status(signal)
-        detected_shelfware = _detect_shelfware(tool_ch)
-        if detected_shelfware != "NONE" and detected_hold == "NONE" and verdict == "STAY":
-            disq = _detect_disqualifier(notes, detected_hold)
-            if disq == "NONE":
-                print(f"  SKIP {signal_path.name}: Shelfware flag with STAY verdict and no Disqualifier")
-                skipped += 1
-                continue
             continue
 
         user_msg = _build_user_message(context, roi, signal, scenario=scenario)
         for v in range(args.variants):
             cot_trace = _build_cot_trace(scenario, signal, context, roi, verdict, variant=v)
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYS_VERDICT_LEAN},
-                    {"role": "user",   "content": user_msg},
-                    {"role": "assistant", "content": cot_trace},
-                ]
+            examples.append({
+                "record": {
+                    "messages": [
+                        {"role": "system", "content": SYS_VERDICT_LEAN},
+                        {"role": "user",   "content": user_msg},
+                        {"role": "assistant", "content": cot_trace},
+                    ]
+                },
+                "metadata": _build_trace_metadata(
+                    signal_path,
+                    category,
+                    competitor_slug,
+                    scenario,
+                    context,
+                    signal,
+                    roi,
+                    verdict,
+                    variant_index=v,
+                ),
             })
 
+    raw_stats = _dataset_stats(examples)
+
     if args.balance:
-        # ── Stratified balancing: equal counts per (verdict, category) cell ──
-        from collections import defaultdict
-
-        def _extract_verdict(rec: dict) -> str:
-            c = rec["messages"][2]["content"]
-            if "VERDICT: SWITCH" in c:
-                return "SWITCH"
-            if "VERDICT: HOLD" in c:
-                return "HOLD"
-            return "STAY"
-
-        def _extract_category(rec: dict) -> str:
-            for line in rec["messages"][1]["content"].split("\n"):
-                if line.startswith("Category:"):
-                    return line.split("—")[0].replace("Category:", "").strip()
-            return "unknown"
-
-        # Group into (verdict, category) cells
-        cells: dict[tuple[str, str], list[dict]] = defaultdict(list)
-        for rec in records:
-            v = _extract_verdict(rec)
-            c = _extract_category(rec)
-            cells[(v, c)].append(rec)
-
-        raw_cell_counts = {k: len(v) for k, v in sorted(cells.items())}
-        print(f"Pre-balance cell counts: {raw_cell_counts}")
-
-        # Find the minimum cell size across all 15 cells
-        min_cell = min(len(v) for v in cells.values()) if cells else 0
-        target_per_cell = min_cell
-        print(f"Target per (verdict, category) cell: {target_per_cell}")
-
-        rng_b = random.Random(99)
-        balanced: list[dict] = []
-        for key in sorted(cells.keys()):
-            cell_list = cells[key]
-            rng_b.shuffle(cell_list)
-            balanced.extend(cell_list[:target_per_cell])
-        rng_b.shuffle(balanced)
-        records = balanced
-        total_per_verdict = target_per_cell * 5
-        print(f"Balance: {target_per_cell} per cell × 15 cells = {len(records)} total "
-              f"({total_per_verdict} per verdict class)")
+        examples, balance_info = _balance_examples(examples, granularity=args.balance_granularity)
+        print(f"Pre-balance group counts ({args.balance_granularity}): {balance_info['raw_group_counts']}")
+        print(f"Target per group: {balance_info['target_per_group']}")
+        print(
+            f"Balance ({args.balance_granularity}): {balance_info['target_per_group']} per group × "
+            f"{balance_info['group_count']} groups = {balance_info['total_after_balance']} total "
+            f"({balance_info['balanced_verdict_counts']} by verdict)"
+        )
+    else:
+        balance_info = None
 
     out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8") as f:
-        for rec in records:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    _write_jsonl(out, examples)
+    print(f"Wrote {len(examples)} traces → {out}  ({skipped} skipped)")
 
-    print(f"Wrote {len(records)} traces → {out}  ({skipped} skipped)")
+    effective_val_ratio = args.val_ratio
+    if effective_val_ratio <= 0 and (args.train_output or args.val_output):
+        effective_val_ratio = 0.15
+        print("Validation ratio not provided; defaulting to 0.15 because split outputs were requested.")
 
-    if records:
+    train_examples: list[dict] = []
+    val_examples: list[dict] = []
+    if effective_val_ratio > 0:
+        train_examples, val_examples = _split_examples(examples, effective_val_ratio)
+        default_train, default_val = _default_split_paths(args.output)
+        train_out = Path(args.train_output) if args.train_output else default_train
+        val_out = Path(args.val_output) if args.val_output else default_val
+        _write_jsonl(train_out, train_examples)
+        _write_jsonl(val_out, val_examples)
+        print(
+            f"Wrote grouped split: {len(train_examples)} train / {len(val_examples)} val "
+            f"→ {train_out}, {val_out}"
+        )
+
+    if args.stats_output:
+        stats_payload = {
+            "config": {
+                "limit": args.limit,
+                "variants": args.variants,
+                "balance": args.balance,
+                "balance_granularity": args.balance_granularity,
+                "val_ratio": effective_val_ratio,
+            },
+            "skipped": skipped,
+            "raw": raw_stats,
+            "balanced": _dataset_stats(examples),
+        }
+        if balance_info is not None:
+            stats_payload["balance_info"] = balance_info
+        if train_examples or val_examples:
+            stats_payload["train"] = _dataset_stats(train_examples)
+            stats_payload["val"] = _dataset_stats(val_examples)
+        stats_out = Path(args.stats_output)
+        stats_out.parent.mkdir(parents=True, exist_ok=True)
+        with stats_out.open("w", encoding="utf-8") as handle:
+            json.dump(stats_payload, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+        print(f"Wrote dataset stats → {stats_out}")
+
+    if examples:
         print("\n─── Example trace (first record) ───────────────────────────────")
-        ex = records[0]["messages"]
+        ex = examples[0]["record"]["messages"]
         print(f"[USER]\n{ex[1]['content']}\n")
         print(f"[ASSISTANT]\n{ex[2]['content']}")
         print("────────────────────────────────────────────────────────────────")

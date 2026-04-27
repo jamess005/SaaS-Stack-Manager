@@ -1,6 +1,6 @@
 """
 Model evaluation script — tests the fine-tuned SaaS Stack Manager against
-the generated signal corpus and reports accuracy per scenario type.
+either the synthetic training corpus or a terminal-only held-out fixture set.
 
 Usage:
     # Dry-run (no GPU, uses fixture responses)
@@ -10,10 +10,10 @@ Usage:
     HSA_OVERRIDE_GFX_VERSION=11.0.0 python scripts/evaluate_model.py \\
         --adapter-path training/checkpoints_sft_cot/
 
-    # One scenario type only
-    HSA_OVERRIDE_GFX_VERSION=11.0.0 python scripts/evaluate_model.py \\
-        --adapter-path training/checkpoints_sft_cot/ \\
-        --scenario hard_compliance_failure --per-scenario 5
+    # Terminal-only held-out set with explicit expected verdicts
+    python scripts/evaluate_model.py \\
+        --signals-dir fixtures/eval_signals \\
+        --all-files --dry-run
 """
 
 import argparse
@@ -30,13 +30,16 @@ from rich.table import Table
 _PROJECT_ROOT = Path(__file__).parent.parent
 _DATA_ROOT = _PROJECT_ROOT / "data"
 _GENERATED_DIR = _PROJECT_ROOT / "training" / "generated"
+_DEFAULT_HOLDOUT_DIR = _PROJECT_ROOT / "fixtures" / "eval_signals"
 _OUTPUTS_DIR = _PROJECT_ROOT / "outputs"
+_DASHBOARD_LOG = _OUTPUTS_DIR / "drift_log.jsonl"
 
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
-from agent.model_runner import load_model, run_lean  # noqa: E402
-from agent.output_validator import extract_verdict_class, validate_lean_output  # noqa: E402
+from agent.drift_tracker import log_live_run  # noqa: E402
+from agent.model_runner import load_model, run_lean, run_voting  # noqa: E402
+from agent.output_validator import extract_verdict_class, validate_lean_output, validate_verdict  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
 from agent.signal_interpreter import parse_signal_payload  # noqa: E402
 from config import MODEL_PATH  # noqa: E402
@@ -86,26 +89,159 @@ def _parse_generated_filename(stem: str) -> tuple[str, str, str] | None:
     return None
 
 
+def _coerce_expected_verdict(raw_value: object) -> str | None:
+    if not isinstance(raw_value, str):
+        return None
+    verdict = raw_value.strip().upper()
+    return verdict if verdict in {"SWITCH", "STAY", "HOLD"} else None
+
+
+def _load_signal_case(signal_path: Path) -> dict:
+    with signal_path.open(encoding="utf-8") as f:
+        raw_payload = json.load(f)
+
+    if not isinstance(raw_payload, dict):
+        raise ValueError(f"Signal file must contain a JSON object: {signal_path.name}")
+
+    signal = raw_payload.get("signal") if isinstance(raw_payload.get("signal"), dict) else raw_payload
+    if not isinstance(signal, dict):
+        raise ValueError(f"Signal payload must be a JSON object: {signal_path.name}")
+
+    parsed = _parse_generated_filename(signal_path.stem)
+    category = raw_payload.get("category") if isinstance(raw_payload.get("category"), str) else None
+    competitor_slug = (
+        raw_payload.get("competitor_slug")
+        if isinstance(raw_payload.get("competitor_slug"), str)
+        else None
+    )
+    scenario = raw_payload.get("scenario") if isinstance(raw_payload.get("scenario"), str) else None
+
+    if parsed is not None:
+        category = category or parsed[0]
+        competitor_slug = competitor_slug or parsed[1]
+        scenario = scenario or parsed[2]
+
+    scenario = (scenario or signal_path.stem).strip()
+    if not category or not competitor_slug:
+        raise ValueError(
+            f"Cannot determine category and competitor_slug for {signal_path.name}"
+        )
+
+    expected = _coerce_expected_verdict(raw_payload.get("expected_verdict"))
+    if expected is None and parsed is not None:
+        expected = EXPECTED_VERDICT.get(parsed[2])
+
+    return {
+        "signal": signal,
+        "category": category,
+        "competitor": competitor_slug,
+        "scenario": scenario,
+        "expected": expected,
+    }
+
+
+def _confidence_pct(confidence: dict | None) -> float | None:
+    if not confidence:
+        return None
+    value = confidence.get("verdict_token_prob")
+    if isinstance(value, (int, float)):
+        return float(value) * 100.0
+    return None
+
+
+def _format_confidence(confidence: dict | None) -> str:
+    if not confidence:
+        return "—"
+    value = confidence.get("verdict_token_prob")
+    if isinstance(value, (int, float)):
+        return f"{float(value):.4f}"
+    return "—"
+
+
+def _dashboard_memo_filename(result: dict, run_date: str | None = None) -> str:
+    date_prefix = run_date or datetime.now().date().isoformat()
+    return (
+        f"{date_prefix}-{result['category']}-{result['competitor']}-{result['scenario']}.md"
+    )
+
+
+def _persist_dashboard_run(
+    result: dict,
+    outputs_dir: Path | None = None,
+    log_path: Path | None = None,
+    run_date: str | None = None,
+) -> str:
+    outputs_dir = outputs_dir or _OUTPUTS_DIR
+    log_path = log_path or _DASHBOARD_LOG
+    memo_text = result.get("memo_text")
+    if not isinstance(memo_text, str):
+        raise ValueError("memo_text is required to persist dashboard runs")
+
+    memo_filename = _dashboard_memo_filename(result, run_date=run_date)
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    (outputs_dir / memo_filename).write_text(memo_text, encoding="utf-8")
+
+    log_live_run(
+        category=result["category"],
+        competitor=result["competitor"],
+        verdict=result.get("actual") or "UNKNOWN",
+        format_valid=bool(result.get("format_valid")),
+        validation_attempts=int(result.get("validation_attempts", 1)),
+        confidence=result.get("confidence"),
+        log_path=log_path,
+        memo_filename=memo_filename,
+    )
+    return memo_filename
+
+
+def _serialisable_result(result: dict) -> dict:
+    return {key: value for key, value in result.items() if key != "memo_text"}
+
+
+def _pipeline_components(pipeline: str):
+    if pipeline == "voting":
+        return run_voting, validate_verdict
+    return run_lean, validate_lean_output
+
+
 # ── Signal sampling ────────────────────────────────────────────────────────────
 
-def _collect_samples(scenario_filter: str | None, limit: int) -> list[Path]:
+def _collect_samples(
+    scenario_filter: str | None,
+    limit: int,
+    signals_dir: Path,
+    all_files: bool = False,
+) -> list[Path]:
     """
     Return a reproducible sample of signal files grouped by scenario type.
     Uses a fixed seed so the same files are always selected.
     """
-    by_scenario: dict[str, list[Path]] = {s: [] for s in SCENARIO_TYPES}
+    by_scenario: dict[str, list[Path]] = {}
 
-    for path in _GENERATED_DIR.glob("*.json"):
-        parsed = _parse_generated_filename(path.stem)
-        if parsed is None:
+    for path in sorted(signals_dir.glob("*.json")):
+        try:
+            case = _load_signal_case(path)
+        except (OSError, ValueError, json.JSONDecodeError):
             continue
-        _, _, scenario = parsed
-        if scenario in by_scenario:
-            by_scenario[scenario].append(path)
+        scenario = case["scenario"]
+        by_scenario.setdefault(scenario, []).append(path)
+
+    if all_files:
+        if scenario_filter:
+            return list(by_scenario.get(scenario_filter, []))
+        selected: list[Path] = []
+        for scenario in sorted(by_scenario):
+            selected.extend(by_scenario[scenario])
+        return selected
 
     selected: list[Path] = []
     rng = random.Random(42)
-    scenarios_to_run = [scenario_filter] if scenario_filter else SCENARIO_TYPES
+    if scenario_filter:
+        scenarios_to_run = [scenario_filter]
+    else:
+        scenarios_to_run = [s for s in SCENARIO_TYPES if s in by_scenario]
+        extras = sorted(s for s in by_scenario if s not in SCENARIO_TYPES)
+        scenarios_to_run.extend(extras)
     for scenario in scenarios_to_run:
         pool = sorted(by_scenario.get(scenario, []))
         rng.shuffle(pool)
@@ -120,16 +256,21 @@ def _evaluate_one(
     signal_path: Path,
     tokenizer,
     model,
+    pipeline: str = "lean",
 ) -> dict:
     """Run the pipeline on one signal file and return a result record."""
-    parsed = _parse_generated_filename(signal_path.stem)
-    if parsed is None:
+    try:
+        case = _load_signal_case(signal_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
             "status": "skip",
-            "reason": f"Cannot parse filename: {signal_path.name}",
+            "reason": str(exc),
+            "source_file": signal_path.name,
         }
 
-    category, competitor_slug, scenario = parsed
+    category = case["category"]
+    competitor_slug = case["competitor"]
+    scenario = case["scenario"]
 
     try:
         context = load_context(category, competitor_slug, _DATA_ROOT)
@@ -137,23 +278,25 @@ def _evaluate_one(
         return {"status": "error", "reason": str(exc), "scenario": scenario,
                 "category": category, "competitor": competitor_slug}
 
-    with signal_path.open(encoding="utf-8") as f:
-        signal = json.load(f)
+    signal = case["signal"]
     inbox_text = json.dumps(signal, indent=2, ensure_ascii=False)
 
     pass1_payload = extract_pass1_vars(context, parse_signal_payload(inbox_text))
     roi_result = calculate_roi(pass1_payload)
 
-    memo, _ = run_lean(inbox_text, context, roi_result, tokenizer, model)
+    runner, validator = _pipeline_components(pipeline)
+    validation_attempts = 1
+    memo, confidence = runner(inbox_text, context, roi_result, tokenizer, model)
 
     # Retry once on validation failure
-    is_valid, _errors = validate_lean_output(memo)
+    is_valid, _errors = validator(memo)
     if not is_valid:
-        memo, _ = run_lean(inbox_text, context, roi_result, tokenizer, model)
-        is_valid, _ = validate_lean_output(memo)
+        validation_attempts = 2
+        memo, confidence = runner(inbox_text, context, roi_result, tokenizer, model)
+        is_valid, _ = validator(memo)
 
     verdict = extract_verdict_class(memo)
-    expected = EXPECTED_VERDICT.get(scenario)
+    expected = case["expected"]
 
     result: dict = {
         "status": "ok",
@@ -162,7 +305,10 @@ def _evaluate_one(
         "competitor": competitor_slug,
         "expected": expected,
         "actual": verdict,
+        "confidence": confidence,
         "format_valid": is_valid,
+        "validation_attempts": validation_attempts,
+        "memo_text": memo,
         "source_file": signal_path.name,
     }
     if not is_valid:
@@ -181,6 +327,7 @@ def _print_results(results: list[dict]) -> None:
     detail.add_column("Category / Competitor", style="dim", min_width=24)
     detail.add_column("Expected", justify="center", min_width=8)
     detail.add_column("Actual", justify="center", min_width=8)
+    detail.add_column("Confidence", justify="right", min_width=10)
     detail.add_column("Match", justify="center", min_width=6)
     detail.add_column("Format", justify="center", min_width=7)
 
@@ -206,6 +353,7 @@ def _print_results(results: list[dict]) -> None:
             f"{r['category']} / {r['competitor']}",
             expected,
             f"[{match_style}]{actual}[/{match_style}]" if match_style else actual,
+            _format_confidence(r.get("confidence")),
             match_str,
             fmt_str,
         )
@@ -267,6 +415,30 @@ def _print_results(results: list[dict]) -> None:
             f"[{colour}]{total_correct}/{total_clear} = {overall_pct:.1f}%[/{colour}][/bold]"
         )
 
+    scored_conf = [_confidence_pct(r.get("confidence")) for r in ok]
+    scored_conf = [pct for pct in scored_conf if pct is not None]
+    correct_conf = [
+        _confidence_pct(r.get("confidence"))
+        for r in ok
+        if r.get("expected") is not None and r.get("actual") == r.get("expected")
+    ]
+    correct_conf = [pct for pct in correct_conf if pct is not None]
+    wrong_conf = [
+        _confidence_pct(r.get("confidence"))
+        for r in ok
+        if r.get("expected") is not None and r.get("actual") != r.get("expected")
+    ]
+    wrong_conf = [pct for pct in wrong_conf if pct is not None]
+    if scored_conf:
+        console.print(
+            f"[bold]Average verdict confidence:[/bold] {sum(scored_conf) / len(scored_conf):.1f}%"
+        )
+    if correct_conf and wrong_conf:
+        console.print(
+            f"[bold]Correct vs wrong confidence:[/bold] "
+            f"{sum(correct_conf) / len(correct_conf):.1f}% / {sum(wrong_conf) / len(wrong_conf):.1f}%"
+        )
+
     skipped = [r for r in results if r["status"] != "ok"]
     if skipped:
         console.print(f"\n[yellow]⚠  {len(skipped)} file(s) skipped or errored:[/yellow]")
@@ -291,8 +463,20 @@ def main() -> None:
                         help="Load base model with no LoRA adapter (diagnostic baseline).")
     parser.add_argument("--per-scenario", type=int, default=2, dest="per_scenario",
                         help="Signal files to test per scenario type (default: 2 → 36 total tests).")
-    parser.add_argument("--scenario", default=None, choices=SCENARIO_TYPES,
-                        help="Evaluate one scenario type only.")
+    parser.add_argument("--scenario", default=None,
+                        help="Evaluate one scenario label only.")
+    parser.add_argument("--signals-dir",
+                        default=str(_GENERATED_DIR),
+                    help=("Directory of JSON signal files. Defaults to training/generated; "
+                        f"use {_DEFAULT_HOLDOUT_DIR.relative_to(_PROJECT_ROOT)} for the realistic hold-out set."))
+    parser.add_argument("--all-files", action="store_true",
+                        help="Evaluate every JSON file in --signals-dir instead of sampling per scenario.")
+    parser.add_argument("--holdout", action="store_true",
+                help="Shortcut for --signals-dir fixtures/eval_signals --all-files.")
+    parser.add_argument("--pipeline", choices=["lean", "voting"], default="lean",
+                        help="Inference pipeline to evaluate. Use 'voting' to mirror the normal production route.")
+    parser.add_argument("--populate-dashboard", action="store_true",
+                        help="Write memos and live_run drift records so the dashboard reflects this evaluation run.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Use fixture responses — no GPU required.")
     parser.add_argument("--files", nargs="+", metavar="FILE",
@@ -303,6 +487,10 @@ def main() -> None:
     if args.dry_run:
         os.environ["AGENT_DRY_RUN"] = "true"
 
+    if args.holdout and not args.files:
+        args.signals_dir = str(_DEFAULT_HOLDOUT_DIR)
+        args.all_files = True
+
     if args.files:
         samples = [Path(f) if Path(f).is_absolute() else _PROJECT_ROOT / f for f in args.files]
         missing = [p for p in samples if not p.exists()]
@@ -312,11 +500,17 @@ def main() -> None:
             sys.exit(1)
         mode_label = f"{len(samples)} explicit file(s)"
     else:
-        samples = _collect_samples(args.scenario, args.per_scenario)
-        mode_label = f"{args.per_scenario} per scenario"
+        signals_dir = Path(args.signals_dir)
+        if not signals_dir.is_absolute():
+            signals_dir = _PROJECT_ROOT / signals_dir
+        samples = _collect_samples(args.scenario, args.per_scenario, signals_dir, args.all_files)
+        if args.all_files:
+            mode_label = f"all files in {signals_dir}"
+        else:
+            mode_label = f"{args.per_scenario} per scenario from {signals_dir}"
 
     if not samples:
-        console.print("[red]No signal files found. Check training/generated/ exists.[/red]")
+        console.print("[red]No signal files found. Check the selected signals directory.[/red]")
         sys.exit(1)
 
     console.print(
@@ -345,29 +539,32 @@ def main() -> None:
             end="",
         )
 
-        result = _evaluate_one(signal_path, tokenizer, model)
+        result = _evaluate_one(signal_path, tokenizer, model, pipeline=args.pipeline)
         result.setdefault("source_file", signal_path.name)
+        if args.populate_dashboard and result["status"] == "ok":
+            result["memo_filename"] = _persist_dashboard_run(result)
         results.append(result)
+        conf_text = _format_confidence(result.get("confidence"))
 
         if result["status"] == "ok":
             expected = result["expected"]
             actual = result["actual"] or "?"
             ambiguous = expected is None
             if ambiguous:
-                console.print(f"→ [dim]{actual}[/dim]  [dim](ambiguous)[/dim]")
+                console.print(f"→ [dim]{actual}[/dim]  [dim](ambiguous, p={conf_text})[/dim]")
             elif actual == expected:
                 correct += 1
                 total_scored += 1
                 console.print(
                     f"→ [bold green]{actual}[/bold green] [green]✓[/green]"
-                    f"  [dim]{correct}/{total_scored} correct[/dim]"
+                    f"  [dim]p={conf_text} · {correct}/{total_scored} correct[/dim]"
                 )
             else:
                 total_scored += 1
                 console.print(
                     f"→ [bold red]{actual}[/bold red] [red]✗[/red]"
                     f"  expected [yellow]{expected}[/yellow]"
-                    f"  [dim]{correct}/{total_scored} correct[/dim]"
+                    f"  [dim]p={conf_text} · {correct}/{total_scored} correct[/dim]"
                 )
         else:
             console.print(f"→ [yellow]SKIP: {result.get('reason', '')}[/yellow]")
@@ -379,7 +576,15 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     out_path = _OUTPUTS_DIR / f"eval_{timestamp}.json"
     with out_path.open("w", encoding="utf-8") as f:
-        json.dump({"timestamp": timestamp, "results": results}, f, indent=2, ensure_ascii=False)
+        json.dump(
+            {
+                "timestamp": timestamp,
+                "results": [_serialisable_result(result) for result in results],
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
     console.print(f"\n[dim]Results saved to {out_path}[/dim]")
 
 

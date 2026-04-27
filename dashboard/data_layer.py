@@ -44,34 +44,18 @@ def get_stats(
     records = _load_drift_records(log_path)
     live_runs = [r for r in records if r.get("type") == "live_run"]
 
-    # Use latest verdict per competitor (not raw counts of all historical runs)
-    latest: dict[str, dict] = {}
-    for r in live_runs:
-        key = r.get("competitor", "")
-        if not key:
-            continue
-        prev = latest.get(key)
-        if prev is None or r.get("ts", "") > prev.get("ts", ""):
-            latest[key] = r
-
     counts: dict[str, int] = {"SWITCH": 0, "HOLD": 0, "STAY": 0}
-    for r in latest.values():
+    for r in live_runs:
         v = r.get("verdict", "")
         if v in counts:
             counts[v] += 1
-
-    total_tracked = 0
-    if competitors_dir.exists():
-        for cat_dir in competitors_dir.iterdir():
-            if cat_dir.is_dir():
-                total_tracked += len(list(cat_dir.glob("*.json")))
 
     return {
         "switch": counts["SWITCH"],
         "hold": counts["HOLD"],
         "stay": counts["STAY"],
-        "total_evaluated": sum(counts.values()),
-        "total_tracked": total_tracked,
+        "total_evaluated": len(live_runs),
+        "total_tracked": len(live_runs),
     }
 
 
@@ -96,7 +80,7 @@ def get_recent_verdicts(
         ts = run.get("ts", "")[:10]
         category = run.get("category", "")
         competitor = run.get("competitor", "")
-        memo_filename = f"{ts}-{category}-{competitor}.md"
+        memo_filename = run.get("memo_filename") or f"{ts}-{category}-{competitor}.md"
         memo_path = outputs_dir / memo_filename
 
         memo_excerpt = ""
@@ -171,6 +155,19 @@ def add_competitor(
     out.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     data["slug"] = slug
     return data
+
+
+def delete_competitor(
+    category: str,
+    slug: str,
+    competitors_dir: Path | None = None,
+) -> bool:
+    competitors_dir = competitors_dir if competitors_dir is not None else _COMPETITORS_DIR
+    target = competitors_dir / category / f"{slug}.json"
+    if not target.exists():
+        return False
+    target.unlink()
+    return True
 
 
 def record_feedback(
@@ -253,7 +250,7 @@ def get_rankings(
         ts_date = r.get("ts", "")[:10]
         cat = r.get("category", "")
         comp = r.get("competitor", "")
-        memo_fn = f"{ts_date}-{cat}-{comp}.md"
+        memo_fn = r.get("memo_filename") or f"{ts_date}-{cat}-{comp}.md"
         result.append({
             "rank": rank,
             "category": cat,
@@ -307,7 +304,7 @@ def get_review_queue(
         ts = r.get("ts", "")[:10]
         cat = r.get("category", "")
         comp = r.get("competitor", "")
-        memo_fn = f"{ts}-{cat}-{comp}.md"
+        memo_fn = r.get("memo_filename") or f"{ts}-{cat}-{comp}.md"
         if memo_fn in reviewed:
             continue
         queue.append({
@@ -356,7 +353,7 @@ def get_active_holds(
         ts_date = r.get("ts", "")[:10]
         cat = r.get("category", "")
         comp = r.get("competitor", "")
-        memo_fn = f"{ts_date}-{cat}-{comp}.md"
+        memo_fn = r.get("memo_filename") or f"{ts_date}-{cat}-{comp}.md"
 
         # Try to extract REASSESS CONDITION from the memo
         reassess = ""
@@ -402,7 +399,7 @@ def get_all_verdicts(
         ts = run.get("ts", "")[:10]
         category = run.get("category", "")
         competitor = run.get("competitor", "")
-        memo_fn = f"{ts}-{category}-{competitor}.md"
+        memo_fn = run.get("memo_filename") or f"{ts}-{category}-{competitor}.md"
         result.append({
             **run,
             "memo_filename": memo_fn,

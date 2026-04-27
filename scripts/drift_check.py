@@ -23,6 +23,7 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(_PROJECT_ROOT))
 
+from training.drift_canaries import DRIFT_CANARY_EXPECTED, DRIFT_CANARY_FILES  # noqa: E402
 from agent.context_loader import load_context  # noqa: E402
 from agent.drift_tracker import _DRIFT_LOG, load_records  # noqa: E402
 from agent.model_runner import load_model, run_lean  # noqa: E402
@@ -37,35 +38,8 @@ console = Console()
 _DATA_ROOT = _PROJECT_ROOT / "data"
 
 # Canary signals — known-answer fixtures not used in training
-_CANARY_FILES = [
-    _PROJECT_ROOT / "training" / "generated" / "crm_leadsphere_competitor_nearly_ready.json",
-    _PROJECT_ROOT / "training" / "generated" / "finance_brightbooks_pull_dominant.json",
-    _PROJECT_ROOT / "training" / "generated" / "hr_teamrise_shelfware_case.json",
-    _PROJECT_ROOT / "training" / "generated" / "project_mgmt_opscanvas_contract_renewal_hold.json",
-    # Edge-case canaries — disqualifier, borderline ROI, shelfware variant, weak pull
-    _PROJECT_ROOT / "training" / "generated" / "crm_closerhub_negative_signal_buried.json",
-    _PROJECT_ROOT / "training" / "generated" / "finance_ledgerflow_pull_dominant.json",
-    _PROJECT_ROOT / "training" / "generated" / "project_mgmt_flowboard_shelfware_case.json",
-    _PROJECT_ROOT / "training" / "generated" / "hr_workforge_fluff_update.json",
-    # Extended canaries — irrelevant-change STAY, competitor-nearly-ready HOLD
-    _PROJECT_ROOT / "training" / "generated" / "analytics_pulsemetrics_irrelevant_change.json",
-    _PROJECT_ROOT / "training" / "generated" / "finance_exactspend_competitor_nearly_ready.json",
-]
-
-_EXPECTED: dict[str, str] = {
-    "crm_leadsphere_competitor_nearly_ready":          "HOLD",
-    "finance_brightbooks_pull_dominant":               "SWITCH",
-    "hr_teamrise_shelfware_case":                      "SWITCH",
-    "project_mgmt_opscanvas_contract_renewal_hold":    "HOLD",
-    # Edge-case canaries
-    "crm_closerhub_negative_signal_buried":            "STAY",
-    "finance_ledgerflow_pull_dominant":                "SWITCH",
-    "project_mgmt_flowboard_shelfware_case":           "SWITCH",
-    "hr_workforge_fluff_update":                       "STAY",
-    # Extended canaries
-    "analytics_pulsemetrics_irrelevant_change":        "STAY",
-    "finance_exactspend_competitor_nearly_ready":      "HOLD",
-}
+_CANARY_FILES = DRIFT_CANARY_FILES
+_EXPECTED = DRIFT_CANARY_EXPECTED
 
 
 def _run_canary(signal_path: Path, tokenizer, model) -> dict:
@@ -134,6 +108,10 @@ def _run_canary(signal_path: Path, tokenizer, model) -> dict:
         result["retried"] = True
     if confidence:
         result["confidence"] = confidence
+    # Save actual model output when canary fails — used as DPO rejected trace on next retrain.
+    # At this point memo is still the initial wrong attempt (retry only overwrites on success).
+    if not result["correct"]:
+        result["wrong_memo"] = memo
     return result
 
 
@@ -145,15 +123,9 @@ def main() -> None:
     parser.add_argument("--adapter-path",
                         default=str(_PROJECT_ROOT / "training" / "checkpoints_sft_cot"))
     parser.add_argument("--dpo-adapter-path", default=None,
-                        help="Path to a DPO adapter to stack on top of the SFT adapter. "
-                             "Auto-detected from training/checkpoints_dpo/ if not specified.")
+                        help="Optional path to a DPO adapter to stack on top of the SFT adapter. "
+                             "Disabled by default so canary runs measure the SFT adapter alone.")
     args = parser.parse_args()
-
-    # Auto-detect DPO adapter if not explicitly provided
-    if args.dpo_adapter_path is None:
-        dpo_default = _PROJECT_ROOT / "training" / "checkpoints_dpo"
-        if dpo_default.exists() and (dpo_default / "adapter_config.json").exists():
-            args.dpo_adapter_path = str(dpo_default)
 
     if args.dry_run:
         os.environ["AGENT_DRY_RUN"] = "true"
@@ -167,6 +139,10 @@ def main() -> None:
 
     console.print(f"\n[bold]Running canary eval[/bold] ({len(_CANARY_FILES)} signals, "
                   f"{'dry-run' if args.dry_run else 'live model'})\n")
+    if args.dpo_adapter_path:
+        console.print(f"[dim]Stacking DPO adapter: {args.dpo_adapter_path}[/dim]\n")
+    else:
+        console.print("[dim]Running SFT-only canary check (no DPO adapter stacked).[/dim]\n")
 
     adapter = None if args.dry_run else args.adapter_path
     dpo_adapter = None if args.dry_run else args.dpo_adapter_path

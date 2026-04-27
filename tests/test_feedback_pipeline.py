@@ -1,5 +1,6 @@
 """Tests for the feedback harvester and DPO pipeline data layer."""
 
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -182,6 +183,49 @@ def test_extract_canary_pairs(drift_log_with_feedback):
         finally:
             fh.load_context = original_load
             fh._GENERATED_DIR = original_dir
+
+
+def test_harvest_excludes_eval_canaries_by_default(tmp_path, monkeypatch):
+    import training.feedback_harvester as fh
+
+    monkeypatch.setattr(fh, "_load_drift_records", lambda log_path=None: [{"type": "stub"}])
+    monkeypatch.setattr(fh, "_extract_human_feedback_pairs", lambda records: [{"source": "human_feedback"}])
+    monkeypatch.setattr(fh, "_extract_canary_pairs", lambda records: [{"source": "canary"}])
+    monkeypatch.setattr(fh, "_extract_golden_canary_pairs", lambda: [{"source": "golden_canary"}])
+    monkeypatch.setattr(fh, "_sample_sft_traces", lambda: [{"source": "sft_sample"}])
+
+    pairs = fh.harvest(
+        log_path=tmp_path / "drift_log.jsonl",
+        output_path=tmp_path / "feedback_pairs.jsonl",
+        dry_run=True,
+    )
+
+    assert [pair["source"] for pair in pairs] == ["human_feedback", "sft_sample"]
+
+
+def test_harvest_can_opt_into_eval_canaries(tmp_path, monkeypatch):
+    import training.feedback_harvester as fh
+
+    monkeypatch.setattr(fh, "_load_drift_records", lambda log_path=None: [{"type": "stub"}])
+    monkeypatch.setattr(fh, "_extract_human_feedback_pairs", lambda records: [{"source": "human_feedback"}])
+    monkeypatch.setattr(fh, "_extract_canary_pairs", lambda records: [{"source": "canary"}])
+    monkeypatch.setattr(fh, "_extract_golden_canary_pairs", lambda: [{"source": "golden_canary"}])
+    monkeypatch.setattr(fh, "_sample_sft_traces", lambda: [{"source": "sft_sample"}])
+
+    pairs = fh.harvest(
+        log_path=tmp_path / "drift_log.jsonl",
+        output_path=tmp_path / "feedback_pairs.jsonl",
+        dry_run=True,
+        include_canary_failures=True,
+        include_golden_canaries=True,
+    )
+
+    assert Counter(pair["source"] for pair in pairs) == Counter({
+        "human_feedback": 1,
+        "canary": 1,
+        "golden_canary": 1,
+        "sft_sample": 1,
+    })
 
 
 def test_build_trace_has_required_sections():

@@ -38,9 +38,18 @@ training/traces_fresh/
 training/checkpoints/
 training/checkpoints_grpo/
 training/checkpoints_dpo/
-training/checkpoints_sft_cot/
-training/checkpoints_sft_cot/
+training/checkpoints_dpo_bad*/
+training/checkpoints_*/
 training/sft_cot_traces.jsonl
+training/sft_cot_traces.jsonl.bak
+training/sft_cot_traces.jsonl.pre_repair
+training/sft_cot_traces.train.jsonl
+training/sft_cot_traces.val.jsonl
+training/sft_cot_traces.stats.json
+training/feedback_pairs.jsonl
+training/eval_signals/
+eval_output.txt
+
 training/runs/
 training/logs/
 wandb/
@@ -52,10 +61,15 @@ wandb/
 market_inbox/*.md
 /outputs/
 hold_register.json
+fixtures/eval_signals/*.json
+!fixtures/eval_signals/README.md
 
 # Drift monitoring — runtime logs and generated dashboard
 outputs/drift_log.jsonl
 outputs/drift_dashboard.html
+
+# Claude session state
+.claude/scheduled_tasks.lock
 
 # Coverage / test artifacts
 .coverage

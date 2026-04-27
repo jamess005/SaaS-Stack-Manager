@@ -16,6 +16,8 @@ import json
 import re
 from pathlib import Path
 
+from training.reasoning_alignment import build_semantic_view
+
 _INPUT = Path(__file__).parent / "sft_cot_traces.jsonl"
 
 # ── Reasoning quality check ──────────────────────────────────────────────────
@@ -31,12 +33,45 @@ REASONING_CONNECTIVES = [
 
 MIN_INDICATORS = 2
 MIN_LENGTH = 200
+_BOUNDARY_MARKERS = ("Not STAY:", "Not HOLD:", "Not SWITCH:")
+_PLACEHOLDER_REPLACEMENTS = {
+    "state the contract renewal timing explicitly": "the contract renewal window is not yet open",
+    "shallow_degradation": "a shallow incumbent degradation signal",
+    "minor maintenance update only": "a maintenance-only competitor update",
+    "issues persist": "the incumbent issues remain unresolved",
+    "surface cannot deliver": "the competitor cannot deliver",
+    "acquisition certainty uncertain": "vendor acquisition remains uncertain",
+    "shelfware case: no new changes": "a shelfware-driven switch case even without major new competitor changes",
+}
+
+
+def _has_boundary_coverage(analysis: str) -> bool:
+    return sum(marker in analysis for marker in _BOUNDARY_MARKERS) >= 2
+
+
+def _contains_placeholder(text: str) -> bool:
+    lower = text.lower()
+    return any(token in lower for token in _PLACEHOLDER_REPLACEMENTS)
+
+
+def _clean_distilled_text(text: str) -> str:
+    cleaned = text
+    for token, replacement in _PLACEHOLDER_REPLACEMENTS.items():
+        cleaned = re.sub(re.escape(token), replacement, cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = re.sub(r"\.\.+", ".", cleaned)
+    return cleaned.strip()
 
 
 def _is_weak(analysis: str) -> bool:
     al = analysis.lower()
     indicators = sum(1 for c in REASONING_CONNECTIVES if c in al)
-    return indicators < MIN_INDICATORS or len(analysis) < MIN_LENGTH
+    return (
+        indicators < MIN_INDICATORS
+        or len(analysis) < MIN_LENGTH
+        or not _has_boundary_coverage(analysis)
+        or _contains_placeholder(analysis)
+    )
 
 
 # ── Extract structured data from a trace ─────────────────────────────────────
@@ -58,6 +93,10 @@ def _parse_trace(record: dict) -> dict:
         "hold_condition": "",
         "analysis": "",
         "issues": [],
+        "user_tool_changes": [],
+        "user_competitor_changes": [],
+        "user_notes": [],
+        "user_previous_verdict": "",
         "user_roi": "",
         "user_hold": "",
         "user_shelfware": "",
@@ -80,26 +119,49 @@ def _parse_trace(record: dict) -> dict:
             info["user_shelfware"] = line.replace("Shelfware flag:", "").strip()
         elif line.startswith("Disqualifier:"):
             info["user_disqualifier"] = line.replace("Disqualifier:", "").strip()
-        elif line.strip().startswith("- ") and "known issues" not in line.lower():
-            pass  # handled below
+        elif line.startswith("Previous verdict:"):
+            info["user_previous_verdict"] = line.replace("Previous verdict:", "").strip()
 
-    # Extract known issues from user message
-    in_issues = False
-    in_competitor = False
-    for line in user.split("\n"):
-        if "known issues:" in line.lower():
-            in_issues = True
+    section = None
+    for raw_line in user.split("\n"):
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        lower = stripped.lower()
+
+        if "known issues:" in lower:
+            section = "issues"
             continue
-        if line.startswith("Changes this period") or line.startswith("Buried") or line.startswith("ROI"):
-            in_issues = False
-        if in_issues and line.strip().startswith("- "):
-            info["issues"].append(line.strip()[2:])
-        if "Competitor:" in line:
-            in_competitor = True
+        if stripped.startswith("Changes this period"):
+            section = None
             continue
-        if in_competitor and line.strip().startswith("- "):
-            # Competitor change
-            pass
+        if stripped.startswith("Buried signals / notes:"):
+            section = "user_notes"
+            continue
+        if stripped.startswith("ROI:"):
+            section = None
+            continue
+        if stripped.startswith("Current tool:"):
+            section = "user_tool_changes"
+            remainder = stripped.split("Current tool:", 1)[1].strip()
+            if remainder and remainder not in {"(unchanged this period)", "(none)"}:
+                info["user_tool_changes"].append(remainder[2:] if remainder.startswith("- ") else remainder)
+            continue
+        if stripped.startswith("Competitor:"):
+            section = "user_competitor_changes"
+            remainder = stripped.split("Competitor:", 1)[1].strip()
+            if remainder and remainder not in {"(unchanged this period)", "(none)"}:
+                info["user_competitor_changes"].append(remainder[2:] if remainder.startswith("- ") else remainder)
+            continue
+
+        if stripped.startswith("- "):
+            if section == "issues":
+                info["issues"].append(stripped[2:])
+            elif section == "user_tool_changes":
+                info["user_tool_changes"].append(stripped[2:])
+            elif section == "user_competitor_changes":
+                info["user_competitor_changes"].append(stripped[2:])
+            elif section == "user_notes":
+                info["user_notes"].append(stripped[2:])
 
     # From assistant message
     section = None
@@ -154,6 +216,23 @@ def _parse_trace(record: dict) -> dict:
     return info
 
 
+_NO_CHANGE_MARKERS = {
+    "no change",
+    "no change — existing issues persist.",
+    "no change this period",
+    "stable",
+    "unchanged",
+}
+
+
+def _semantic_view(info: dict):
+    tool_changes = [
+        change for change in info["user_tool_changes"]
+        if change.lower().strip() not in _NO_CHANGE_MARKERS
+    ]
+    return build_semantic_view(info["issues"], info["user_competitor_changes"], tool_changes)
+
+
 # ── ROI parsing ──────────────────────────────────────────────────────────────
 
 def _parse_roi(roi_line: str) -> dict:
@@ -166,13 +245,207 @@ def _parse_roi(roi_line: str) -> dict:
     return {"migration": migration, "annual": annual, "met": met}
 
 
+def _normalize_phrase(text: str, fallback: str) -> str:
+    if not text:
+        return fallback
+    cleaned = _clean_distilled_text(text.strip())
+    return cleaned if cleaned else fallback
+
+
+def _primary_issue(info: dict) -> str:
+    view = _semantic_view(info)
+    if view.primary_issue:
+        return _normalize_phrase(view.primary_issue, "the incumbent gap")
+    if info["push_lines"]:
+        return _normalize_phrase(info["push_lines"][0].split(" — ")[0], "the incumbent gap")
+    return "the incumbent gap"
+
+
+def _primary_pull(info: dict) -> str:
+    view = _semantic_view(info)
+    if view.positive_pull is not None:
+        return _normalize_phrase(view.positive_pull.change, "the competitor change")
+    if view.pending_pull is not None:
+        return _normalize_phrase(view.pending_pull.change, "the competitor change")
+    if view.primary_pull:
+        return _normalize_phrase(view.primary_pull, "the competitor change")
+    return "the competitor change"
+
+
+def _primary_positive_tool(info: dict) -> str:
+    view = _semantic_view(info)
+    if view.positive_tool is not None:
+        return _normalize_phrase(view.positive_tool.change, "active improvements")
+    return "active improvements"
+
+
+def _primary_negative_tool(info: dict) -> str:
+    view = _semantic_view(info)
+    if view.negative_tool is not None:
+        return _normalize_phrase(view.negative_tool.change, "active degradation")
+    return _normalize_phrase(view.primary_tool_change or "active degradation", "active degradation")
+
+
+def _has_previous_hold(info: dict) -> bool:
+    return info["user_previous_verdict"].strip().upper() == "HOLD"
+
+
+def _issue_is_high(info: dict, issue: str) -> bool:
+    for line in info["push_lines"]:
+        if issue in line and "Severity: HIGH" in line:
+            return True
+    return any(token in issue.lower() for token in ("required", "missing", "manual", "outdated", "no ", "cannot", "compliance", "audit", "sso", "gdpr"))
+
+
+def _resolution_clause(info: dict, comp: str) -> str:
+    view = _semantic_view(info)
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
+    if view.positive_pull is not None:
+        return f"{comp} delivers '{pull}', which addresses '{issue}'."
+    return f"{comp} presents a live alternative, but this trace does not justify claiming that an unrelated feature resolves '{issue}'."
+
+
+def _pull_substance(info: dict) -> str:
+    if not info["pull_lines"]:
+        return "NONE"
+    if any("Substance: CONCRETE" in line for line in info["pull_lines"]):
+        return "CONCRETE"
+    if any("Substance: VAGUE" in line for line in info["pull_lines"]):
+        return "VAGUE"
+    return "UNKNOWN"
+
+
+def _has_active_hold(info: dict) -> bool:
+    hold = info["hold_condition"].strip()
+    return bool(hold) and hold != "NONE"
+
+
+def _has_disqualifier(info: dict) -> bool:
+    disq = info["user_disqualifier"].strip()
+    return bool(disq) and disq != "NONE"
+
+
+def _has_shelfware(info: dict) -> bool:
+    shelfware = info["user_shelfware"].strip()
+    return bool(shelfware) and shelfware != "NONE"
+
+
+def _reject_switch_for_stay(info: dict) -> str:
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
+    roi = _parse_roi(info["roi_line"])
+
+    if _has_disqualifier(info):
+        disqualifier = _normalize_phrase(info["user_disqualifier"], "the unresolved competitor gap")
+        return (
+            f"the disqualifier '{disqualifier}' makes the competitor non-viable today, "
+            f"so there is no valid migration target."
+        )
+    if _pull_substance(info) == "NONE":
+        return f"there is no shipped competitor change that resolves '{issue}', so the switch case never starts."
+    if _pull_substance(info) == "VAGUE":
+        return f"the competitor change ('{pull}') is too vague to prove it resolves '{issue}'."
+    if not roi["met"]:
+        return f"the economics still fail the move, with ROI below threshold at £{roi['annual']:+d}/yr."
+    return f"the competitor change does not solve the decisive gap ('{issue}') clearly enough to justify migration."
+
+
+def _reject_hold_for_stay(info: dict) -> str:
+    if _has_disqualifier(info):
+        return (
+            "this is not a wait-for-later case; the blocker is a real disqualifier, "
+            "not a temporary delivery or timing gate."
+        )
+    if _has_active_hold(info):
+        hold = _normalize_phrase(info["hold_condition"], "the cited timing condition")
+        return f"'{hold}' is not the decisive issue here; even after waiting, the switch case still lacks merit."
+    return (
+        "no active contract, pilot, roadmap, or pre-GA gate is blocking the decision, "
+        "so waiting would not create a stronger case."
+    )
+
+
+def _reject_switch_for_hold(info: dict) -> str:
+    hold = _normalize_phrase(info["hold_condition"], "the active hold condition")
+    return f"the active hold condition ('{hold}') still blocks commitment, so switching now would ignore a live temporal gate."
+
+
+def _reject_stay_for_hold(info: dict) -> str:
+    pull = _primary_pull(info)
+    if _pull_substance(info) != "NONE":
+        return (
+            f"the competitor still shows a real switch case once the blocker clears, because '{pull}' "
+            "materially improves the incumbent gap."
+        )
+    return (
+        "the case is paused for timing, not rejected on merit; the decisive issue is when to move, "
+        "not whether the competitor is viable at all."
+    )
+
+
+def _reject_stay_for_switch(info: dict) -> str:
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
+
+    if _has_shelfware(info):
+        shelfware = _normalize_phrase(info["user_shelfware"], "the shelfware signal")
+        return (
+            f"staying would preserve known waste from underutilisation ('{shelfware}'), "
+            "which is itself the decisive reason to move."
+        )
+    if _has_previous_hold(info):
+        return (
+            "the previous hold condition has already cleared, so returning to STAY would leave "
+            "a now-actionable switch case on the table."
+        )
+    if _pull_substance(info) == "CONCRETE":
+        return f"staying leaves '{issue}' unresolved even though the competitor now ships '{pull}'."
+    return f"staying leaves the incumbent gap ('{issue}') unresolved despite a viable alternative."
+
+
+def _reject_hold_for_switch(info: dict) -> str:
+    if _has_previous_hold(info):
+        return "the previous hold condition has already cleared, so re-issuing HOLD would ignore the resolved gate."
+    if _has_active_hold(info):
+        hold = _normalize_phrase(info["hold_condition"], "the cited hold condition")
+        return f"'{hold}' is no longer a live blocker in this trace, so waiting is not justified."
+    return (
+        "there is no active contract, pilot, roadmap, or pre-GA blocker left to wait on, "
+        "so delaying would only postpone a justified move."
+    )
+
+
+def _append_boundary_rejections(base_analysis: str, info: dict) -> str:
+    verdict = info["verdict"]
+    additions: list[str] = []
+
+    if verdict == "STAY":
+        additions.extend([
+            f"Not SWITCH: {_reject_switch_for_stay(info)}",
+            f"Not HOLD: {_reject_hold_for_stay(info)}",
+        ])
+    elif verdict == "HOLD":
+        additions.extend([
+            f"Not SWITCH: {_reject_switch_for_hold(info)}",
+            f"Not STAY: {_reject_stay_for_hold(info)}",
+        ])
+    elif verdict == "SWITCH":
+        additions.extend([
+            f"Not STAY: {_reject_stay_for_switch(info)}",
+            f"Not HOLD: {_reject_hold_for_switch(info)}",
+        ])
+
+    return " ".join(part.strip() for part in [base_analysis, *additions] if part).strip()
+
+
 # ── Distilled analysis writers ───────────────────────────────────────────────
 # Each function produces a high-quality reasoning chain for a specific pattern.
 # The reasoning always includes explicit causal connectives and step-by-step logic.
 
 def _distill_stay_irrelevant(info: dict) -> str:
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "minor updates"
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
     comp = info["competitor"] or "Competitor"
     roi = _parse_roi(info["roi_line"])
     roi_str = f"ROI threshold {'met' if roi['met'] else 'not met'} at £{roi['annual']:+d}/yr"
@@ -189,8 +462,8 @@ def _distill_stay_irrelevant(info: dict) -> str:
 
 
 def _distill_stay_fluff(info: dict) -> str:
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "minor updates"
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
     comp = info["competitor"] or "Competitor"
 
     return (
@@ -208,8 +481,8 @@ def _distill_stay_fluff(info: dict) -> str:
 def _distill_stay_rally(info: dict) -> str:
     tool = info["tool"]
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "minor updates"
-    push = info["push_lines"][0].split(" — ")[0] if info["push_lines"] else "active improvements"
+    pull = _primary_pull(info)
+    push = _primary_positive_tool(info)
 
     return (
         f"The incumbent ({tool}) is actively improving: '{push}'. This is significant "
@@ -226,7 +499,7 @@ def _distill_stay_rally(info: dict) -> str:
 def _distill_stay_disqualifier(info: dict) -> str:
     disq = info["user_disqualifier"] or "pre-GA language in notes"
     comp = info["competitor"] or "Competitor"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    issue = _primary_issue(info)
 
     return (
         f"A Disqualifier is present: '{disq}' — found in buried notes, not in competitor "
@@ -258,8 +531,8 @@ def _distill_stay_price(info: dict) -> str:
 def _distill_stay_both(info: dict) -> str:
     tool = info["tool"]
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "minor updates"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    pull = _primary_pull(info)
+    issue = _primary_issue(info)
     roi = _parse_roi(info["roi_line"])
 
     return (
@@ -275,8 +548,8 @@ def _distill_stay_both(info: dict) -> str:
 
 def _distill_switch_gate_check(info: dict) -> str:
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "concrete feature"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
     roi = _parse_roi(info["roi_line"])
     roi_str = f"ROI threshold {'met' if roi['met'] else 'not met'} at £{roi['annual']:+d}/yr"
 
@@ -284,9 +557,7 @@ def _distill_switch_gate_check(info: dict) -> str:
         f"Step 1: Check blocking gates. Compliance: PASSED. Hold signal: NONE. No blocks. "
         f"Step 2: Evaluate pull substance. '{pull}' from {comp} is CONCRETE — this is a "
         f"specific, shipped capability, not a vague promise. "
-        f"Step 3: Match pull to push. The push driver is '{issue}'. The pull signal "
-        f"directly resolves this gap, because it delivers the specific capability that "
-        f"the current tool lacks. "
+        f"Step 3: Match pull to push. The push driver is '{issue}'. {_resolution_clause(info, comp)} "
         f"Step 4: ROI check. {roi_str}. "
         f"Since all four gates are clear and the concrete pull resolves the push driver, "
         f"the switch case is established. SWITCH."
@@ -295,8 +566,8 @@ def _distill_switch_gate_check(info: dict) -> str:
 
 def _distill_switch_compliance(info: dict) -> str:
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "concrete feature"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    pull = _primary_pull(info)
+    issue = _primary_issue(info)
     roi = _parse_roi(info["roi_line"])
     roi_str = f"ROI: £{roi['annual']:+d}/yr"
 
@@ -304,7 +575,7 @@ def _distill_switch_compliance(info: dict) -> str:
         f"Compliance was the sole blocking gate — it is now cleared. This changes the "
         f"decision landscape because the switch case that compliance previously blocked "
         f"can now proceed on its merits. With the blocker removed: the pull signal from "
-        f"{comp} ('{pull}') is CONCRETE, directly resolving the push driver ('{issue}'). "
+        f"{comp} ('{pull}') is CONCRETE. {_resolution_clause(info, comp)} "
         f"Because the pull addresses the specific gap and compliance now passes, the only "
         f"remaining question is whether any other gate blocks. Hold signal: NONE. "
         f"{roi_str}. Since compliance is cleared, the pull is concrete, and no "
@@ -315,33 +586,32 @@ def _distill_switch_compliance(info: dict) -> str:
 def _distill_switch_push_high(info: dict) -> str:
     tool = info["tool"]
     comp = info["competitor"] or "Competitor"
-    push = info["push_lines"][0].split(" — ")[0] if info["push_lines"] else "critical degradation"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "available alternative"
+    push = _primary_negative_tool(info)
+    pull = _primary_pull(info)
+    issue = _primary_issue(info)
 
     return (
         f"{tool} is critically degrading: '{push}'. At HIGH push severity, the calculus "
         f"changes — because the incumbent is actively failing, the cost of staying is not "
-        f"zero but rather the ongoing damage from the degradation. Even if the pull signal "
-        f"('{pull}' from {comp}) is not the strongest, it provides a viable exit path from "
-        f"the failing tool. When push severity is HIGH, a weaker pull signal is sufficient "
-        f"because the priority shifts from finding the perfect alternative to escaping the "
-        f"failing incumbent. Compliance: PASSED. Hold: NONE. Therefore SWITCH."
+        f"zero but rather the ongoing damage from the degradation. {_resolution_clause(info, comp)} "
+        f"That makes the alternative relevant to the same high-severity issue ('{issue}'), "
+        f"not to some unrelated feature line. Compliance: PASSED. Hold: NONE. Therefore SWITCH."
     )
 
 
 def _distill_switch_both_aligned(info: dict) -> str:
     tool = info["tool"]
     comp = info["competitor"] or "Competitor"
-    push = info["push_lines"][0].split(" — ")[0] if info["push_lines"] else "degradation"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "improvement"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    push = _primary_negative_tool(info)
+    pull = _primary_pull(info)
+    issue = _primary_issue(info)
 
     return (
         f"Both push and pull signals reinforce the same conclusion. {tool} is degrading "
         f"('{push}') while {comp} delivers '{pull}'. This is significant because when "
         f"push and pull are aligned — the tool is getting worse AND the competitor is "
         f"getting better at exactly the thing that matters — the switch case is at its "
-        f"strongest. The pull directly addresses the push driver ('{issue}'). "
+        f"strongest. {_resolution_clause(info, comp)} "
         f"Compliance: PASSED. Hold signal: NONE. Since both signals point in the same "
         f"direction and all gates clear, the verdict is SWITCH."
     )
@@ -365,13 +635,13 @@ def _distill_switch_shelfware(info: dict) -> str:
 
 def _distill_switch_both_signals(info: dict) -> str:
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "concrete feature"
-    issue = info["issues"][0] if info["issues"] else "existing tool limitations"
+    pull = _primary_pull(info)
+    issue = _primary_issue(info)
     roi = _parse_roi(info["roi_line"])
 
     return (
         f"Both push and pull signals are active. {comp} delivers '{pull}', which directly "
-        f"addresses '{issue}'. The ROI threshold is met at £{roi['annual']:+d}/yr, meaning "
+        f"connects to '{issue}'. {_resolution_clause(info, comp)} The ROI threshold is met at £{roi['annual']:+d}/yr, meaning "
         f"the economics support the migration. Because the pull signal resolves the primary "
         f"push driver and the ROI gate clears, the switch case stands on both technical and "
         f"financial merits. Compliance: PASSED. Hold signal: NONE. When a concrete pull "
@@ -452,21 +722,23 @@ def _distill_hold_pilot(info: dict) -> str:
 
 def _distill_hold_resolved(info: dict) -> str:
     comp = info["competitor"] or "Competitor"
-    pull = info["pull_lines"][0].split(" — ")[0] if info["pull_lines"] else "the blocking condition"
+    issue = _primary_issue(info)
+    pull = _primary_pull(info)
     roi = _parse_roi(info["roi_line"])
     roi_str = f"ROI threshold {'met' if roi['met'] else 'not met'} at £{roi['annual']:+d}/yr"
 
+    if roi['met']:
+        roi_clause = f"{roi_str} — the economics now support the move."
+    elif _issue_is_high(info, issue):
+        roi_clause = f"{roi_str} — below threshold, but '{issue}' is still a HIGH-severity blocker, so the delivered capability creates clear operational gain."
+    else:
+        roi_clause = f"{roi_str}."
+
     return (
-        f"Previous verdict: HOLD — the prior hold condition has now been resolved. "
-        f"{comp} delivers '{pull}', which removes the specific blocking condition that "
-        f"caused the HOLD. Because the hold gate is no longer active (Hold signal: NONE), "
-        f"the decision reverts to a standard SWITCH/STAY evaluation. "
-        f"With the hold cleared: compliance PASSED, pull signal is CONCRETE (GA delivery), "
-        f"and the pull directly addresses the push driver. "
-        f"{roi_str} — note that ROI does NOT block when a prior HOLD is cleared; "
-        f"the hold-release is the binding event, not the ROI gate. "
-        f"No new hold condition has emerged. Therefore SWITCH — not HOLD (condition gone), "
-        f"not STAY (there is a concrete pull). SWITCH."
+        f"Previous verdict: HOLD — the prior blocker has now cleared because Hold signal = NONE. "
+        f"That does not make SWITCH automatic; it means the trace must be re-evaluated on the normal SWITCH/STAY rules. "
+        f"Here {_resolution_clause(info, comp)} Compliance PASSED. {roi_clause} "
+        f"With the hold removed and the core gap now covered, the verdict becomes SWITCH."
     )
 
 
@@ -495,7 +767,7 @@ def _detect_pattern(info: dict) -> str:
     if v == "SWITCH":
         # Check hold_resolved FIRST — must precede other SWITCH checks or falls through
         # to switch_generic which overwrites hold-resolution reasoning with gate-check logic.
-        if "previous verdict: hold" in info.get("_user_lower", ""):
+        if _has_previous_hold(info):
             return "switch_hold_resolved"
         if "gate check" in al:
             return "switch_gate_check"
@@ -582,7 +854,7 @@ def main() -> None:
             failed += 1
             continue
 
-        new_analysis = distiller(info)
+        new_analysis = _clean_distilled_text(_append_boundary_rejections(distiller(info), info))
 
         # Verify the distilled analysis is actually better
         if _is_weak(new_analysis):

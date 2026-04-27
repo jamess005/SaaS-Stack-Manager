@@ -52,6 +52,7 @@ sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
 from agent.model_runner import load_model  # noqa: E402
+from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
 
 from config import SMALL_MODEL_PATH as _cfg_small_model_path  # noqa: E402
 
@@ -476,6 +477,34 @@ def _validate_trigger(data: dict) -> list[str]:
     return errors
 
 
+def _apply_trigger_defaults(trigger: dict, scenario: str) -> dict:
+    trigger.setdefault("date", "2025-01-15")
+    trigger.setdefault("competitor_changes", [])
+    trigger.setdefault("current_tool_status", [])
+    trigger.setdefault("pricing_delta", "unchanged")
+    trigger.setdefault("compliance_changes", "unchanged")
+    trigger.setdefault("notes", [])
+    trigger["scenario_type"] = scenario
+    return trigger
+
+
+def _trigger_consistency_failure(context: dict, trigger: dict, scenario: str) -> str | None:
+    from training.generate_cot_traces import (  # local import avoids circular import at module load
+        EXPECTED_VERDICT,
+        _consistency_failure_reason,
+        _infer_ambiguous_verdict,
+    )
+
+    try:
+        roi = calculate_roi(extract_pass1_vars(context, trigger))
+    except Exception as exc:  # pragma: no cover - defensive, exercised via generator runtime
+        return f"ROI error: {exc}"
+
+    expected = EXPECTED_VERDICT.get(scenario)
+    verdict = expected if expected is not None else _infer_ambiguous_verdict(scenario, roi, trigger, context)
+    return _consistency_failure_reason(scenario, trigger, context, roi, verdict)
+
+
 def generate_one(
     category: str,
     competitor_slug: str,
@@ -484,6 +513,9 @@ def generate_one(
     model,
     output_dir: Path,
     dry_run: bool = False,
+    *,
+    force: bool = False,
+    max_attempts: int = 3,
 ) -> Path | None:
     """
     Generate one inbox trigger JSON file and save it.
@@ -492,7 +524,7 @@ def generate_one(
         Path to the saved file, or None if skipped/failed.
     """
     output_path = output_dir / f"{category}_{competitor_slug}_{scenario}.json"
-    if output_path.exists():
+    if output_path.exists() and not force:
         logger.info("Skipping (already exists): %s", output_path.name)
         return None
 
@@ -512,40 +544,70 @@ def generate_one(
             print(f"\n[{msg['role'].upper()}]\n{msg['content'][:800]}...")
         return None
 
-    logger.info("Generating: %s/%s/%s", category, competitor_slug, scenario)
-    raw_text = _generate_text(tokenizer, model, messages)
+    for attempt in range(1, max_attempts + 1):
+        logger.info("Generating: %s/%s/%s (attempt %d/%d)", category, competitor_slug, scenario, attempt, max_attempts)
+        raw_text = _generate_text(tokenizer, model, messages)
 
-    # Parse and validate JSON
-    try:
-        trigger = _parse_json_output(raw_text)
-    except ValueError as exc:
-        logger.error("JSON parse failed for %s/%s/%s: %s", category, competitor_slug, scenario, exc)
-        return None
+        try:
+            trigger = _parse_json_output(raw_text)
+        except ValueError as exc:
+            logger.warning(
+                "JSON parse failed for %s/%s/%s on attempt %d/%d: %s",
+                category,
+                competitor_slug,
+                scenario,
+                attempt,
+                max_attempts,
+                exc,
+            )
+            continue
 
-    # Force correct metadata (LLM may misspell names or omit scenario_type)
-    trigger["scenario_type"] = scenario
-    trigger["category"] = category
-    trigger["competitor"] = context["competitor_data"]["name"]
-    trigger["current_tool"] = context["current_stack_entry"]["tool"]
-
-    errors = _validate_trigger(trigger)
-    if errors:
-        logger.warning("Validation issues for %s/%s/%s: %s", category, competitor_slug, scenario, errors)
-        trigger.setdefault("date", "2025-01-15")
-        trigger.setdefault("competitor_changes", [])
-        trigger.setdefault("current_tool_status", [])
-        trigger.setdefault("pricing_delta", "unchanged")
-        trigger.setdefault("compliance_changes", "unchanged")
-        trigger.setdefault("notes", [])
-        # scenario_type is always authoritative from the caller — not left to setdefault
         trigger["scenario_type"] = scenario
+        trigger["category"] = category
+        trigger["competitor"] = context["competitor_data"]["name"]
+        trigger["current_tool"] = context["current_stack_entry"]["tool"]
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(trigger, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        errors = _validate_trigger(trigger)
+        if errors:
+            logger.warning(
+                "Validation issues for %s/%s/%s on attempt %d/%d: %s",
+                category,
+                competitor_slug,
+                scenario,
+                attempt,
+                max_attempts,
+                errors,
+            )
+        trigger = _apply_trigger_defaults(trigger, scenario)
+
+        consistency_failure = _trigger_consistency_failure(context, trigger, scenario)
+        if consistency_failure is not None:
+            logger.warning(
+                "Scenario consistency failed for %s/%s/%s on attempt %d/%d: %s",
+                category,
+                competitor_slug,
+                scenario,
+                attempt,
+                max_attempts,
+                consistency_failure,
+            )
+            continue
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(trigger, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        logger.info("Saved: %s", output_path.name)
+        return output_path
+
+    logger.error(
+        "Failed to generate a consistent trigger for %s/%s/%s after %d attempt(s).",
+        category,
+        competitor_slug,
+        scenario,
+        max_attempts,
     )
-    logger.info("Saved: %s", output_path.name)
-    return output_path
+    return None
 
 
 def main() -> None:
@@ -568,6 +630,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, help="Max files per category (0 = no limit).")
     parser.add_argument("--output-dir", default=str(_OUTPUT_DIR), help="Output directory.")
     parser.add_argument("--dry-run", action="store_true", help="Print prompts; do not load model or generate.")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing files by regenerating them.")
+    parser.add_argument("--max-attempts", type=int, default=3, help="Maximum generation attempts per file before giving up.")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -587,7 +651,17 @@ def main() -> None:
         tokenizer, model = load_model(model_path=_SIGNAL_GEN_MODEL, quantize_bits=0, adapter_path=None)
 
     if single_run and not batch_run:
-        generate_one(args.category, args.competitor, args.scenario, tokenizer, model, output_dir, args.dry_run)
+        generate_one(
+            args.category,
+            args.competitor,
+            args.scenario,
+            tokenizer,
+            model,
+            output_dir,
+            args.dry_run,
+            force=args.force,
+            max_attempts=args.max_attempts,
+        )
     else:
         # Batch: iterate all categories/competitors, applying any filters provided
         scenarios_to_run = [args.scenario] if args.scenario else SCENARIO_TYPES
@@ -600,7 +674,15 @@ def main() -> None:
                     if args.limit and count >= args.limit:
                         break
                     result = generate_one(
-                        category, competitor_slug, scenario, tokenizer, model, output_dir, args.dry_run
+                        category,
+                        competitor_slug,
+                        scenario,
+                        tokenizer,
+                        model,
+                        output_dir,
+                        args.dry_run,
+                        force=args.force,
+                        max_attempts=args.max_attempts,
                     )
                     if result is not None:
                         count += 1

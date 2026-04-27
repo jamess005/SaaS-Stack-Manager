@@ -127,7 +127,9 @@ def main() -> None:
                         help="Path to the base SFT LoRA adapter to build on.")
     parser.add_argument("--adapter-out", default=_DEFAULT_DPO_ADAPTER_OUT)
     parser.add_argument("--data-path", default=_DEFAULT_DATA_PATH)
-    parser.add_argument("--epochs", type=int, default=4)
+    parser.add_argument("--epochs", type=int, default=1,
+                        help="Training epochs. Default 1 — accumulative training means each run "
+                             "is additive, so fewer passes per run avoids overcorrection.")
     parser.add_argument("--lr", type=float, default=5e-6)
     parser.add_argument("--beta", type=float, default=0.3,
                         help="DPO beta — controls deviation from reference policy. "
@@ -137,6 +139,9 @@ def main() -> None:
                         help="Validate data format only — no training.")
     parser.add_argument("--skip-canary", action="store_true",
                         help="Skip post-training canary validation.")
+    parser.add_argument("--no-accumulate", action="store_true",
+                        help="Start DPO from SFT base only, discarding any previous DPO adapter. "
+                             "Use when you want a clean reset rather than additive training.")
     args = parser.parse_args()
 
     # ── Load and validate data ─────────────────────────────────────────────
@@ -211,6 +216,17 @@ def main() -> None:
         logger.info("SFT adapter merged into base model.")
     else:
         logger.warning("No SFT adapter found at %s — training from base model.", args.sft_adapter)
+
+    # Accumulate previous DPO corrections: merge existing adapter before training a new one.
+    # This means each run builds on prior corrections rather than resetting to SFT.
+    dpo_checkpoint = Path(args.adapter_out)
+    if not args.no_accumulate and (dpo_checkpoint / "adapter_config.json").exists():
+        logger.info("Accumulative DPO: merging previous adapter from %s", args.adapter_out)
+        model = PeftModel.from_pretrained(model, str(dpo_checkpoint))
+        model = model.merge_and_unload()
+        logger.info("Previous DPO corrections merged — new training is additive.")
+    elif args.no_accumulate:
+        logger.info("--no-accumulate set: starting fresh from SFT base.")
 
     n_params = sum(p.numel() for p in model.parameters()) / 1e6
     logger.info("Model ready: %.0fM parameters", n_params)

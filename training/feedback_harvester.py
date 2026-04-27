@@ -19,6 +19,7 @@ Usage:
     python training/feedback_harvester.py
     python training/feedback_harvester.py --min-pairs 5   # require at least 5
     python training/feedback_harvester.py --dry-run        # preview without writing
+    python training/feedback_harvester.py --include-canary-failures --include-golden-canaries
 """
 
 import argparse
@@ -192,6 +193,14 @@ _SHELFWARE_NEGATION = re.compile(
     re.IGNORECASE,
 )
 
+_SHELFWARE_GLOBAL_NEGATION = re.compile(
+    r"shelfware(?:\s+(?:flag|status))?(?:\s*(?::|=)\s*|\s+remains?\s+)(?:false|no|none)\b",
+    re.IGNORECASE,
+)
+
+_SHELFWARE_COUNT = re.compile(r"inactive\s+seats?[^\d]*(\d+)", re.IGNORECASE)
+_SHELFWARE_PERCENT = re.compile(r"(\d+)%", re.IGNORECASE)
+
 
 def _detect_shelfware(tool_changes: list[str]) -> str:
     """Return the shelfware-flagging line from current_tool_status, or 'NONE'.
@@ -202,8 +211,20 @@ def _detect_shelfware(tool_changes: list[str]) -> str:
     files that write negation as a status line.
     """
     for change in tool_changes:
-        if any(kw in change.lower() for kw in _SHELFWARE_KW):
-            if not _SHELFWARE_NEGATION.search(change):
+        if _SHELFWARE_GLOBAL_NEGATION.search(change):
+            return "NONE"
+    for change in tool_changes:
+        lower = change.lower()
+        if any(kw in lower for kw in _SHELFWARE_KW):
+            if _SHELFWARE_NEGATION.search(change):
+                continue
+            if "shelfware" in lower or "unused capacity" in lower or "underutilis" in lower:
+                return change
+            inactive_counts = [int(value) for value in _SHELFWARE_COUNT.findall(change)]
+            if inactive_counts and max(inactive_counts) >= 10:
+                return change
+            percents = [int(value) for value in _SHELFWARE_PERCENT.findall(change)]
+            if percents and max(percents) >= 30:
                 return change
     return "NONE"
 
@@ -815,12 +836,14 @@ def harvest(
     output_path: Path | None = None,
     min_pairs: int = 1,
     dry_run: bool = False,
-    no_golden: bool = False,
+    include_canary_failures: bool = False,
+    include_golden_canaries: bool = False,
     no_sft_samples: bool = False,
 ) -> list[dict]:
     """
     Harvest DPO preference pairs from drift log.
 
+    By default, eval canaries are excluded so the held-out drift suite stays isolated.
     Returns list of pairs. Writes to output_path unless dry_run.
     """
     log_path = log_path or _DRIFT_LOG
@@ -832,8 +855,15 @@ def harvest(
         return []
 
     human_pairs = _extract_human_feedback_pairs(records)
-    canary_pairs = _extract_canary_pairs(records)
-    golden_pairs = [] if no_golden else _extract_golden_canary_pairs()
+    if include_canary_failures or include_golden_canaries:
+        logger.warning(
+            "Including eval canaries in DPO harvest. This re-couples training to the held-out canary set."
+        )
+    else:
+        logger.info("Eval canaries excluded from DPO harvest by default.")
+
+    canary_pairs = _extract_canary_pairs(records) if include_canary_failures else []
+    golden_pairs = _extract_golden_canary_pairs() if include_golden_canaries else []
     sft_pairs = [] if no_sft_samples else _sample_sft_traces()
     all_pairs = human_pairs + canary_pairs + golden_pairs + sft_pairs
 
@@ -867,17 +897,24 @@ def main() -> None:
                         help="Preview pairs without writing.")
     parser.add_argument("--output", type=str, default=str(_OUTPUT_PATH),
                         help="Output path for feedback_pairs.jsonl")
-    parser.add_argument("--no-golden", action="store_true",
-                        help="Skip golden canary pairs — include only failure corrections.")
+    parser.add_argument("--include-canary-failures", action="store_true",
+                        help="Include currently failing eval canaries in DPO pairs. Disabled by default to keep eval canaries isolated.")
+    parser.add_argument("--include-golden-canaries", action="store_true",
+                        help="Include golden canary fixtures in DPO pairs. Disabled by default to keep eval canaries isolated.")
+    parser.add_argument("--no-golden", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--no-sft-samples", action="store_true",
                         help="Skip SFT trace augmentation — use only failure/canary pairs.")
     args = parser.parse_args()
+
+    if args.no_golden:
+        logger.warning("--no-golden is deprecated; golden canaries are already excluded by default.")
 
     pairs = harvest(
         min_pairs=args.min_pairs,
         dry_run=args.dry_run,
         output_path=Path(args.output),
-        no_golden=args.no_golden,
+        include_canary_failures=args.include_canary_failures,
+        include_golden_canaries=args.include_golden_canaries and not args.no_golden,
         no_sft_samples=args.no_sft_samples,
     )
 

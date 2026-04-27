@@ -56,6 +56,18 @@ def api_add_competitor():
     return jsonify(data), 201
 
 
+@bp.route("/api/competitors/<category>/<slug>", methods=["DELETE"])
+def api_delete_competitor(category: str, slug: str):
+    deleted = dl.delete_competitor(
+        category=category,
+        slug=slug,
+        competitors_dir=dl._COMPETITORS_DIR,
+    )
+    if not deleted:
+        return jsonify({"error": "Competitor not found"}), 404
+    return jsonify({"ok": True, "category": category, "slug": slug})
+
+
 @bp.route("/api/feedback", methods=["POST"])
 def api_feedback():
     body = request.get_json(silent=True) or {}
