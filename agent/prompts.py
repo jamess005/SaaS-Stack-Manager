@@ -500,22 +500,43 @@ SYS_VERDICT_LEAN = """\
 Evaluate whether Meridian Consulting Group (UK B2B consultancy, 150 staff) should \
 SWITCH to a competitor SaaS tool, STAY with the current tool, or issue a HOLD verdict.
 
-Compliance has already been checked — the competitor passed all hard blocks.
+Compliance requirements (Meridian, 150 staff): SOC2 Type II required for all tools. \
+SSO/SAML required (150 seats > 10 threshold). UK or EU data residency required. \
+Exportable audit log required for finance, HR, and CRM tools only. \
+Evaluate compliance from the competitor profile and compliance signal shown in the input. \
+If any hard requirement is not met after applying the compliance signal, the verdict is STAY.
 
 SWITCH — competitor resolves one or more key push issues AND (ROI threshold met OR \
-clear operational gains such as unblocked revenue or removed compliance risk).
+clear operational gains such as unblocked revenue or removed compliance risk). \
+Shelfware exception: ≥30% inactive seats or ≥10 inactive seats = shelfware \
+elimination justifies SWITCH even if the ROI threshold is not met and even if a \
+contract renewal is approaching — do not apply a contract timing HOLD when \
+shelfware is the dominant push signal.
 STAY   — competitor does not resolve the key push issues, push signals are weak, \
-or the ROI and operational case is insufficient.
+or the ROI and operational case is insufficient. If Notes explicitly state the \
+competitor's changes are irrelevant to or do not address the category's \
+requirements, treat those pull signals as insufficient — but do not infer \
+irrelevance; rely only on what Notes says.
 HOLD   — switch case is real but a named condition must be met first: feature in \
 beta (not GA), contract timing, or insufficient proof of delivery.
 
-Signal position matters: pre-GA language (beta, preview, roadmap) in competitor \
-changes = competitor nearly ready → HOLD (wait for GA). Pre-GA language only in \
-buried notes = competitor not viable → STAY (not HOLD). Trust the Hold signal \
-field: if NONE, there is no hold condition regardless of what notes contain.
+Signal position matters: pre-GA language (beta, preview, roadmap, early access) in \
+competitor changes = competitor nearly ready → HOLD (wait for GA). Pre-GA language \
+only in buried notes = competitor not viable → STAY (not HOLD). Trust the Hold \
+signal field: if NONE, there is no hold condition — do NOT issue a HOLD verdict, \
+choose SWITCH or STAY only. \
+If Hold signal is NOT NONE, the verdict MUST be HOLD — the hold condition takes \
+precedence over ROI and signal-strength assessment. \
+If Hold status shows RESOLVED, the prior hold condition has cleared — do NOT \
+re-issue HOLD; evaluate as SWITCH or STAY on normal criteria.
 
-If a Disqualifier field is present: the competitor has an unresolved delivery gap — \
-verdict is STAY (not HOLD). A disqualifier is not a hold condition.
+Trust the Disqualifier field: if present, the competitor fails a hard requirement \
+and the verdict is STAY — no exceptions, regardless of pull signal strength or ROI. \
+A disqualifier is not a hold condition. A Disqualifier overrides a Hold signal.
+
+Trust the Shelfware flag field: if present, internal underutilisation is the \
+dominant push signal — verdict is SWITCH regardless of ROI threshold, pull signal \
+strength, or contract timing. Do not apply HOLD or STAY when a Shelfware flag is set.
 
 ROI threshold: £1,200/yr net. Staff rate: £48/hr. Migration: max 15 hours.
 A feature improvement that resolves a HIGH push issue can justify SWITCH even \
@@ -533,7 +554,7 @@ PULL SIGNALS:
   - <competitor change> — Substance: CONCRETE/VAGUE
   [or: None identified]
 
-COMPLIANCE: PASSED
+COMPLIANCE: PASSED [or: BLOCKED — <reason(s)>]
 ROI: Migration £<X> | Annual net £<Y> → Threshold MET/NOT MET
 
 HOLD CONDITION: NONE

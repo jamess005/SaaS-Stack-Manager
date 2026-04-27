@@ -32,8 +32,8 @@ from pathlib import Path
 
 from agent.context_loader import load_context, parse_inbox_filename
 from agent.drift_tracker import check_accuracy_due, log_live_run
-from agent.model_runner import load_model, run_voting
-from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_verdict
+from agent.model_runner import load_model, run_lean
+from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_lean_output
 from agent.roi_calculator import calculate_roi, extract_pass1_vars
 from agent.signal_interpreter import parse_signal_payload
 
@@ -271,27 +271,26 @@ def run_agent(
         roi_result["roi_threshold_met"],
     )
 
-    # ── Step 6: Voting pipeline — independent micro-decisions ────────────────
-    logger.info("Running independent voting pipeline...")
-    memo_text, confidence = run_voting(inbox_text, context, roi_result, tokenizer, model)
+    # ── Step 6: Lean single-pass pipeline ──────────────────────────────────────
+    logger.info("Running lean verdict pipeline...")
+    memo_text, confidence = run_lean(inbox_text, context, roi_result, tokenizer, model)
 
     # ── Step 7: Validate; retry once on failure ────────────────────────────────
     validation_attempts = 1
-    is_valid, errors = validate_verdict(memo_text)
+    is_valid, errors = validate_lean_output(memo_text)
     if not is_valid:
         logger.warning("Validation failed (%d errors). Retrying...", len(errors))
         for err in errors:
             logger.warning("  - %s", err)
-        memo_text, confidence = run_voting(
+        memo_text, confidence = run_lean(
             inbox_text,
             context,
             roi_result,
             tokenizer,
             model,
-            retry_hint=errors,
         )
         validation_attempts = 2
-        is_valid, errors = validate_verdict(memo_text)
+        is_valid, errors = validate_lean_output(memo_text)
         if not is_valid:
             logger.error("Retry failed. Writing memo with [VALIDATION FAILED] prefix.")
             for err in errors:

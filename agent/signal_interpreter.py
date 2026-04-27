@@ -11,7 +11,7 @@ import re
 from typing import Any
 
 
-_PRICE_RE = re.compile(r"£\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
+_PRICE_RE = re.compile(r"(?:£|PS)\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
 _COMPETITOR_HINT_RE = re.compile(
     r"competitor|challenger|new tool|alternative|candidate",
     re.IGNORECASE,
@@ -60,6 +60,17 @@ def signal_compliance_changes(signal: dict[str, Any] | None) -> str:
     value = signal.get("compliance_changes")
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list):
+        # List of dicts or strings — flatten to a single string
+        parts: list[str] = []
+        for item in value:
+            if isinstance(item, dict):
+                name = item.get("name", "")
+                status = item.get("status", "")
+                parts.append(f"{name}: {status}" if name else str(item))
+            elif isinstance(item, str) and item.strip():
+                parts.append(item.strip())
+        return "; ".join(parts)
     if isinstance(value, str):
         return value.strip()
     return ""
@@ -83,7 +94,7 @@ def infer_competitor_monthly_cost(context: dict[str, Any], signal: dict[str, Any
     amounts = [float(value) for value in _PRICE_RE.findall(pricing_delta)]
 
     from_to = re.search(
-        r"from\s*£\s*([0-9]+(?:\.[0-9]+)?)\s*to\s*£\s*([0-9]+(?:\.[0-9]+)?)",
+        r"from\s*(?:£|PS)\s*([0-9]+(?:\.[0-9]+)?)\s*(?:/\w+)?\s*to\s*(?:£|PS)\s*([0-9]+(?:\.[0-9]+)?)",
         pricing_delta,
         re.IGNORECASE,
     )
