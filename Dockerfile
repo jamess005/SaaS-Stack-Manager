@@ -2,7 +2,7 @@
 # Requires AMD GPU with ROCm 7.x on the host for live model inference.
 # Dry-run mode (AGENT_DRY_RUN=true) works without GPU for pipeline testing.
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -27,7 +27,9 @@ RUN pip install --no-cache-dir \
     huggingface-hub>=0.24.0 \
     rich>=13.7.0
 
-# Application code — training/ included for generate_signals imports
+# Application code — training/ included because scripts/drift_check.py and
+# scripts/evaluate_model.py import from training.drift_canaries / training.generate_signals.
+# Adapter weights are NOT baked in — they are mounted at runtime via docker-compose volumes.
 COPY agent/       agent/
 COPY data/        data/
 COPY fixtures/    fixtures/

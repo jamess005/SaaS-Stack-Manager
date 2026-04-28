@@ -91,6 +91,13 @@ Thumbs.db
 .ipynb_checkpoints/
 *.ipynb
 
+# Docker local overrides
+docker-compose.override.yml
+
+# SQLite / local databases
+*.db
+*.sqlite
+
 # Logs
 *.log
 logs/
