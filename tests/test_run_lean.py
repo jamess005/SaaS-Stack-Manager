@@ -2,8 +2,6 @@ import os
 import pytest
 from pathlib import Path
 
-import torch
-
 _PROJECT_ROOT = Path(__file__).parent.parent
 _DATA_ROOT = _PROJECT_ROOT / "data"
 
@@ -100,6 +98,7 @@ class _FakeTokenizer:
 
 
 def test_extract_verdict_confidence_uses_softmax_renormalized():
+    torch = pytest.importorskip("torch", reason="torch not installed")
     from agent.model_runner import _extract_verdict_confidence
 
     tokenizer = _FakeTokenizer()

@@ -286,10 +286,11 @@ def get_review_queue(
         if r.get("type") == "human_feedback" and r.get("memo_filename")
     }
 
-    # Latest run per competitor
+    # Latest run per scenario (keyed by memo_filename, falling back to category+competitor+ts
+    # to avoid collapsing multiple scenarios for the same competitor into one entry)
     latest: dict[str, dict] = {}
     for r in live_runs:
-        key = r.get("competitor", "")
+        key = r.get("memo_filename") or "{}:{}".format(r.get("category", ""), r.get("competitor", ""))
         if not key:
             continue
         prev = latest.get(key)
