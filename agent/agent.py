@@ -32,7 +32,7 @@ from pathlib import Path
 
 from agent.context_loader import load_context, parse_inbox_filename
 from agent.drift_tracker import check_accuracy_due, log_live_run
-from agent.model_runner import load_model, run_lean
+from agent.model_runner import load_base_model, load_model, run_lean, unload_model
 from agent.output_validator import extract_hold_metadata, extract_verdict_class, validate_lean_output
 from agent.roi_calculator import calculate_roi, extract_pass1_vars
 from agent.signal_interpreter import parse_signal_payload
@@ -305,7 +305,13 @@ def run_agent(
     output_path = _write_output(memo_text, category, competitor_slug, outputs_dir)
 
     # ── Step 9: Auto-generate plain-English summary ────────────────────────────
-    _auto_summarise(memo_text, output_path.name, tokenizer, model)
+    # Unload the fine-tuned verdict model first — it produces structured
+    # ANALYSIS/VERDICT output, not natural prose. Load the untuned base model
+    # instead, summarise, then release it before returning.
+    unload_model(model)
+    base_tok, base_model = load_base_model()
+    _auto_summarise(memo_text, output_path.name, base_tok, base_model)
+    unload_model(base_model)
 
     # ── Step 10: Verdict + hold register ──────────────────────────────────────
     verdict = extract_verdict_class(memo_text) or "UNKNOWN"

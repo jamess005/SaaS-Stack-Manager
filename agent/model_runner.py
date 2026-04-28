@@ -178,6 +178,54 @@ def load_model(
     return tokenizer, model
 
 
+def load_base_model(
+    model_path: str | None = _DEFAULT_MODEL_PATH,
+) -> tuple[Any, Any]:
+    """Load the base model WITHOUT any LoRA adapter, for summary generation.
+
+    Summary generation should always use the untuned base model so it produces
+    natural prose rather than the structured ANALYSIS/VERDICT format the fine-tuned
+    model was trained to output.
+
+    Returns (tokenizer, model), or (None, None) in dry-run mode.
+    """
+    if _is_dry_run():
+        return None, None
+
+    import torch  # type: ignore[import-untyped]
+    from transformers import AutoModelForCausalLM, AutoTokenizer  # type: ignore[import-untyped]
+
+    source = model_path or _DEFAULT_MODEL_PATH
+    is_rocm = hasattr(torch.version, "hip") and torch.version.hip is not None
+    device_map = {"": 0} if is_rocm else "auto"
+
+    logger.info("Loading base model for summarisation: %s (bf16, no adapter)", source)
+    tokenizer = AutoTokenizer.from_pretrained(source, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        source,
+        dtype=torch.bfloat16,
+        device_map=device_map,
+        trust_remote_code=True,
+    )
+    model.eval()
+    logger.info("Base model loaded.")
+    return tokenizer, model
+
+
+def unload_model(model) -> None:
+    """Release GPU memory held by a model. Call between verdict and summary phases."""
+    if model is None:
+        return
+    try:
+        import torch  # type: ignore[import-untyped]
+        model.cpu()
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("unload_model: %s", exc)
+
+
 # ── Prompt assembly ────────────────────────────────────────────────────────────
 
 

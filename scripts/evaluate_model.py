@@ -38,10 +38,11 @@ sys.path.insert(0, str(_PROJECT_ROOT))
 
 from agent.context_loader import VALID_CATEGORIES, load_context  # noqa: E402
 from agent.drift_tracker import log_live_run  # noqa: E402
-from agent.model_runner import load_model, run_lean, run_voting  # noqa: E402
+from agent.model_runner import load_base_model, load_model, run_lean, run_voting, unload_model  # noqa: E402
 from agent.output_validator import extract_verdict_class, validate_lean_output, validate_verdict  # noqa: E402
 from agent.roi_calculator import calculate_roi, extract_pass1_vars  # noqa: E402
 from agent.signal_interpreter import parse_signal_payload  # noqa: E402
+from agent.agent import _auto_summarise  # noqa: E402
 from config import MODEL_PATH  # noqa: E402
 from training.generate_signals import SCENARIO_TYPES  # noqa: E402
 
@@ -586,6 +587,26 @@ def main() -> None:
             ensure_ascii=False,
         )
     console.print(f"\n[dim]Results saved to {out_path}[/dim]")
+
+    # ── Summarise dashboard memos (base model, no adapter) ───────────────────
+    # After all verdicts are done we unload the verdict model (already out of scope
+    # here) and load the untuned base model to produce plain-English summaries for
+    # every memo that was written during this run.
+    dashboard_results = [
+        r for r in results
+        if r["status"] == "ok" and args.populate_dashboard and r.get("memo_filename")
+    ]
+    if dashboard_results and not args.dry_run:
+        console.print(f"\n[dim]Generating summaries for {len(dashboard_results)} memo(s) …[/dim]")
+        unload_model(model)  # release verdict model before loading base
+        base_tok, base_model = load_base_model(model_path=args.model_path)
+        for r in dashboard_results:
+            memo_path = _OUTPUTS_DIR / r["memo_filename"]
+            if memo_path.exists():
+                memo_text = memo_path.read_text(encoding="utf-8")
+                _auto_summarise(memo_text, r["memo_filename"], base_tok, base_model)
+        unload_model(base_model)
+        console.print("[dim]Summaries written to outputs/summaries.json[/dim]")
 
 
 if __name__ == "__main__":
