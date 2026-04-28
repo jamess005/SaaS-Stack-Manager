@@ -2,7 +2,7 @@
 # Requires AMD GPU with ROCm 7.x on the host for live model inference.
 # Dry-run mode (AGENT_DRY_RUN=true) works without GPU for pipeline testing.
 
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
